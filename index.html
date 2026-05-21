@@ -1055,17 +1055,19 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJ
 // Переменная для отслеживания инициализации
 let sheetsInitialized = false;
 
-// Функция-обёртка для инициализации синхронизации (НЕ ВНУТРИ loadAllFromSheets)
+// Функция-обёртка для инициализации синхронизации
 async function initSheetsSync() {
   if (sheetsInitialized) return;
-  if (!GAS_URL || GAS_URL === 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') {
+  
+  // ПРОВЕРКА: если GAS_URL не задан или равен пустой строке или заглушке
+  if (!GAS_URL || GAS_URL === '' || GAS_URL.includes('ВСТАВЬТЕ') || GAS_URL === 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') {
     console.log('Google Sheets не настроен, работаем только с localStorage');
     return;
   }
   
   sheetsInitialized = true;
-  await loadAllFromSheets();  // ← здесь вызывается loadAllFromSheets
-}  
+  await loadAllFromSheets();
+}
   
 // ============================================================
 // === CLOUDINARY UPLOAD ======================================
@@ -1154,7 +1156,11 @@ function normalizeProgram(p) {
   
 // Загрузка данных из Google Sheets при старте (получает актуальные фото)
 async function loadAllFromSheets() {
-  if (!GAS_URL || GAS_URL === 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') return;
+  // Проверка что URL корректен (не заглушка)
+  if (!GAS_URL || GAS_URL === '' || GAS_URL.includes('ВСТАВЬТЕ') || GAS_URL === 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') {
+    console.log('Google Sheets URL не настроен');
+    return;
+  }
   
   showToast('Синхронизация данных...');
   try {
@@ -1534,8 +1540,6 @@ function init() {
   loadSettingsAdmin();
 }
 init();
-// Load fresh data from Google Sheets (async, non-blocking)
-loadAllFromSheets();
 </script>
 
 <!-- ===== КНОПКА "НАВЕРХ" ===== -->
