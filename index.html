@@ -558,6 +558,7 @@ let purchases = loadState('purchases', [
 let leads = loadState('leads', []);
 let gallery = loadState('gallery', []);
 let inviteCodeSetting = loadState('inviteCode', 'VPUTI2026');
+let groups = loadState('groups', []);
 
 // ============================================================
 // === ВИДЫ ТРАНСПОРТА =========================================
@@ -1108,40 +1109,46 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJ
 
 // Переменная для отслеживания инициализации
 let sheetsInitialized = false;
-let groups = loadState('groups', []);
 
-// Простой GET запрос через fetch с таймаутом
-async function gasGet(params) {
-  const queryParams = new URLSearchParams({
-    ...params,
-    t: Date.now()
-  });
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-  
-  try {
-    const response = await fetch(`${GAS_URL}?${queryParams.toString()}`, {
-      method: 'GET',
-      mode: 'cors',
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json'
-      }
+
+// ============================================================
+// === JSONP GET ЗАПРОС (для чтения данных) ====================
+// ============================================================
+function gasGet(params) {
+  return new Promise((resolve, reject) => {
+    const callbackName = '_gasCallback_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+    const timeout = setTimeout(() => {
+      delete window[callbackName];
+      const script = document.querySelector(`script[data-callback="${callbackName}"]`);
+      if (script) script.remove();
+      reject(new Error('Google Sheets timeout'));
+    }, 15000);
+
+    window[callbackName] = function(data) {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      const script = document.querySelector(`script[data-callback="${callbackName}"]`);
+      if (script) script.remove();
+      resolve(data);
+    };
+
+    const queryParams = new URLSearchParams({
+      ...params,
+      callback: callbackName,
+      t: Date.now()
     });
-    
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    
-    return await response.json();
-  } catch(e) {
-    clearTimeout(timeoutId);
-    console.warn('GET request failed:', e);
-    return { ok: false, error: e.message };
-  }
+
+    const script = document.createElement('script');
+    script.src = `${GAS_URL}?${queryParams.toString()}`;
+    script.setAttribute('data-callback', callbackName);
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      script.remove();
+      reject(new Error('Failed to load script'));
+    };
+    document.head.appendChild(script);
+  });
 }
 
   // Инициализация синхронизации
@@ -1202,10 +1209,10 @@ async function uploadImage(file, folder) {
   }
 }
 
-
-
-// POST запрос для отправки данных
+// === POST ЗАПРОС (для записи данных) ========================
+// ============================================================
 async function gasPost(body) {
+  console.log('Sending to Sheets:', body);
   try {
     const response = await fetch(GAS_URL, {
       method: 'POST',
@@ -1218,13 +1225,10 @@ async function gasPost(body) {
     });
     
     if (!response.ok) {
-      console.warn('POST response not OK:', response.status);
-      return { ok: false, error: `HTTP ${response.status}` };
+      throw new Error(`HTTP ${response.status}`);
     }
     
-    const result = await response.json();
-    console.log('POST response:', result);
-    return result;
+    return await response.json();
     
   } catch(e) {
     console.warn('POST request failed:', e);
