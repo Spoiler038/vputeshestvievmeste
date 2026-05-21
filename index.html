@@ -706,7 +706,7 @@ function resetFilters() { ['f-season','f-transport','f-duration','f-people'].for
 // ============================================================
 // === ГАЛЕРЕЯ =================================================
 // ============================================================
-function renderGallery() { document.getElementById('gallery-grid').innerHTML = gallery.map(item => `<div class="gallery-item">${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="this.style.display='none'">` : `<span>${item.emoji}</span>`}<div class="gallery-meta">${item.caption} — ${item.author}</div></div>`).join(''); }
+function renderGallery() { document.getElementById('gallery-grid').innerHTML = gallery.map(item => `<div class="gallery-item">${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>${item.emoji}</span>`}<div class="gallery-meta">${item.caption} — ${item.author}</div></div>`).join(''); }
 
 // ============================================================
 // === КАК МЫ ПУТЕШЕСТВУЕМ =====================================
@@ -720,7 +720,7 @@ function renderHowCards() {
         return '<div class="how-card">'
           + '<div class="how-photo">'
           + (imgSrc
-            ? '<img src="' + imgSrc + '" alt="' + t.label + '" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">'
+            ? '<img src="' + imgSrc + '" alt="' + t.label + '" onerror="imgErr(this)">'
               + '<span style="font-size:40px;display:none;">' + t.emoji + '</span>'
             : '<span style="font-size:40px;">' + t.emoji + '</span>')
           + '</div>'
@@ -784,7 +784,7 @@ async function addPhoto() {
   } else { await saveItem(url); }
 }
 async function saveGalleryItemToSheets(item) { if (typeof gasPost === 'function') await gasPost({ action: 'upsert', sheet: 'gallery', data: item }); }
-function renderUserGallery(userId) { const u = users.find(x => x.id === userId); if (!u) return; const shortName = u.name.split(' ')[0]; const userPhotos = gallery.filter(g => g.author === shortName); document.getElementById('user-gallery').innerHTML = userPhotos.length === 0 ? '<p style="color:var(--text-muted);">Пока нет фотографий.</p>' : userPhotos.map(item => `<div class="gallery-item">${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="this.style.display='none'">` : `<span>${item.emoji}</span>`}<div class="gallery-meta">${item.caption}</div></div>`).join(''); }
+function renderUserGallery(userId) { const u = users.find(x => x.id === userId); if (!u) return; const shortName = u.name.split(' ')[0]; const userPhotos = gallery.filter(g => g.author === shortName); document.getElementById('user-gallery').innerHTML = userPhotos.length === 0 ? '<p style="color:var(--text-muted);">Пока нет фотографий.</p>' : userPhotos.map(item => `<div class="gallery-item">${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>${item.emoji}</span>`}<div class="gallery-meta">${item.caption}</div></div>`).join(''); }
 function switchTab(tab) { document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['profile','trips','photos'][i] === tab)); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('tab-'+tab).classList.add('active'); }
 
 // ============================================================
@@ -1075,7 +1075,7 @@ function renderTransportList() {
     return '<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border);">'
       + '<label style="display:flex;align-items:center;gap:10px;flex:1;cursor:pointer;">'
       + '<input type="checkbox" style="accent-color:var(--accent);width:17px;height:17px;" ' + (enabled ? 'checked' : '') + ' onchange="toggleTransportEnabled('' + t.val + '',this.checked)">'
-      + (imgSrc ? '<img src="' + imgSrc + '" style="width:38px;height:38px;object-fit:contain;border-radius:6px;background:var(--accent-light);padding:3px;" onerror="this.style.display='none'">' : '')
+      + (imgSrc ? '<img src="' + imgSrc + '" style="width:38px;height:38px;object-fit:contain;border-radius:6px;background:var(--accent-light);padding:3px;" onerror="imgHide(this)">' : '')
       + '<span style="font-size:22px;">' + t.emoji + '</span>'
       + '<span style="font-weight:500;">' + t.label + '</span>'
       + '<span style="font-size:11px;color:var(--text-muted);">(' + t.val + ')</span>'
@@ -1098,7 +1098,7 @@ function renderHowEditorCards() {
     const imgSrc = t.photo || t.icon || null;
     return '<div style="background:var(--bg);border-radius:var(--radius-sm);padding:16px;border:1px solid var(--border);">'
       + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
-      + (imgSrc ? '<img src="' + imgSrc + '" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:var(--accent-light);padding:3px;" onerror="this.style.display='none'">' : '')
+      + (imgSrc ? '<img src="' + imgSrc + '" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:var(--accent-light);padding:3px;" onerror="imgHide(this)">' : '')
       + '<span style="font-size:24px;">' + t.emoji + '</span>'
       + '<strong>' + t.label + '</strong></div>'
       + '<div class="form-group" style="margin-bottom:0;">'
@@ -1358,6 +1358,15 @@ function saveMobContacts(){const g=id=>(document.getElementById(id)||{value:''})
 function initMobileAdminItems(){document.querySelectorAll('.mob-item').forEach(el=>{el.addEventListener('click',function(){switchMobSection(this.dataset.section);});});}
 window.addEventListener('resize',function(){updateNavbarHeight();if(typeof isMobPanelOpen!=='undefined'&&window.innerWidth>768&&isMobPanelOpen)closeMobAdmin();});
 document.addEventListener('DOMContentLoaded',function(){updateNavbarHeight();initMobileAdminItems();});
+
+// Хелперы для обработки ошибок загрузки изображений
+function imgHide(el) { if (el) el.style.display = 'none'; }
+function imgErr(el) {
+  if (!el) return;
+  el.style.display = 'none';
+  const next = el.nextElementSibling;
+  if (next) next.style.display = 'flex';
+}
 </script>
 
 </body>
