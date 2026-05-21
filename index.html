@@ -622,6 +622,10 @@ function smoothScroll(id) { if (currentPage !== 'home') { showPage('home'); setT
 // ============================================================
 // === ФУНКЦИИ ДЛЯ РАБОТЫ С ФОТО ===============================
 // ============================================================
+
+// Загрузка фото программы с сохранением URL в Google Sheets
+let pendingProgramPhotoFile = null;
+  
 function previewProgramPhoto(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -629,8 +633,9 @@ function previewProgramPhoto(event) {
   const reader = new FileReader();
   reader.onload = e => {
     const preview = document.getElementById('program-photo-preview');
-    preview.src = e.target.result; preview.style.display = 'block';
-    document.getElementById('m-photo').value = e.target.result; // preview only
+    preview.src = e.target.result; 
+    preview.style.display = 'block';
+    document.getElementById('m-photo').value = e.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -745,42 +750,72 @@ function submitLead() { const name = document.getElementById('lead-name').value.
 function loadDashboard() { if (!currentUser) return; const u = currentUser; const avatarDiv = document.getElementById('profile-avatar-big'); if (u.avatar) { avatarDiv.innerHTML = `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;"><div class="avatar-upload-overlay">📷 Сменить фото</div><input type="file" id="avatar-upload-big" accept="image/*" style="display:none">`; document.getElementById('avatar-upload-big').onchange = (e) => { updateUserAvatar(e.target.files[0], (url) => { avatarDiv.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;"><div class="avatar-upload-overlay">📷 Сменить фото</div><input type="file" id="avatar-upload-big" accept="image/*" style="display:none">`; document.getElementById('avatar-upload-big').onchange = (e2) => updateUserAvatar(e2.target.files[0], null); }); }; } else { avatarDiv.innerHTML = `<span id="profile-avatar-text">${u.name[0]}</span><div class="avatar-upload-overlay">📷 Сменить фото</div><input type="file" id="avatar-upload-big" accept="image/*" style="display:none">`; document.getElementById('avatar-upload-big').onchange = (e) => { updateUserAvatar(e.target.files[0], (url) => { avatarDiv.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;"><div class="avatar-upload-overlay">📷 Сменить фото</div><input type="file" id="avatar-upload-big" accept="image/*" style="display:none">`; document.getElementById('avatar-upload-big').onchange = (e2) => updateUserAvatar(e2.target.files[0], null); }); }; } document.getElementById('profile-name-big').textContent = u.name; document.getElementById('profile-role-display').textContent = u.role === 'owner' ? 'Владелец клуба' : (u.role === 'admin' ? 'Администратор' : 'Участник'); document.getElementById('profile-info-list').innerHTML = `<div class="profile-info-item"><div class="profile-info-label">Email</div>${u.email}</div><div class="profile-info-item"><div class="profile-info-label">Логин</div>${u.username}</div><div class="profile-info-item"><div class="profile-info-label">О себе</div>${u.bio || '—'}</div><div class="profile-info-item"><div class="profile-info-label">Участник с</div>${u.joinedDate}</div>`; document.getElementById('edit-name').value = u.name; document.getElementById('edit-email').value = u.email; document.getElementById('edit-bio').value = u.bio || ''; const userPurchases = purchases.filter(p => p.userId === u.id); const tripList = document.getElementById('my-trips-list'); if (userPurchases.length === 0) { tripList.innerHTML = '<p style="color:var(--text-muted);">Ещё не было путешествий. Выберите программу!</p>'; } else { tripList.innerHTML = userPurchases.map(pu => { const prog = programs.find(p => p.id === pu.programId); if (!prog) return ''; return `<div class="trip-item"><div class="trip-icon">${prog.photo ? `<img src="${prog.photo}" alt="${prog.name}">` : `<span>🏔</span>`}</div><div class="trip-info"><div class="trip-name">${prog.name}</div><div class="trip-date">${pu.date} · ${pu.status}</div></div><div class="trip-price">${pu.price.toLocaleString('ru')} ₽</div></div>`; }).join(''); } renderUserGallery(u.id); }
 function saveProfile() { if (!currentUser) return; const u = users.find(x => x.id === currentUser.id); if (!u) return; u.name = document.getElementById('edit-name').value; u.email = document.getElementById('edit-email').value; u.bio = document.getElementById('edit-bio').value; currentUser = u; saveState('users', users); updateNavForUser(); loadDashboard(); showToast('Профиль обновлён ✓'); }
 function changePassword() { if (!currentUser) return; const currentPwd = document.getElementById('current-password').value; const newPwd = document.getElementById('new-password').value; const confirmPwd = document.getElementById('confirm-password').value; const user = users.find(u => u.id === currentUser.id); if (!user || user.password !== currentPwd) { showToast('Неверный текущий пароль'); return; } if (newPwd !== confirmPwd) { showToast('Новый пароль и подтверждение не совпадают'); return; } if (newPwd.length < 4) { showToast('Пароль должен быть не менее 4 символов'); return; } user.password = newPwd; currentUser.password = newPwd; saveState('users', users); showToast('Пароль успешно изменён!'); document.getElementById('current-password').value = ''; document.getElementById('new-password').value = ''; document.getElementById('confirm-password').value = ''; }
+// Загрузка фото в галерею (с синхронизацией)
 async function addPhoto() {
   if (!currentUser) { showToast('Войдите в аккаунт'); return; }
+  
   const fileInput = document.getElementById('photo-file');
   const urlInput  = document.getElementById('photo-url');
   const caption   = (document.getElementById('photo-caption').value.trim()) || 'Моё фото';
   const statusEl  = document.getElementById('photo-upload-status');
   const btn       = document.getElementById('photo-upload-btn');
+  
   const file = fileInput && fileInput.files && fileInput.files[0];
   const url  = urlInput ? urlInput.value.trim() : '';
+  
   if (!file && !url) { showToast('Выберите файл или укажите ссылку'); return; }
-  async function saveItem(photoUrl) {
-    const item = { id: gallery.length > 0 ? Math.max(...gallery.map(g=>parseInt(g.id)||0))+1 : 1, url: photoUrl, emoji: null, caption, author: currentUser.name.split(' ')[0], createdAt: new Date().toISOString().slice(0,10) };
-    gallery.push(item); saveState('gallery', gallery);
-    if (typeof saveGalleryItemToSheets === 'function') saveGalleryItemToSheets(item);
-    renderGallery(); renderUserGallery(currentUser.id);
+  
+  async function saveGalleryItem(photoUrl) {
+    const item = { 
+      id: gallery.length > 0 ? Math.max(...gallery.map(g => parseInt(g.id) || 0)) + 1 : 1,
+      url: photoUrl, 
+      emoji: null, 
+      caption, 
+      author: currentUser.name.split(' ')[0], 
+      createdAt: new Date().toISOString().slice(0,10)
+    };
+    
+    gallery.push(item);
+    saveState('gallery', gallery);
+    
+    // Синхронизация с Google Sheets
+    if (GAS_URL && GAS_URL !== 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') {
+      try {
+        await gasPost({ action: 'upsert', sheet: 'gallery', data: item });
+      } catch(e) { console.warn('Gallery sync error:', e); }
+    }
+    
+    renderGallery();
+    if (currentUser) renderUserGallery(currentUser.id);
+    
     if (fileInput) fileInput.value = '';
-    if (urlInput)  urlInput.value  = '';
+    if (urlInput)  urlInput.value = '';
     if (document.getElementById('photo-caption')) document.getElementById('photo-caption').value = '';
     if (statusEl) statusEl.style.display = 'none';
     if (btn) btn.disabled = false;
+    
     showToast('Фото добавлено в галерею!');
   }
+  
   if (file) {
     if (btn) btn.disabled = true;
     if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Загрузка на Cloudinary...'; }
+    
     try {
-      const cloudUrl = await uploadImage(file, 'gallery');
+      const cloudUrl = await uploadToCloudinary(file, 'gallery');
       if (statusEl) statusEl.textContent = 'Готово!';
-      await saveItem(cloudUrl);
+      await saveGalleryItem(cloudUrl);
     } catch(e) {
       showToast('Ошибка загрузки: ' + e.message);
       if (statusEl) statusEl.style.display = 'none';
       if (btn) btn.disabled = false;
     }
-  } else { await saveItem(url); }
+  } else {
+    await saveGalleryItem(url);
+  }
 }
+
+  
 async function saveGalleryItemToSheets(item) { if (typeof gasPost === 'function') await gasPost({ action: 'upsert', sheet: 'gallery', data: item }); }
 function renderUserGallery(userId) { const u = users.find(x => x.id === userId); if (!u) return; const shortName = u.name.split(' ')[0]; const userPhotos = gallery.filter(g => g.author === shortName); document.getElementById('user-gallery').innerHTML = userPhotos.length === 0 ? '<p style="color:var(--text-muted);">Пока нет фотографий.</p>' : userPhotos.map(item => `<div class="gallery-item">${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>${item.emoji}</span>`}<div class="gallery-meta">${item.caption}</div></div>`).join(''); }
 function switchTab(tab) { document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['profile','trips','photos'][i] === tab)); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('tab-'+tab).classList.add('active'); }
@@ -869,30 +904,95 @@ function showUserStats(userId) { const u = users.find(x=>x.id===userId); const u
 function toggleFeaturedLabel() { const cb = document.getElementById('m-featured'); const label = document.getElementById('featured-label'); setTimeout(() => label.classList.toggle('checked', cb.checked), 0); }
 function openAddProgram() { editingProgramId = null; document.getElementById('modal-program-title').textContent = 'Добавить программу'; document.getElementById('m-name').value = ''; document.getElementById('m-season').value = 'лето'; document.getElementById('m-transport').value = 'самолёт'; document.getElementById('m-days').value = ''; document.getElementById('m-max-people').value = ''; document.getElementById('m-price').value = ''; document.getElementById('m-country').value = ''; document.getElementById('m-short-desc').value = ''; document.getElementById('m-full-desc').value = ''; document.getElementById('m-tags').value = ''; document.getElementById('m-includes').value = ''; document.getElementById('m-featured').checked = false; document.getElementById('m-photo').value = ''; document.getElementById('program-photo-preview').style.display = 'none'; document.getElementById('featured-label').classList.remove('checked'); openModal('program-modal'); }
 function openEditProgram(id) { const p = programs.find(x=>x.id===id); if (!p) return; editingProgramId = id; document.getElementById('modal-program-title').textContent = 'Редактировать программу'; document.getElementById('m-name').value = p.name; document.getElementById('m-season').value = p.season; document.getElementById('m-transport').value = p.transport; document.getElementById('m-days').value = p.days; document.getElementById('m-max-people').value = p.maxPeople; document.getElementById('m-price').value = p.price; document.getElementById('m-country').value = p.country; document.getElementById('m-short-desc').value = p.shortDesc; document.getElementById('m-full-desc').value = p.fullDesc; document.getElementById('m-tags').value = (p.tags||[]).join(', '); document.getElementById('m-includes').value = (p.includes||[]).join('\n'); document.getElementById('m-featured').checked = !!p.featured; document.getElementById('m-photo').value = p.photo || ''; if (p.photo) { const preview = document.getElementById('program-photo-preview'); preview.src = p.photo; preview.style.display = 'block'; } else { document.getElementById('program-photo-preview').style.display = 'none'; } document.getElementById('featured-label').classList.toggle('checked', !!p.featured); openModal('program-modal'); }
+// Сохранение программы (с загрузкой фото в Cloudinary)
 async function saveProgram() {
   const btn = document.getElementById('save-program-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Сохранение...'; }
+  
   try {
     let photoUrl = document.getElementById('m-photo').value;
+    
+    // Если есть новый файл для загрузки
     if (pendingProgramPhotoFile) {
       showToast('Загрузка фото...');
-      try { photoUrl = await uploadImage(pendingProgramPhotoFile, 'programs'); }
-      catch(e) { console.warn('Photo upload failed:', e); /* keep base64 preview */ }
+      try {
+        photoUrl = await uploadToCloudinary(pendingProgramPhotoFile, 'programs');
+        showToast('Фото загружено ✓');
+      } catch(e) {
+        console.warn('Cloudinary error:', e);
+        showToast('Ошибка загрузки фото, используется временная ссылка');
+      }
       pendingProgramPhotoFile = null;
     }
-    const data = { name: document.getElementById('m-name').value.trim(), season: document.getElementById('m-season').value, transport: document.getElementById('m-transport').value, days: parseInt(document.getElementById('m-days').value)||7, maxPeople: parseInt(document.getElementById('m-max-people').value)||10, price: parseInt(document.getElementById('m-price').value)||0, country: document.getElementById('m-country').value.trim(), photo: photoUrl || '', shortDesc: document.getElementById('m-short-desc').value.trim(), fullDesc: document.getElementById('m-full-desc').value.trim(), tags: document.getElementById('m-tags').value.split(',').map(t=>t.trim()).filter(Boolean), includes: document.getElementById('m-includes').value.split('\n').map(s=>s.trim()).filter(Boolean), featured: document.getElementById('m-featured').checked };
+    
+    const data = {
+      id: editingProgramId || (programs.length > 0 ? Math.max(...programs.map(p => parseInt(p.id) || 0)) + 1 : 1),
+      name: document.getElementById('m-name').value.trim(),
+      season: document.getElementById('m-season').value,
+      transport: document.getElementById('m-transport').value,
+      days: parseInt(document.getElementById('m-days').value) || 7,
+      maxPeople: parseInt(document.getElementById('m-max-people').value) || 10,
+      price: parseInt(document.getElementById('m-price').value) || 0,
+      country: document.getElementById('m-country').value.trim(),
+      photo: photoUrl || '',
+      shortDesc: document.getElementById('m-short-desc').value.trim(),
+      fullDesc: document.getElementById('m-full-desc').value.trim(),
+      tags: document.getElementById('m-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+      includes: document.getElementById('m-includes').value.split('\n').map(s => s.trim()).filter(Boolean),
+      featured: document.getElementById('m-featured').checked,
+      createdAt: editingProgramId ? undefined : new Date().toISOString().slice(0,10)
+    };
+    
     if (!data.name) { showToast('Введите название программы'); return; }
-    if (editingProgramId) { const idx = programs.findIndex(p=>p.id===editingProgramId); data.id = editingProgramId; programs[idx] = { ...programs[idx], ...data }; showToast('Программа обновлена ✓'); }
-    else { data.id = programs.length > 0 ? Math.max(...programs.map(p=>parseInt(p.id)||0)) + 1 : 1; programs.push(data); showToast('Программа добавлена ✓'); }
+    
+    if (editingProgramId) {
+      const idx = programs.findIndex(p => p.id === editingProgramId);
+      data.id = editingProgramId;
+      programs[idx] = { ...programs[idx], ...data };
+      showToast('Программа обновлена ✓');
+    } else {
+      programs.push(data);
+      showToast('Программа добавлена ✓');
+    }
+    
+    // Сохраняем в localStorage
     saveState('programs', programs);
-    if (typeof saveProgramToSheets === 'function') saveProgramToSheets(data);
+    
+    // Синхронизируем с Google Sheets
+    await syncProgramToSheets(data);
+    
     closeModal('program-modal');
-    renderPrograms(programs); renderFeaturedCarousel(); loadAdminPrograms();
+    renderPrograms(programs);
+    renderFeaturedCarousel();
+    loadAdminPrograms();
     if (currentUser && currentUser.role === 'owner') loadAdminStats();
+    
+  } catch(e) {
+    console.error('Save program error:', e);
+    showToast('Ошибка сохранения: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Сохранить программу'; }
   }
 }
+
+// Синхронизация программы с Google Sheets
+async function syncProgramToSheets(program) {
+  if (!GAS_URL || GAS_URL === 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') return;
+  
+  try {
+    const payload = {
+      ...program,
+      tags: JSON.stringify(program.tags || []),
+      includes: JSON.stringify(program.includes || []),
+      featured: program.featured ? 'TRUE' : 'FALSE'
+    };
+    await gasPost({ action: 'upsert', sheet: 'programs', data: payload });
+    console.log('Program synced to Sheets:', program.id);
+  } catch(e) {
+    console.warn('Sheets sync error:', e);
+  }
+}
+  
 function deleteProgram(id) { if (!confirm('Удалить программу?')) return; programs = programs.filter(p=>p.id!==id); saveState('programs', programs); renderPrograms(programs); renderFeaturedCarousel(); loadAdminPrograms(); if (currentUser && currentUser.role === 'owner') loadAdminStats(); showToast('Программа удалена'); }
 
 // ============================================================
@@ -950,31 +1050,54 @@ if (founderPhotoInput) { founderPhotoInput.onchange = function(event) { const fi
 // === ИНИЦИАЛИЗАЦИЯ ===========================================
 // ============================================================
 // === GOOGLE SHEETS SYNC ===
-const GAS_URL = 'ВСТАВЬТЕ_ВАШ_URL_GOOGLE_APPS_SCRIPT';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec';
 
+// Переменная для отслеживания инициализации
+let sheetsInitialized = false;
+
+// Функция-обёртка для инициализации синхронизации (НЕ ВНУТРИ loadAllFromSheets)
+async function initSheetsSync() {
+  if (sheetsInitialized) return;
+  if (!GAS_URL || GAS_URL === 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') {
+    console.log('Google Sheets не настроен, работаем только с localStorage');
+    return;
+  }
+  
+  sheetsInitialized = true;
+  await loadAllFromSheets();  // ← здесь вызывается loadAllFromSheets
+}  
+  
 // ============================================================
 // === CLOUDINARY UPLOAD ======================================
 // ============================================================
-const CLOUDINARY_CLOUD  = 'dczxaodya';
+// Cloudinary upload (без подписи, с upload preset)
+const CLOUDINARY_CLOUD = 'dczxaodya';
 const CLOUDINARY_PRESET = 'vputi_unsigned';
 
 async function uploadToCloudinary(file, folder) {
   if (!file) throw new Error('Файл не выбран');
   if (file.size > 20 * 1024 * 1024) throw new Error('Файл больше 20 МБ');
+  
   const fd = new FormData();
   fd.append('file', file);
   fd.append('upload_preset', CLOUDINARY_PRESET);
   fd.append('folder', 'vputi/' + folder);
+  
   const res = await fetch(
     'https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD + '/image/upload',
     { method: 'POST', body: fd }
   );
-  if (!res.ok) { const err = await res.json().catch(()=>({})); throw new Error(err.error?.message || 'Ошибка Cloudinary'); }
+  
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Ошибка Cloudinary');
+  }
+  
   const data = await res.json();
   return data.secure_url;
 }
 
-// Универсальная загрузка: Cloudinary → fallback base64
+// Универсальная загрузка с fallback на base64
 async function uploadImage(file, folder) {
   try {
     return await uploadToCloudinary(file, folder);
@@ -1028,34 +1151,107 @@ function normalizeProgram(p) {
   };
 }
 
+  
+// Загрузка данных из Google Sheets при старте (получает актуальные фото)
 async function loadAllFromSheets() {
-  if (!GAS_URL || GAS_URL.startsWith('ВСТАВЬТЕ')) return;
+  if (!GAS_URL || GAS_URL === 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') return;
+  
   showToast('Синхронизация данных...');
   try {
-    const result = await gasGet({ action:'readAll' });
+    const result = await gasGet({ action: 'readAll' });
     if (!result || !result.ok) throw new Error(result && result.error ? result.error : 'No response');
+    
     const d = result.data || {};
+    
+    // Загружаем программы с фото
     if (d.programs && d.programs.length > 0) {
-      programs = d.programs.map(normalizeProgram);
+      programs = d.programs.map(p => ({
+        id: parseInt(p.id) || p.id,
+        name: p.name || '',
+        season: p.season || 'лето',
+        transport: p.transport || 'самолёт',
+        days: parseInt(p.days) || 7,
+        maxPeople: parseInt(p.maxPeople) || 10,
+        price: parseInt(p.price) || 0,
+        country: p.country || '',
+        photo: p.photo || '',
+        shortDesc: p.shortDesc || '',
+        fullDesc: p.fullDesc || '',
+        tags: Array.isArray(p.tags) ? p.tags : (typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : []),
+        includes: Array.isArray(p.includes) ? p.includes : (typeof p.includes === 'string' ? JSON.parse(p.includes || '[]') : []),
+        featured: p.featured === true || p.featured === 'TRUE' || p.featured === 'true',
+        createdAt: p.createdAt || ''
+      }));
       saveState('programs', programs);
     }
-    if (d.leads) { leads = d.leads; saveState('leads', leads); }
+    
+    // Загружаем галерею с фото
+    if (d.gallery && d.gallery.length > 0) {
+      gallery = d.gallery;
+      saveState('gallery', gallery);
+    }
+    
+    // Загружаем заявки
+    if (d.leads) {
+      leads = d.leads;
+      saveState('leads', leads);
+    }
+    
+    // Загружаем настройки
     if (d.settings && d.settings.length > 0) {
       d.settings.forEach(s => {
-        if (s.key === 'inviteCode') { inviteCodeSetting = s.value; saveState('inviteCode', s.value); }
-        if (s.key === 'founderContent') { try { founderContent = typeof s.value==='object' ? s.value : JSON.parse(s.value); saveState('founderContent', founderContent); } catch(e){} }
-        if (s.key === 'contactsContent') { try { contactsContent = typeof s.value==='object' ? s.value : JSON.parse(s.value); saveState('contactsContent', contactsContent); } catch(e){} }
+        if (s.key === 'inviteCode') {
+          inviteCodeSetting = s.value;
+          saveState('inviteCode', s.value);
+        }
+        if (s.key === 'founderContent') {
+          try {
+            founderContent = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+            saveState('founderContent', founderContent);
+          } catch(e) {}
+        }
+        if (s.key === 'contactsContent') {
+          try {
+            contactsContent = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+            saveState('contactsContent', contactsContent);
+          } catch(e) {}
+        }
+        if (s.key === 'enabledTransports') {
+          try {
+            enabledTransports = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+            saveState('enabledTransports', enabledTransports);
+          } catch(e) {}
+        }
+        if (s.key === 'transportDescs') {
+          try {
+            const descs = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+            ALL_TRANSPORTS.forEach(t => {
+              if (descs[t.val] !== undefined) t.desc = descs[t.val];
+            });
+            saveState('transportDescs', descs);
+          } catch(e) {}
+        }
       });
     }
+    
+    // Перерисовываем всё с новыми данными
     renderPrograms(programs);
+    renderGallery();
+    renderHowCards();
     renderFeaturedCarousel();
     applyFounderContent();
     applyContactsContent();
-    if (document.getElementById('hint-invite-code')) document.getElementById('hint-invite-code').textContent = inviteCodeSetting;
+    updateTransportSelects();
+    
+    if (document.getElementById('hint-invite-code')) {
+      document.getElementById('hint-invite-code').textContent = inviteCodeSetting;
+    }
+    
     showToast('Данные загружены ✓');
+    
   } catch(e) {
     console.warn('Sheets sync error:', e);
-    showToast('Офлайн-режим (кэш)');
+    showToast('Офлайн-режим (данные из кэша)');
   }
 }
 
@@ -1331,7 +1527,7 @@ function loadHowAdmin() {
 
 function init() {
   updateTransportSelects();
-  renderPrograms(programs); renderGallery(); renderHowCards(); renderFeaturedCarousel(); applyFounderContent(); applyContactsContent(); updateNavForUser(); initEnterHandlers();
+  renderPrograms(programs); renderGallery(); renderHowCards(); renderFeaturedCarousel(); applyFounderContent(); applyContactsContent(); updateNavForUser(); initEnterHandlers(); initSheetsSync();
   if (currentUser && currentUser.role !== 'owner') { const dashboardNavItem = document.querySelector('.admin-nav-item[onclick*="dashboard"]'); if (dashboardNavItem) dashboardNavItem.style.display = 'none'; }
   const avatarUploadBig = document.getElementById('avatar-upload-big'); if (avatarUploadBig) avatarUploadBig.onchange = (e) => updateUserAvatar(e.target.files[0], null);
   const avatarUploadSmall = document.getElementById('avatar-upload-small'); if (avatarUploadSmall) avatarUploadSmall.onchange = (e) => updateUserAvatar(e.target.files[0], null);
