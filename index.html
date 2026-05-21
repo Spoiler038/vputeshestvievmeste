@@ -766,7 +766,27 @@ function applyContactsContent() { document.getElementById('contact-phone').textC
 // ============================================================
 // === ФОРМА СВЯЗИ =============================================
 // ============================================================
-function submitLead() { const name = document.getElementById('lead-name').value.trim(); const contact = document.getElementById('lead-contact').value.trim(); const message = document.getElementById('lead-message').value.trim(); if (!name || !contact) { showToast('Укажите имя и контакт'); return; } leads.push({ id: leads.length+1, name, contact, message, date: new Date().toISOString().slice(0,10) }); saveState('leads', leads); document.getElementById('contact-form-wrap').innerHTML = `<div class="form-success"><div class="form-success-icon">✅</div><h3 style="font-family:var(--font-family);font-size:26px;margin-bottom:7px;">Заявка отправлена!</h3><p style="color:var(--text-muted);">Марина свяжется с вами в течение 24 часов.</p></div>`; showToast('Заявка успешно отправлена!'); }
+function submitLead() { 
+  const name = document.getElementById('lead-name').value.trim(); 
+  const contact = document.getElementById('lead-contact').value.trim(); 
+  const message = document.getElementById('lead-message').value.trim(); 
+  if (!name || !contact) { showToast('Укажите имя и контакт'); return; } 
+  
+  const lead = { 
+    id: leads.length + 1, 
+    name, contact, message, 
+    date: new Date().toISOString().slice(0,10) 
+  };
+  
+  leads.push(lead); 
+  saveState('leads', leads); 
+  
+  // Отправляем в Google Sheets
+  saveLeadToSheets(lead);
+  
+  document.getElementById('contact-form-wrap').innerHTML = `<div class="form-success"><div class="form-success-icon">✅</div><h3 style="font-family:var(--font-family);font-size:26px;margin-bottom:7px;">Заявка отправлена!</h3><p style="color:var(--text-muted);">Марина свяжется с вами в течение 24 часов.</p></div>`; 
+  showToast('Заявка успешно отправлена!'); 
+}
 
 // ============================================================
 // === ЛИЧНЫЙ КАБИНЕТ ==========================================
@@ -999,21 +1019,31 @@ async function saveProgram() {
   }
 }
 
-// Синхронизация программы с Google Sheets
+// Сохранение программы в Google Sheets
 async function syncProgramToSheets(program) {
-  if (!GAS_URL || GAS_URL === 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') return;
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return false;
   
-  try {
-    const payload = {
+  const payload = {
+    action: 'upsert',
+    sheet: 'programs',
+    data: {
       ...program,
       tags: JSON.stringify(program.tags || []),
       includes: JSON.stringify(program.includes || []),
       featured: program.featured ? 'TRUE' : 'FALSE'
-    };
-    await gasPost({ action: 'upsert', sheet: 'programs', data: payload });
-    console.log('Program synced to Sheets:', program.id);
+    }
+  };
+  
+  try {
+    const result = await gasPost(payload);
+    if (result && result.ok) {
+      console.log('Program saved to Sheets:', program.id);
+      return true;
+    }
+    return false;
   } catch(e) {
-    console.warn('Sheets sync error:', e);
+    console.warn('Failed to save program to Sheets:', e);
+    return false;
   }
 }
   
@@ -1078,8 +1108,43 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJ
 
 // Переменная для отслеживания инициализации
 let sheetsInitialized = false;
+let groups = loadState('groups', []);
 
-// Функция-обёртка для инициализации синхронизации
+// Простой GET запрос через fetch с таймаутом
+async function gasGet(params) {
+  const queryParams = new URLSearchParams({
+    ...params,
+    t: Date.now()
+  });
+  
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  
+  try {
+    const response = await fetch(`${GAS_URL}?${queryParams.toString()}`, {
+      method: 'GET',
+      mode: 'cors',
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch(e) {
+    clearTimeout(timeoutId);
+    console.warn('GET request failed:', e);
+    return { ok: false, error: e.message };
+  }
+}
+
+  // Инициализация синхронизации
 async function initSheetsSync() {
   if (sheetsInitialized) return;
   
@@ -1231,24 +1296,140 @@ async function saveProgramToSheets(program) {
   }
 }
 async function deleteProgramFromSheets(id) { await gasPost({ action:'delete', sheet:'programs', id }); }
-async function saveLeadToSheets(data) { await gasPost({ action:'upsert', sheet:'leads', data }); }
+
+ // Сохранение заявки в Google Sheets
+async function saveLeadToSheets(lead) {
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return false;
+  
+  const payload = {
+    action: 'upsert',
+    sheet: 'leads',
+    data: lead
+  };
+  
+  try {
+    const result = await gasPost(payload);
+    return result && result.ok;
+  } catch(e) {
+    console.warn('Failed to save lead to Sheets:', e);
+    return false;
+  }
+} 
+
+function openLeadModal(leadId) {
+  const lead = leads.find(l => l.id === leadId);
+  if (!lead) return;
+  
+  const isPhone = /^[\d\s\(\)\+-]{7,}$/.test(lead.contact);
+  const isEmail = lead.contact.includes('@');
+  
+  const modalContent = document.getElementById('lead-modal-content');
+  modalContent.innerHTML = `
+    <div style="margin-bottom:20px;">
+      <div><strong>Имя:</strong> ${lead.name}</div>
+      <div><strong>Контакт:</strong> ${lead.contact}</div>
+      <div><strong>Сообщение:</strong> ${lead.message || '—'}</div>
+      <div><strong>Дата:</strong> ${lead.date}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${isPhone ? `<a href="tel:${lead.contact}" class="btn btn-primary">📞 Позвонить</a>` : ''}
+      ${isEmail ? `<a href="mailto:${lead.contact}" class="btn btn-primary">✉️ Написать</a>` : ''}
+      <button class="btn btn-edit" onclick="addUserFromLead(${lead.id})">👤 Добавить пользователя</button>
+      <button class="btn btn-danger" onclick="deleteLead(${lead.id})">🗑 Удалить заявку</button>
+    </div>
+  `;
+  
+  openModal('lead-modal');
+}
+
+function addUserFromLead(leadId) {
+  const lead = leads.find(l => l.id === leadId);
+  if (!lead) return;
+  
+  const username = prompt('Придумайте логин для пользователя:', lead.name.toLowerCase().replace(/\s/g, '_'));
+  if (!username) return;
+  
+  if (users.find(u => u.username === username)) {
+    showToast('Логин уже существует');
+    return;
+  }
+  
+  const tempPassword = Math.random().toString(36).slice(2, 10);
+  const newUser = {
+    id: users.length + 1,
+    username: username,
+    password: tempPassword,
+    role: 'user',
+    name: lead.name,
+    email: lead.contact.includes('@') ? lead.contact : '',
+    bio: '',
+    joinedDate: new Date().toISOString().slice(0, 10),
+    avatar: '',
+    discount: 0
+  };
+  
+  users.push(newUser);
+  saveState('users', users);
+  
+  showToast(`Пользователь создан! Логин: ${username}, пароль: ${tempPassword}`);
+  alert(`Данные для входа:\nЛогин: ${username}\nПароль: ${tempPassword}`);
+  
+  closeModal('lead-modal');
+  if (currentUser && currentUser.role === 'owner') {
+    loadAdminUsers(true);
+  }
+}
+
+function deleteLead(leadId) {
+  if (!confirm('Удалить заявку?')) return;
+  leads = leads.filter(l => l.id !== leadId);
+  saveState('leads', leads);
+  closeModal('lead-modal');
+  loadAdminLeads();
+  showToast('Заявка удалена');
+}
+  
 // Сохранение настройки в Google Sheets
 async function saveSettingToSheets(key, value) {
   if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return false;
   
   const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
   
+  const payload = {
+    action: 'saveSetting',
+    sheet: 'settings',
+    data: { key, value: stringValue }
+  };
+  
   try {
-    await gasPost({ action: 'saveSetting', sheet: 'settings', data: { key, value: stringValue } });
-    console.log('Setting saved to Sheets:', key);
-    return true;
+    const result = await gasPost(payload);
+    return result && result.ok;
   } catch(e) {
     console.warn('Failed to save setting to Sheets:', e);
     return false;
   }
 }
 
-// Вспомогательная функция нормализации программы
+// Сохранение фото галереи
+async function saveGalleryToSheets(item) {
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return false;
+  
+  const payload = {
+    action: 'upsert',
+    sheet: 'gallery',
+    data: item
+  };
+  
+  try {
+    const result = await gasPost(payload);
+    return result && result.ok;
+  } catch(e) {
+    console.warn('Failed to save gallery to Sheets:', e);
+    return false;
+  }
+}
+
+// Нормализация программы
 function normalizeProgram(p) {
   return {
     id: parseInt(p.id) || p.id,
@@ -1269,8 +1450,25 @@ function normalizeProgram(p) {
   };
 }
 
+// Нормализация группы
+function normalizeGroup(g) {
+  return {
+    id: parseInt(g.id) || g.id,
+    name: g.name || '',
+    programId: parseInt(g.programId) || null,
+    programName: g.programName || '',
+    startDate: g.startDate || '',
+    endDate: g.endDate || '',
+    maxPeople: parseInt(g.maxPeople) || 0,
+    status: g.status || 'набор',
+    members: Array.isArray(g.members) ? g.members : [],
+    notes: g.notes || '',
+    createdAt: g.createdAt || ''
+  };
+}
+
   
-// Загрузка данных из Google Sheets при старте (получает актуальные фото)
+// Загрузка всех данных из Google Sheets
 async function loadAllFromSheets() {
   if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) {
     console.log('Google Sheets не настроен');
@@ -1289,59 +1487,66 @@ async function loadAllFromSheets() {
     const d = result.data || {};
     
     // Загружаем программы
-    if (d.programs && d.programs.length > 0) {
+    if (d.programs && Array.isArray(d.programs) && d.programs.length > 0) {
       programs = d.programs.map(normalizeProgram);
       saveState('programs', programs);
       console.log(`Загружено ${programs.length} программ`);
     }
     
     // Загружаем галерею
-    if (d.gallery && d.gallery.length > 0) {
+    if (d.gallery && Array.isArray(d.gallery) && d.gallery.length > 0) {
       gallery = d.gallery;
       saveState('gallery', gallery);
       console.log(`Загружено ${gallery.length} фото`);
     }
     
     // Загружаем заявки
-    if (d.leads && d.leads.length > 0) {
+    if (d.leads && Array.isArray(d.leads) && d.leads.length > 0) {
       leads = d.leads;
       saveState('leads', leads);
       console.log(`Загружено ${leads.length} заявок`);
     }
     
+    // Загружаем группы
+    if (d.groups && Array.isArray(d.groups) && d.groups.length > 0) {
+      groups = d.groups.map(normalizeGroup);
+      saveState('groups', groups);
+      console.log(`Загружено ${groups.length} групп`);
+    }
+    
     // Загружаем настройки
-    if (d.settings && d.settings.length > 0) {
+    if (d.settings && Array.isArray(d.settings)) {
       for (const s of d.settings) {
         if (s.key === 'inviteCode') {
           inviteCodeSetting = s.value;
           saveState('inviteCode', s.value);
-          if (document.getElementById('hint-invite-code')) {
-            document.getElementById('hint-invite-code').textContent = s.value;
-          }
-          if (document.getElementById('current-invite-code')) {
-            document.getElementById('current-invite-code').textContent = s.value;
-          }
+          const hintEl = document.getElementById('hint-invite-code');
+          if (hintEl) hintEl.textContent = s.value;
+          const currentEl = document.getElementById('current-invite-code');
+          if (currentEl) currentEl.textContent = s.value;
         }
         if (s.key === 'founderContent') {
           try {
             const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
             founderContent = { ...founderContent, ...parsed };
             saveState('founderContent', founderContent);
-          } catch(e) {}
+          } catch(e) { console.warn('Parse founderContent error:', e); }
         }
         if (s.key === 'contactsContent') {
           try {
             const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
             contactsContent = { ...contactsContent, ...parsed };
             saveState('contactsContent', contactsContent);
-          } catch(e) {}
+          } catch(e) { console.warn('Parse contactsContent error:', e); }
         }
         if (s.key === 'enabledTransports') {
           try {
             const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
-            enabledTransports = parsed;
-            saveState('enabledTransports', enabledTransports);
-          } catch(e) {}
+            if (Array.isArray(parsed)) {
+              enabledTransports = parsed;
+              saveState('enabledTransports', enabledTransports);
+            }
+          } catch(e) { console.warn('Parse enabledTransports error:', e); }
         }
         if (s.key === 'transportDescs') {
           try {
@@ -1350,7 +1555,7 @@ async function loadAllFromSheets() {
               if (descs[t.val] !== undefined) t.desc = descs[t.val];
             }
             saveState('transportDescs', descs);
-          } catch(e) {}
+          } catch(e) { console.warn('Parse transportDescs error:', e); }
         }
       }
     }
@@ -1363,6 +1568,11 @@ async function loadAllFromSheets() {
     applyFounderContent();
     applyContactsContent();
     updateTransportSelects();
+    
+    // Обновляем админку если открыта
+    if (currentPage === 'admin' && currentUser) {
+      loadAdmin();
+    }
     
     showToast('Данные синхронизированы ✓');
     console.log('Google Sheets sync completed successfully');
