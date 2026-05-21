@@ -733,6 +733,30 @@ function renderHowCards() {
       }).join('');
 }
 
+  function renderHowEditorCards() {
+  const container = document.getElementById('how-editor-cards');
+  if (!container) return;
+  
+  const actives = ALL_TRANSPORTS.filter(t => enabledTransports.includes(t.val));
+  if (actives.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-muted);">Нет активных видов транспорта.</p>';
+    return;
+  }
+  
+  container.innerHTML = actives.map((t, i) => `
+    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:16px;border:1px solid var(--border);margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-size:24px;">${t.emoji}</span>
+        <strong>${t.label}</strong>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Описание карточки</label>
+        <textarea class="form-textarea" id="how-desc-${i}" data-val="${t.val}" style="min-height:70px;">${t.desc || ''}</textarea>
+      </div>
+    </div>
+  `).join('');
+}
+
 // ============================================================
 // === БЛОК ОСНОВАТЕЛЯ =========================================
 // ============================================================
@@ -1115,7 +1139,7 @@ async function uploadImage(file, folder) {
 
 function gasGet(params) {
   return new Promise((resolve, reject) => {
-    const callbackName = '_gasCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+    const callbackName = '_gasCallback_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
     const timeout = setTimeout(() => {
       delete window[callbackName];
       const script = document.querySelector(`script[src*="${callbackName}"]`);
