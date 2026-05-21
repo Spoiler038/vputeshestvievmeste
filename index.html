@@ -466,26 +466,24 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 
 <!-- ===== АДМИНИСТРАТИВНАЯ ПАНЕЛЬ ===== -->
 <div id="page-admin" class="hidden admin-panel"><div class="admin-layout"><aside class="admin-sidebar"><div class="admin-sidebar-logo">⚙ Управление</div><div class="admin-nav-item active" onclick="switchAdmin('dashboard')"><span class="admin-nav-icon">📊</span> Дашборд</div><div class="admin-nav-item" onclick="switchAdmin('programs')"><span class="admin-nav-icon">🗺</span> Программы</div><div class="admin-nav-item" onclick="switchAdmin('users')"><span class="admin-nav-icon">👥</span> Пользователи</div><div class="admin-nav-item" onclick="switchAdmin('leads')"><span class="admin-nav-icon">📩</span> Заявки</div><div class="admin-nav-item" onclick="switchAdmin('settings')"><span class="admin-nav-icon">⚙️</span> Настройки</div><div class="admin-nav-item" onclick="switchAdmin('founder')"><span class="admin-nav-icon">👤</span> Об основателе</div><div class="admin-nav-item" onclick="switchAdmin('howto')"><span class="admin-nav-icon">🚂</span> Как мы ездим</div><div class="admin-nav-item" onclick="switchAdmin('contacts')"><span class="admin-nav-icon">📞</span> Контакты</div><div class="admin-nav-item" onclick="showPage('home')" style="margin-top:32px;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;"><span class="admin-nav-icon">🏠</span> На сайт</div></aside><main class="admin-main"><div class="admin-section active" id="admin-dashboard"><div class="admin-page-title">Дашборд</div><div class="admin-page-sub">Сводная статистика по сайту</div><div class="stats-grid" id="stats-grid"></div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:28px;"><h3 style="font-family:var(--font-family);font-size:22px;font-weight:500;margin-bottom:22px;">Выручка по месяцам</h3><div class="revenue-grid" id="revenue-chart"></div></div></div><div class="admin-section" id="admin-programs"><div class="admin-page-title">Программы</div><div class="admin-page-sub">Управление маршрутами путешествий</div><div class="admin-bar-top"><button class="btn btn-primary" onclick="openAddProgram()">+ Добавить программу</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Фото</th><th>Название</th><th>Сезон</th><th>Транспорт</th><th>Дней</th><th>Цена</th><th>Действия</th></tr></thead><tbody id="programs-tbody"></tbody></table></div></div><div class="admin-section" id="admin-users"><div class="admin-page-title">Пользователи</div><div class="admin-page-sub">Список зарегистрированных участников</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Логин</th><th>Роль</th><th>Путешествий</th><th>Скидка (%)</th><th>Действия</th></tr></thead><tbody id="users-tbody"></tbody></table></div></div><div class="admin-section" id="admin-leads"><div class="admin-page-title">Заявки</div><div class="admin-page-sub">Входящие запросы с сайта</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Контакт</th><th>Сообщение</th><th>Дата</th></tr></thead><tbody id="leads-tbody"></tbody></table></div></div><div class="admin-section" id="admin-settings"><div class="admin-page-title">Настройки сайта</div><div class="admin-page-sub">Управление кодом приглашения</div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><div class="form-group"><label>Код приглашения для регистрации</label><input type="text" class="form-input" id="invite-code" placeholder="VPUTI2026"><button class="btn btn-primary" style="margin-top:10px;" onclick="saveInviteCode()">Сохранить код</button><p class="auth-hint" style="margin-top:10px;">Текущий код: <span id="current-invite-code">VPUTI2026</span></p></div></div></div><div class="admin-section" id="admin-founder"><div class="admin-page-title">Об основателе клуба</div><div class="admin-page-sub">Редактирование раздела «Основатель клуба» на главной странице</div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><div class="form-group"><label>Имя (заголовок)</label><input type="text" class="form-input" id="founder-admin-name" placeholder="Марина Пищальникова"></div><div class="form-group"><label>Годы опыта (число с +)</label><input type="text" class="form-input" id="founder-admin-years" placeholder="7+"></div><div class="form-group"><label>Фото основателя (URL или загрузите)</label><div class="photo-upload-area" onclick="document.getElementById('founder-photo-input').click()"><span>📸 Нажмите, чтобы выбрать фото</span><input type="file" id="founder-photo-input" accept="image/*" style="display:none"></div><img id="founder-photo-preview" class="photo-preview" style="display:none; max-width:200px;"><input type="hidden" id="founder-photo-url" value=""></div><div class="form-group"><label>Основной текст (первый абзац)</label><textarea class="form-textarea" id="founder-admin-bio1" style="min-height:100px;"></textarea></div><div class="form-group"><label>Второй абзац</label><textarea class="form-textarea" id="founder-admin-bio2" style="min-height:100px;"></textarea></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;"><div><div class="form-group"><label>Ценность 1 — Заголовок</label><input type="text" class="form-input" id="val1-title"></div><div class="form-group"><label>Ценность 1 — Текст</label><input type="text" class="form-input" id="val1-text"></div></div><div><div class="form-group"><label>Ценность 2 — Заголовок</label><input type="text" class="form-input" id="val2-title"></div><div class="form-group"><label>Ценность 2 — Текст</label><input type="text" class="form-input" id="val2-text"></div></div><div><div class="form-group"><label>Ценность 3 — Заголовок</label><input type="text" class="form-input" id="val3-title"></div><div class="form-group"><label>Ценность 3 — Текст</label><input type="text" class="form-input" id="val3-text"></div></div></div><button class="btn btn-primary" onclick="saveFounderContent()">Сохранить и применить</button></div></div><div class="admin-section" id="admin-howto">
-  <div class="admin-page-title">Как мы ездим</div>
-  <div class="admin-page-sub">Управление видами транспорта: включение/отключение, иконки, описания карточек на сайте и параметры фильтра.</div>
+  <div class="admin-page-title">Как мы путешествуем</div>
+  <div class="admin-page-sub">Управление видами транспорта: включение/отключение, иконки, описания карточек</div>
 
-  <!-- ── Текущие виды транспорта ── -->
+  <!-- Текущие виды транспорта -->
   <div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-bottom:20px;">
-    <h3 style="font-family:var(--font-family);font-size:20px;font-weight:500;margin-bottom:6px;">Активные виды транспорта</h3>
+    <h3 style="font-family:var(--font-family);font-size:20px;font-weight:500;margin-bottom:6px;">Виды транспорта</h3>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">
       Включённые виды отображаются на сайте в разделе «Как мы путешествуем» и в фильтре программ.
-      Иконки хранятся на GitHub:
-      <code style="background:var(--bg2);padding:2px 6px;border-radius:4px;font-size:12px;">icons/transport/</code>
+      Для каждого вида можно настроить описание карточки.
     </p>
-    <div id="transport-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
-
-    <!-- ── Описания карточек ── -->
-    <h4 style="font-family:var(--font-family);font-size:16px;font-weight:500;margin-bottom:14px;">Описания карточек</h4>
-    <div id="how-editor-cards" style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;"></div>
-    <button class="btn btn-primary" onclick="saveHowContent()">💾 Сохранить описания</button>
+    <div id="transport-list" style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;"></div>
+    
+    <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-primary" onclick="saveAllTransportDescs()">💾 Сохранить все описания</button>
+    </div>
   </div>
 
-  <!-- ── Добавить новый транспорт ── -->
+  <!-- Добавить новый транспорт -->
   <div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);">
     <h3 style="font-family:var(--font-family);font-size:20px;font-weight:500;margin-bottom:16px;">+ Добавить вид транспорта</h3>
     <div style="display:grid;grid-template-columns:70px 1fr 1fr;gap:12px;margin-bottom:14px;">
@@ -517,7 +515,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
       <label>Описание карточки</label>
       <textarea class="form-textarea" id="new-transport-desc" placeholder="Несколько слов об этом виде транспорта..." style="min-height:70px;"></textarea>
     </div>
-    <button class="btn btn-primary" onclick="addTransportType()">+ Добавить</button>
+    <button class="btn btn-primary" onclick="addTransportType()">+ Добавить вид транспорта</button>
   </div>
 </div>
 
@@ -1063,133 +1061,271 @@ async function loadAllFromSheets() {
 
 
 // ============================================================
-// === УПРАВЛЕНИЕ ТРАНСПОРТОМ ==================================
+// === УПРАВЛЕНИЕ ТРАНСПОРТОМ (ОБЪЕДИНЁННЫЙ БЛОК) ==============
 // ============================================================
+
 function renderTransportList() {
   const el = document.getElementById('transport-list');
   if (!el) return;
+  
   el.innerHTML = ALL_TRANSPORTS.map((t, i) => {
     const enabled = enabledTransports.includes(t.val);
     const imgSrc = t.photo || t.icon || null;
     const isDefault = i < DEFAULT_TRANSPORTS.length;
-    return '<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border);">'
-      + '<label style="display:flex;align-items:center;gap:10px;flex:1;cursor:pointer;">'
-      + '<input type="checkbox" style="accent-color:var(--accent);width:17px;height:17px;" ' + (enabled ? 'checked' : '') + ' onchange="toggleTransportEnabled(\'' + t.val + '\', this.checked)">'
-      + (imgSrc ? '<img src="' + imgSrc + '" style="width:38px;height:38px;object-fit:contain;border-radius:6px;background:var(--accent-light);padding:3px;" onerror="imgHide(this)">' : '')
-      + '<span style="font-size:22px;">' + t.emoji + '</span>'
-      + '<span style="font-weight:500;">' + t.label + '</span>'
-      + '<span style="font-size:11px;color:var(--text-muted);">(' + t.val + ')</span>'
-      + (enabled ? '<span class="tag tag-green" style="margin-left:4px;">вкл</span>' : '<span style="font-size:11px;color:var(--text-muted);">выкл</span>')
-      + '</label>'
-      + (!isDefault ? '<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="removeTransportType(\'' + t.val + '\')">✕ Удалить</button>' : '')
-      + '</div>';
+    
+    return `
+      <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:12px;overflow:hidden;">
+        <!-- Заголовок с чекбоксом включения -->
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg);border-bottom:1px solid var(--border);">
+          <label style="display:flex;align-items:center;gap:10px;flex:1;cursor:pointer;">
+            <input type="checkbox" style="accent-color:var(--accent);width:18px;height:18px;" 
+                   ${enabled ? 'checked' : ''} 
+                   onchange="toggleTransportEnabled('${t.val}', this.checked)">
+            ${imgSrc ? `<img src="${imgSrc}" style="width:36px;height:36px;object-fit:contain;border-radius:6px;background:var(--accent-light);padding:3px;" onerror="imgHide(this)">` : ''}
+            <span style="font-size:22px;">${t.emoji}</span>
+            <span style="font-weight:600;font-size:15px;">${t.label}</span>
+            <span style="font-size:11px;color:var(--text-muted);">(${t.val})</span>
+          </label>
+          ${enabled ? '<span class="tag tag-green" style="margin-left:auto;">активен</span>' : '<span class="tag tag-orange" style="margin-left:auto;background:#FDF0E4;color:#C4895A;">отключён</span>'}
+          ${!isDefault ? `<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="removeTransportType('${t.val}')">✕ Удалить</button>` : ''}
+        </div>
+        
+        <!-- Блок описания карточки (виден только если транспорт активен) -->
+        <div id="transport-desc-block-${i}" style="padding:14px;${enabled ? '' : 'display:none;'}">
+          <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:6px;">
+            📝 Описание карточки на сайте
+          </label>
+          <textarea class="form-textarea" id="how-desc-${i}" data-val="${t.val}" 
+                    style="min-height:65px;font-size:13px;width:100%;" 
+                    placeholder="Опишите, как мы путешествуем на ${t.label}...">${t.desc || ''}</textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+            <button class="btn btn-outline btn-sm" onclick="saveSingleTransportDesc('${t.val}', ${i})" 
+                    style="padding:5px 12px;font-size:11px;">💾 Сохранить описание</button>
+          </div>
+        </div>
+      </div>
+    `;
   }).join('');
 }
 
-function renderHowEditorCards() {
-  const container = document.getElementById('how-editor-cards');
-  if (!container) return;
-  const actives = ALL_TRANSPORTS.filter(t => enabledTransports.includes(t.val));
-  if (actives.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-muted);">Нет активных видов транспорта. Включите чекбоксом выше.</p>';
-    return;
+// Сохранение описания для одного вида транспорта
+function saveSingleTransportDesc(val, index) {
+  const descEl = document.getElementById(`how-desc-${index}`);
+  if (!descEl) return;
+  
+  const newDesc = descEl.value;
+  const transport = ALL_TRANSPORTS.find(t => t.val === val);
+  if (transport) {
+    transport.desc = newDesc;
+    
+    // Сохраняем в localStorage
+    const descs = loadState('transportDescs', {});
+    descs[val] = newDesc;
+    saveState('transportDescs', descs);
+    
+    // Сохраняем кастомные транспорты
+    saveState('customTransports', ALL_TRANSPORTS.slice(DEFAULT_TRANSPORTS.length));
+    
+    // Отправляем в Google Sheets если доступно
+    if (typeof saveSettingToSheets === 'function') {
+      saveSettingToSheets('transportDescs', descs);
+    }
+    
+    // Перерисовываем карточки на главной
+    renderHowCards();
+    showToast(`Описание для "${transport.label}" сохранено ✓`);
   }
-  container.innerHTML = actives.map((t, i) => {
-    const imgSrc = t.photo || t.icon || null;
-    return '<div style="background:var(--bg);border-radius:var(--radius-sm);padding:16px;border:1px solid var(--border);">'
-      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
-      + (imgSrc ? '<img src="' + imgSrc + '" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:var(--accent-light);padding:3px;" onerror="imgHide(this)">' : '')
-      + '<span style="font-size:24px;">' + t.emoji + '</span>'
-      + '<strong>' + t.label + '</strong></div>'
-      + '<div class="form-group" style="margin-bottom:0;">'
-      + '<label>Описание карточки на сайте</label>'
-      + '<textarea class="form-textarea" id="how-desc-' + i + '" data-val="' + t.val + '" style="min-height:70px;">' + (t.desc || '') + '</textarea>'
-      + '</div></div>';
-  }).join('');
 }
 
+// Включение/выключение транспорта с перерисовкой блоков
 function toggleTransportEnabled(val, checked) {
-  if (checked) { if (!enabledTransports.includes(val)) enabledTransports.push(val); }
-  else { enabledTransports = enabledTransports.filter(t => t !== val); }
+  if (checked) {
+    if (!enabledTransports.includes(val)) enabledTransports.push(val);
+  } else {
+    enabledTransports = enabledTransports.filter(t => t !== val);
+  }
+  
   saveState('enabledTransports', enabledTransports);
-  renderHowCards();
+  
+  // Обновляем видимость блоков описания
+  const idx = ALL_TRANSPORTS.findIndex(t => t.val === val);
+  if (idx !== -1) {
+    const descBlock = document.getElementById(`transport-desc-block-${idx}`);
+    if (descBlock) {
+      descBlock.style.display = checked ? 'block' : 'none';
+    }
+  }
+  
+  // Обновляем остальные элементы
   updateTransportSelects();
-  renderHowEditorCards();
-  showToast(checked ? 'Транспорт включён' : 'Транспорт выключен');
+  renderHowCards();
+  
+  // Обновляем статус-тег
+  const transportDiv = document.querySelector(`#transport-list input[onclick*="${val}"]`)?.closest('.admin-section') ? 
+    document.querySelector(`#transport-list input[onclick*="${val}"]`)?.closest('div')?.parentElement : null;
+  
+  showToast(checked ? `✅ "${ALL_TRANSPORTS.find(t => t.val === val)?.label}" включён` : `❌ "${ALL_TRANSPORTS.find(t => t.val === val)?.label}" отключён`);
 }
 
+// Сохранение всех описаний сразу (кнопка "Сохранить описания")
+function saveAllTransportDescs() {
+  const descs = loadState('transportDescs', {});
+  
+  ALL_TRANSPORTS.forEach((t, i) => {
+    const descEl = document.getElementById(`how-desc-${i}`);
+    if (descEl && enabledTransports.includes(t.val)) {
+      t.desc = descEl.value;
+      descs[t.val] = descEl.value;
+    }
+  });
+  
+  saveState('transportDescs', descs);
+  saveState('customTransports', ALL_TRANSPORTS.slice(DEFAULT_TRANSPORTS.length));
+  
+  if (typeof saveSettingToSheets === 'function') {
+    saveSettingToSheets('transportDescs', descs);
+    saveSettingToSheets('enabledTransports', enabledTransports);
+  }
+  
+  renderHowCards();
+  showToast('Все описания сохранены ✓');
+}
+
+// Добавление нового вида транспорта
 function addTransportType() {
   const emoji   = document.getElementById('new-transport-emoji').value.trim() || '🚌';
   const label   = document.getElementById('new-transport-label').value.trim();
   const val     = document.getElementById('new-transport-val').value.trim().toLowerCase();
   const iconFile= document.getElementById('new-transport-icon').value.trim();
   const desc    = document.getElementById('new-transport-desc').value.trim();
-  if (!label || !val) { showToast('Укажите название и значение'); return; }
-  if (ALL_TRANSPORTS.find(t => t.val === val)) { showToast('Такой вид транспорта уже есть'); return; }
+  
+  if (!label || !val) { 
+    showToast('Укажите название и значение'); 
+    return; 
+  }
+  
+  if (ALL_TRANSPORTS.find(t => t.val === val)) { 
+    showToast('Такой вид транспорта уже есть'); 
+    return; 
+  }
+  
   const icon = iconFile ? GITHUB_ICONS_BASE + iconFile : null;
+  
   ALL_TRANSPORTS.push({ val, emoji, label, icon, photo: null, desc });
   enabledTransports.push(val);
+  
   saveState('enabledTransports', enabledTransports);
   saveState('customTransports', ALL_TRANSPORTS.slice(DEFAULT_TRANSPORTS.length));
+  
+  // Сохраняем описание
+  const descs = loadState('transportDescs', {});
+  descs[val] = desc;
+  saveState('transportDescs', descs);
+  
   updateTransportSelects();
   renderTransportList();
-  renderHowEditorCards();
   renderHowCards();
-  ['new-transport-emoji','new-transport-label','new-transport-val','new-transport-icon','new-transport-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  
+  // Очищаем форму
+  ['new-transport-emoji','new-transport-label','new-transport-val','new-transport-icon','new-transport-desc'].forEach(id => { 
+    const el = document.getElementById(id); 
+    if (el) el.value = ''; 
+  });
+  
   const prev = document.getElementById('new-transport-icon-preview');
   if (prev) prev.style.display = 'none';
-  showToast('Вид транспорта добавлен ✓');
+  
+  showToast(`✅ Вид транспорта "${label}" добавлен`);
 }
 
+// Удаление вида транспорта
 function removeTransportType(val) {
-  if (!confirm('Удалить вид транспорта «' + val + '»?')) return;
+  const transport = ALL_TRANSPORTS.find(t => t.val === val);
+  if (!transport) return;
+  
+  if (!confirm(`Удалить вид транспорта "${transport.label}"? Это действие нельзя отменить.`)) return;
+  
   const idx = ALL_TRANSPORTS.findIndex(t => t.val === val);
-  if (idx < DEFAULT_TRANSPORTS.length) { showToast('Базовые виды транспорта нельзя удалить'); return; }
+  if (idx < DEFAULT_TRANSPORTS.length) { 
+    showToast('Базовые виды транспорта нельзя удалить'); 
+    return; 
+  }
+  
   ALL_TRANSPORTS.splice(idx, 1);
   enabledTransports = enabledTransports.filter(t => t !== val);
+  
   saveState('enabledTransports', enabledTransports);
   saveState('customTransports', ALL_TRANSPORTS.slice(DEFAULT_TRANSPORTS.length));
+  
+  // Удаляем описание
+  const descs = loadState('transportDescs', {});
+  delete descs[val];
+  saveState('transportDescs', descs);
+  
   updateTransportSelects();
   renderTransportList();
-  renderHowEditorCards();
   renderHowCards();
-  showToast('Вид транспорта удалён');
+  
+  showToast(`❌ Вид транспорта "${transport.label}" удалён`);
 }
 
+// Обновление select'ов в фильтре и форме программы
 function updateTransportSelects() {
   ['f-transport', 'm-transport'].forEach(selId => {
     const sel = document.getElementById(selId);
     if (!sel) return;
+    
     const cur = sel.value;
-    // Keep first option (filter: "Любой")
     const firstOpt = selId === 'f-transport' ? sel.options[0] : null;
+    
     sel.innerHTML = '';
     if (firstOpt) sel.appendChild(firstOpt);
+    
     ALL_TRANSPORTS.filter(t => enabledTransports.includes(t.val)).forEach(t => {
       const o = document.createElement('option');
       o.value = t.val;
       o.textContent = t.emoji + ' ' + t.label;
       sel.appendChild(o);
     });
+    
     if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
   });
 }
 
+// Предпросмотр иконки
 function previewNewTransportIcon(filename) {
   const preview = document.getElementById('new-transport-icon-preview');
   const hint = document.getElementById('new-transport-icon-hint');
+  
   if (!filename || !filename.trim()) {
     if (preview) preview.style.display = 'none';
     if (hint) hint.textContent = 'Введите имя файла — появится предпросмотр';
     return;
   }
+  
   const url = GITHUB_ICONS_BASE + filename.trim();
   if (preview) {
     preview.src = url;
     preview.style.display = 'block';
-    preview.onerror = () => { preview.style.display = 'none'; if (hint) { hint.textContent = '⚠️ Файл не найден: ' + url; hint.style.color = '#C0392B'; } };
-    preview.onload  = () => { if (hint) { hint.textContent = '✓ Иконка найдена'; hint.style.color = 'var(--accent)'; } };
+    preview.onerror = () => { 
+      preview.style.display = 'none'; 
+      if (hint) { 
+        hint.textContent = '⚠️ Файл не найден: ' + url; 
+        hint.style.color = '#C0392B'; 
+      } 
+    };
+    preview.onload = () => { 
+      if (hint) { 
+        hint.textContent = '✓ Иконка найдена'; 
+        hint.style.color = 'var(--accent)'; 
+      } 
+    };
   }
+}
+
+// Загрузка раздела "Как мы путешествуем" в админке
+function loadHowAdmin() {
+  renderTransportList();
 }
 
 
