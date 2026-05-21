@@ -1059,8 +1059,7 @@ let sheetsInitialized = false;
 async function initSheetsSync() {
   if (sheetsInitialized) return;
   
-  // ПРОВЕРКА: если GAS_URL не задан или равен пустой строке или заглушке
-  if (!GAS_URL || GAS_URL === '' || GAS_URL.includes('ВСТАВЬТЕ') || GAS_URL === 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') {
+  if (!GAS_URL || GAS_URL === '' || GAS_URL.includes('ВСТАВЬТЕ')) {
     console.log('Google Sheets не настроен, работаем только с localStorage');
     return;
   }
@@ -1116,131 +1115,223 @@ async function uploadImage(file, folder) {
 
 function gasGet(params) {
   return new Promise((resolve, reject) => {
-    const cbName = '_gasCallback_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-    const timeout = setTimeout(() => { delete window[cbName]; reject(new Error('GAS timeout')); }, 12000);
-    window[cbName] = function(data) { clearTimeout(timeout); delete window[cbName]; resolve(data); };
-    const qs = Object.entries({ ...params, callback: cbName }).map(([k,v]) => encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
-    const s = document.createElement('script');
-    s.src = GAS_URL + '?' + qs;
-    s.onerror = () => { clearTimeout(timeout); delete window[cbName]; reject(new Error('Script load error')); };
-    document.head.appendChild(s);
+    const callbackName = '_gasCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+    const timeout = setTimeout(() => {
+      delete window[callbackName];
+      const script = document.querySelector(`script[src*="${callbackName}"]`);
+      if (script) script.remove();
+      reject(new Error('Google Sheets timeout'));
+    }, 15000);
+
+    window[callbackName] = function(data) {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      const script = document.querySelector(`script[src*="${callbackName}"]`);
+      if (script) script.remove();
+      resolve(data);
+    };
+
+    const queryParams = new URLSearchParams({
+      ...params,
+      callback: callbackName,
+      t: Date.now()
+    });
+
+    const script = document.createElement('script');
+    script.src = `${GAS_URL}?${queryParams.toString()}`;
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      reject(new Error('Failed to load script'));
+    };
+    document.head.appendChild(script);
   });
 }
 
+// POST запрос с использованием изображения или form (для обхода CORS)
 async function gasPost(body) {
-  try {
-    await fetch(GAS_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    return { ok: true };
-  } catch(e) { return { ok: false }; }
+  return new Promise((resolve) => {
+    // Используем отправку через form с target="hidden-iframe"
+    const iframeId = 'gas_iframe_' + Date.now();
+    const formId = 'gas_form_' + Date.now();
+    
+    const iframe = document.createElement('iframe');
+    iframe.name = iframeId;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = GAS_URL;
+    form.target = iframeId;
+    form.style.display = 'none';
+    
+    const dataField = document.createElement('input');
+    dataField.type = 'hidden';
+    dataField.name = 'data';
+    dataField.value = JSON.stringify(body);
+    form.appendChild(dataField);
+    
+    document.body.appendChild(form);
+    
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.remove();
+        form.remove();
+        resolve({ ok: true });
+      }, 100);
+    };
+    
+    form.submit();
+  });
 }
 
-async function saveProgramToSheets(data) {
-  const payload = { ...data, tags: JSON.stringify(data.tags||[]), includes: JSON.stringify(data.includes||[]), featured: data.featured ? 'TRUE' : 'FALSE' };
-  await gasPost({ action:'upsert', sheet:'programs', data: payload });
+// Сохранение программы в Google Sheets
+async function saveProgramToSheets(program) {
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return false;
+  
+  const payload = {
+    ...program,
+    tags: JSON.stringify(program.tags || []),
+    includes: JSON.stringify(program.includes || []),
+    featured: program.featured ? 'TRUE' : 'FALSE'
+  };
+  
+  try {
+    await gasPost({ action: 'upsert', sheet: 'programs', data: payload });
+    console.log('Program saved to Sheets:', program.id);
+    return true;
+  } catch(e) {
+    console.warn('Failed to save program to Sheets:', e);
+    return false;
+  }
 }
 async function deleteProgramFromSheets(id) { await gasPost({ action:'delete', sheet:'programs', id }); }
 async function saveLeadToSheets(data) { await gasPost({ action:'upsert', sheet:'leads', data }); }
-async function saveSettingToSheets(key, value) { await gasPost({ action:'saveSetting', sheet:'settings', data:{ key, value } }); }
+// Сохранение настройки в Google Sheets
+async function saveSettingToSheets(key, value) {
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return false;
+  
+  const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+  
+  try {
+    await gasPost({ action: 'saveSetting', sheet: 'settings', data: { key, value: stringValue } });
+    console.log('Setting saved to Sheets:', key);
+    return true;
+  } catch(e) {
+    console.warn('Failed to save setting to Sheets:', e);
+    return false;
+  }
+}
 
+// Вспомогательная функция нормализации программы
 function normalizeProgram(p) {
   return {
-    id: parseInt(p.id)||p.id, name:p.name||'', season:p.season||'лето', transport:p.transport||'самолёт',
-    days:parseInt(p.days)||7, maxPeople:parseInt(p.maxPeople)||10, price:parseInt(p.price)||0,
-    country:p.country||'', photo:p.photo||'', shortDesc:p.shortDesc||'', fullDesc:p.fullDesc||'',
-    tags: Array.isArray(p.tags) ? p.tags : (typeof p.tags==='string' ? JSON.parse(p.tags||'[]') : []),
-    includes: Array.isArray(p.includes) ? p.includes : (typeof p.includes==='string' ? JSON.parse(p.includes||'[]') : []),
-    featured: p.featured===true||p.featured==='TRUE'||p.featured==='true',
+    id: parseInt(p.id) || p.id,
+    name: p.name || '',
+    season: p.season || 'лето',
+    transport: p.transport || 'самолёт',
+    days: parseInt(p.days) || 7,
+    maxPeople: parseInt(p.maxPeople) || 10,
+    price: parseInt(p.price) || 0,
+    country: p.country || '',
+    photo: p.photo || '',
+    shortDesc: p.shortDesc || '',
+    fullDesc: p.fullDesc || '',
+    tags: Array.isArray(p.tags) ? p.tags : (typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : []),
+    includes: Array.isArray(p.includes) ? p.includes : (typeof p.includes === 'string' ? JSON.parse(p.includes || '[]') : []),
+    featured: p.featured === true || p.featured === 'TRUE' || p.featured === 'true',
+    createdAt: p.createdAt || ''
   };
 }
 
   
 // Загрузка данных из Google Sheets при старте (получает актуальные фото)
 async function loadAllFromSheets() {
-  // Проверка что URL корректен (не заглушка)
-  if (!GAS_URL || GAS_URL === '' || GAS_URL.includes('ВСТАВЬТЕ') || GAS_URL === 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') {
-    console.log('Google Sheets URL не настроен');
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) {
+    console.log('Google Sheets не настроен');
     return;
   }
   
-  showToast('Синхронизация данных...');
+  showToast('Синхронизация...');
+  
   try {
     const result = await gasGet({ action: 'readAll' });
-    if (!result || !result.ok) throw new Error(result && result.error ? result.error : 'No response');
+    
+    if (!result || !result.ok) {
+      throw new Error(result?.error || 'Ошибка загрузки');
+    }
     
     const d = result.data || {};
     
-    // Загружаем программы с фото
+    // Загружаем программы
     if (d.programs && d.programs.length > 0) {
-      programs = d.programs.map(p => ({
-        id: parseInt(p.id) || p.id,
-        name: p.name || '',
-        season: p.season || 'лето',
-        transport: p.transport || 'самолёт',
-        days: parseInt(p.days) || 7,
-        maxPeople: parseInt(p.maxPeople) || 10,
-        price: parseInt(p.price) || 0,
-        country: p.country || '',
-        photo: p.photo || '',
-        shortDesc: p.shortDesc || '',
-        fullDesc: p.fullDesc || '',
-        tags: Array.isArray(p.tags) ? p.tags : (typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : []),
-        includes: Array.isArray(p.includes) ? p.includes : (typeof p.includes === 'string' ? JSON.parse(p.includes || '[]') : []),
-        featured: p.featured === true || p.featured === 'TRUE' || p.featured === 'true',
-        createdAt: p.createdAt || ''
-      }));
+      programs = d.programs.map(normalizeProgram);
       saveState('programs', programs);
+      console.log(`Загружено ${programs.length} программ`);
     }
     
-    // Загружаем галерею с фото
+    // Загружаем галерею
     if (d.gallery && d.gallery.length > 0) {
       gallery = d.gallery;
       saveState('gallery', gallery);
+      console.log(`Загружено ${gallery.length} фото`);
     }
     
     // Загружаем заявки
-    if (d.leads) {
+    if (d.leads && d.leads.length > 0) {
       leads = d.leads;
       saveState('leads', leads);
+      console.log(`Загружено ${leads.length} заявок`);
     }
     
     // Загружаем настройки
     if (d.settings && d.settings.length > 0) {
-      d.settings.forEach(s => {
+      for (const s of d.settings) {
         if (s.key === 'inviteCode') {
           inviteCodeSetting = s.value;
           saveState('inviteCode', s.value);
+          if (document.getElementById('hint-invite-code')) {
+            document.getElementById('hint-invite-code').textContent = s.value;
+          }
+          if (document.getElementById('current-invite-code')) {
+            document.getElementById('current-invite-code').textContent = s.value;
+          }
         }
         if (s.key === 'founderContent') {
           try {
-            founderContent = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+            const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+            founderContent = { ...founderContent, ...parsed };
             saveState('founderContent', founderContent);
           } catch(e) {}
         }
         if (s.key === 'contactsContent') {
           try {
-            contactsContent = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+            const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+            contactsContent = { ...contactsContent, ...parsed };
             saveState('contactsContent', contactsContent);
           } catch(e) {}
         }
         if (s.key === 'enabledTransports') {
           try {
-            enabledTransports = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+            const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+            enabledTransports = parsed;
             saveState('enabledTransports', enabledTransports);
           } catch(e) {}
         }
         if (s.key === 'transportDescs') {
           try {
             const descs = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
-            ALL_TRANSPORTS.forEach(t => {
+            for (const t of ALL_TRANSPORTS) {
               if (descs[t.val] !== undefined) t.desc = descs[t.val];
-            });
+            }
             saveState('transportDescs', descs);
           } catch(e) {}
         }
-      });
+      }
     }
     
-    // Перерисовываем всё с новыми данными
+    // Обновляем интерфейс
     renderPrograms(programs);
     renderGallery();
     renderHowCards();
@@ -1249,14 +1340,11 @@ async function loadAllFromSheets() {
     applyContactsContent();
     updateTransportSelects();
     
-    if (document.getElementById('hint-invite-code')) {
-      document.getElementById('hint-invite-code').textContent = inviteCodeSetting;
-    }
-    
-    showToast('Данные загружены ✓');
+    showToast('Данные синхронизированы ✓');
+    console.log('Google Sheets sync completed successfully');
     
   } catch(e) {
-    console.warn('Sheets sync error:', e);
+    console.warn('Sync error:', e);
     showToast('Офлайн-режим (данные из кэша)');
   }
 }
