@@ -1360,9 +1360,10 @@ function openLeadModal(leadId) {
   const lead = leads.find(l => l.id === leadId);
   if (!lead) return;
   
-  const isPhone = /^[\d\s\(\)\+\-]{7,}$/.test(lead.contact);
-  const isEmail = lead.contact.includes('@');
-  const tgMatch = lead.contact.match(/@[\w]+/);
+  const contactStr = String(lead.contact || '');
+  const isPhone = /^[\d\s\(\)\+\-]{7,}$/.test(contactStr);
+  const isEmail = contactStr.includes('@');
+  const tgMatch = contactStr.match(/@[\w]+/);
   
   const modalContent = document.getElementById('lead-modal-content');
   modalContent.innerHTML = `
@@ -2025,11 +2026,11 @@ function buildGroupForm(g) {
       </div>
       <div class="form-group">
         <label>Дата начала</label>
-        <input type="date" class="form-input" id="gm-start" value="${g.startDate || ''}">
+        <input type="date" class="form-input" id="gm-start" value="${g.startDate || ''}" onchange="autoFillEndDate()">
       </div>
       <div class="form-group">
-        <label>Дата окончания</label>
-        <input type="date" class="form-input" id="gm-end" value="${g.endDate || ''}">
+        <label>Дата окончания <span id="gm-end-hint" style="font-weight:400;color:var(--accent);font-size:11px;"></span></label>
+        <input type="date" class="form-input" id="gm-end" value="${g.endDate || ''}" onchange="this.dataset.auto='0'">
       </div>
       <div class="form-group">
         <label>Макс. участников</label>
@@ -2059,7 +2060,26 @@ function updateGroupMaxPeople() {
   const prog = programs.find(p => p.id === parseInt(sel.value));
   if (!prog) return;
   if (maxEl && !maxEl.value) maxEl.value = prog.maxPeople;
-  if (hint) hint.textContent = `В программе указано макс. ${prog.maxPeople} участников`;
+  if (hint) hint.textContent = `Макс. ${prog.maxPeople} участников · ${prog.days} дней`;
+  autoFillEndDate();
+}
+
+function autoFillEndDate() {
+  const startEl = document.getElementById('gm-start');
+  const endEl = document.getElementById('gm-end');
+  const hintEl = document.getElementById('gm-end-hint');
+  const sel = document.getElementById('gm-program');
+  if (!startEl || !startEl.value) return;
+  const prog = sel && sel.value ? programs.find(p => p.id === parseInt(sel.value)) : null;
+  if (!prog || !prog.days) return;
+  const start = new Date(startEl.value);
+  start.setDate(start.getDate() + prog.days - 1);
+  const endStr = start.toISOString().slice(0, 10);
+  if (endEl && (!endEl.value || endEl.dataset.auto === '1')) {
+    endEl.value = endStr;
+    endEl.dataset.auto = '1';
+  }
+  if (hintEl) hintEl.textContent = '↑ авто (' + prog.days + ' дн. из программы)';
 }
 
 function saveGroup() {
