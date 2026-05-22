@@ -465,7 +465,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 </div><div class="gallery-grid" id="user-gallery"></div></div></div></div></div></div>
 
 <!-- ===== АДМИНИСТРАТИВНАЯ ПАНЕЛЬ ===== -->
-<div id="page-admin" class="hidden admin-panel"><div class="admin-layout"><aside class="admin-sidebar"><div class="admin-sidebar-logo">⚙ Управление</div><div class="admin-nav-item active" onclick="switchAdmin('dashboard')"><span class="admin-nav-icon">📊</span> Дашборд</div><div class="admin-nav-item" onclick="switchAdmin('programs')"><span class="admin-nav-icon">🗺</span> Программы</div><div class="admin-nav-item" onclick="switchAdmin('users')"><span class="admin-nav-icon">👥</span> Пользователи</div><div class="admin-nav-item" onclick="switchAdmin('leads')"><span class="admin-nav-icon">📩</span> Заявки</div><div class="admin-nav-item" onclick="switchAdmin('settings')"><span class="admin-nav-icon">⚙️</span> Настройки</div><div class="admin-nav-item" onclick="switchAdmin('founder')"><span class="admin-nav-icon">👤</span> Об основателе</div><div class="admin-nav-item" onclick="switchAdmin('howto')"><span class="admin-nav-icon">🚂</span> Как мы ездим</div><div class="admin-nav-item" onclick="switchAdmin('contacts')"><span class="admin-nav-icon">📞</span> Контакты</div><div class="admin-nav-item" onclick="showPage('home')" style="margin-top:32px;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;"><span class="admin-nav-icon">🏠</span> На сайт</div></aside><main class="admin-main"><div class="admin-section active" id="admin-dashboard"><div class="admin-page-title">Дашборд</div><div class="admin-page-sub">Сводная статистика по сайту</div><div class="stats-grid" id="stats-grid"></div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:28px;"><h3 style="font-family:var(--font-family);font-size:22px;font-weight:500;margin-bottom:22px;">Выручка по месяцам</h3><div class="revenue-grid" id="revenue-chart"></div></div></div><div class="admin-section" id="admin-programs"><div class="admin-page-title">Программы</div><div class="admin-page-sub">Управление маршрутами путешествий</div><div class="admin-bar-top"><button class="btn btn-primary" onclick="openAddProgram()">+ Добавить программу</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Фото</th><th>Название</th><th>Сезон</th><th>Транспорт</th><th>Дней</th><th>Цена</th><th>Действия</th></tr></thead><tbody id="programs-tbody"></tbody></table></div></div><div class="admin-section" id="admin-users"><div class="admin-page-title">Пользователи</div><div class="admin-page-sub">Список зарегистрированных участников</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Логин</th><th>Роль</th><th>Путешествий</th><th>Скидка (%)</th><th>Действия</th></tr></thead><tbody id="users-tbody"></tbody></table></div></div><div class="admin-section" id="admin-leads"><div class="admin-page-title">Заявки</div><div class="admin-page-sub">Входящие запросы с сайта</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Контакт</th><th>Сообщение</th><th>Дата</th></tr></thead><tbody id="leads-tbody"></tbody></table></div></div><div class="admin-section" id="admin-settings"><div class="admin-page-title">Настройки сайта</div><div class="admin-page-sub">Управление кодом приглашения</div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><div class="form-group"><label>Код приглашения для регистрации</label><input type="text" class="form-input" id="invite-code" placeholder="VPUTI2026"><button class="btn btn-primary" style="margin-top:10px;" onclick="saveInviteCode()">Сохранить код</button><p class="auth-hint" style="margin-top:10px;">Текущий код: <span id="current-invite-code">VPUTI2026</span></p></div></div></div><div class="admin-section" id="admin-founder"><div class="admin-page-title">Об основателе клуба</div><div class="admin-page-sub">Редактирование раздела «Основатель клуба» на главной странице</div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><div class="form-group"><label>Имя (заголовок)</label><input type="text" class="form-input" id="founder-admin-name" placeholder="Марина Пищальникова"></div><div class="form-group"><label>Годы опыта (число с +)</label><input type="text" class="form-input" id="founder-admin-years" placeholder="7+"></div><div class="form-group"><label>Фото основателя (URL или загрузите)</label><div class="photo-upload-area" onclick="document.getElementById('founder-photo-input').click()"><span>📸 Нажмите, чтобы выбрать фото</span><input type="file" id="founder-photo-input" accept="image/*" style="display:none"></div><img id="founder-photo-preview" class="photo-preview" style="display:none; max-width:200px;"><input type="hidden" id="founder-photo-url" value=""></div><div class="form-group"><label>Основной текст (первый абзац)</label><textarea class="form-textarea" id="founder-admin-bio1" style="min-height:100px;"></textarea></div><div class="form-group"><label>Второй абзац</label><textarea class="form-textarea" id="founder-admin-bio2" style="min-height:100px;"></textarea></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;"><div><div class="form-group"><label>Ценность 1 — Заголовок</label><input type="text" class="form-input" id="val1-title"></div><div class="form-group"><label>Ценность 1 — Текст</label><input type="text" class="form-input" id="val1-text"></div></div><div><div class="form-group"><label>Ценность 2 — Заголовок</label><input type="text" class="form-input" id="val2-title"></div><div class="form-group"><label>Ценность 2 — Текст</label><input type="text" class="form-input" id="val2-text"></div></div><div><div class="form-group"><label>Ценность 3 — Заголовок</label><input type="text" class="form-input" id="val3-title"></div><div class="form-group"><label>Ценность 3 — Текст</label><input type="text" class="form-input" id="val3-text"></div></div></div><button class="btn btn-primary" onclick="saveFounderContent()">Сохранить и применить</button></div></div><div class="admin-section" id="admin-howto">
+<div id="page-admin" class="hidden admin-panel"><div class="admin-layout"><aside class="admin-sidebar"><div class="admin-sidebar-logo">⚙ Управление</div><div class="admin-nav-item active" onclick="switchAdmin('dashboard')"><span class="admin-nav-icon">📊</span> Дашборд</div><div class="admin-nav-item" onclick="switchAdmin('programs')"><span class="admin-nav-icon">🗺</span> Программы</div><div class="admin-nav-item" onclick="switchAdmin('users')"><span class="admin-nav-icon">👥</span> Пользователи</div><div class="admin-nav-item" onclick="switchAdmin('leads')"><span class="admin-nav-icon">📩</span> Заявки</div><div class="admin-nav-item" onclick="switchAdmin('settings')"><span class="admin-nav-icon">⚙️</span> Настройки</div><div class="admin-nav-item" onclick="switchAdmin('founder')"><span class="admin-nav-icon">👤</span> Об основателе</div><div class="admin-nav-item" onclick="switchAdmin('howto')"><span class="admin-nav-icon">🚂</span> Как мы ездим</div><div class="admin-nav-item" onclick="switchAdmin('contacts')"><span class="admin-nav-icon">📞</span> Контакты</div><div class="admin-nav-item" onclick="showPage('home')" style="margin-top:32px;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;"><span class="admin-nav-icon">🏠</span> На сайт</div></aside><main class="admin-main"><div class="admin-section active" id="admin-dashboard"><div class="admin-page-title">Дашборд</div><div class="admin-page-sub">Сводная статистика по сайту</div><div class="stats-grid" id="stats-grid"></div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:28px;"><h3 style="font-family:var(--font-family);font-size:22px;font-weight:500;margin-bottom:22px;">Выручка по месяцам</h3><div class="revenue-grid" id="revenue-chart"></div></div></div><div class="admin-section" id="admin-programs"><div class="admin-page-title">Программы</div><div class="admin-page-sub">Управление маршрутами путешествий</div><div class="admin-bar-top"><button class="btn btn-primary" onclick="openAddProgram()">+ Добавить программу</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Фото</th><th>Название</th><th>Сезон</th><th>Транспорт</th><th>Дней</th><th>Цена</th><th>Действия</th></tr></thead><tbody id="programs-tbody"></tbody></table></div></div><div class="admin-section" id="admin-users"><div class="admin-page-title">Пользователи</div><div class="admin-page-sub">Список зарегистрированных участников</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Логин</th><th>Роль</th><th>Путешествий</th><th>Скидка (%)</th><th>Действия</th></tr></thead><tbody id="users-tbody"></tbody></table></div></div><div class="admin-section" id="admin-leads"><div class="admin-page-title">Заявки</div><div class="admin-page-sub">Входящие запросы с сайта — нажмите на строку для действий</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Контакт</th><th>Сообщение</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="leads-tbody"></tbody></table></div></div><div class="admin-section" id="admin-settings"><div class="admin-page-title">Настройки сайта</div><div class="admin-page-sub">Управление кодом приглашения</div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><div class="form-group"><label>Код приглашения для регистрации</label><input type="text" class="form-input" id="invite-code" placeholder="VPUTI2026"><button class="btn btn-primary" style="margin-top:10px;" onclick="saveInviteCode()">Сохранить код</button><p class="auth-hint" style="margin-top:10px;">Текущий код: <span id="current-invite-code">VPUTI2026</span></p></div></div></div><div class="admin-section" id="admin-founder"><div class="admin-page-title">Об основателе клуба</div><div class="admin-page-sub">Редактирование раздела «Основатель клуба» на главной странице</div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><div class="form-group"><label>Имя (заголовок)</label><input type="text" class="form-input" id="founder-admin-name" placeholder="Марина Пищальникова"></div><div class="form-group"><label>Годы опыта (число с +)</label><input type="text" class="form-input" id="founder-admin-years" placeholder="7+"></div><div class="form-group"><label>Фото основателя (URL или загрузите)</label><div class="photo-upload-area" onclick="document.getElementById('founder-photo-input').click()"><span>📸 Нажмите, чтобы выбрать фото</span><input type="file" id="founder-photo-input" accept="image/*" style="display:none"></div><img id="founder-photo-preview" class="photo-preview" style="display:none; max-width:200px;"><input type="hidden" id="founder-photo-url" value=""></div><div class="form-group"><label>Основной текст (первый абзац)</label><textarea class="form-textarea" id="founder-admin-bio1" style="min-height:100px;"></textarea></div><div class="form-group"><label>Второй абзац</label><textarea class="form-textarea" id="founder-admin-bio2" style="min-height:100px;"></textarea></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;"><div><div class="form-group"><label>Ценность 1 — Заголовок</label><input type="text" class="form-input" id="val1-title"></div><div class="form-group"><label>Ценность 1 — Текст</label><input type="text" class="form-input" id="val1-text"></div></div><div><div class="form-group"><label>Ценность 2 — Заголовок</label><input type="text" class="form-input" id="val2-title"></div><div class="form-group"><label>Ценность 2 — Текст</label><input type="text" class="form-input" id="val2-text"></div></div><div><div class="form-group"><label>Ценность 3 — Заголовок</label><input type="text" class="form-input" id="val3-title"></div><div class="form-group"><label>Ценность 3 — Текст</label><input type="text" class="form-input" id="val3-text"></div></div></div><button class="btn btn-primary" onclick="saveFounderContent()">Сохранить и применить</button></div></div><div class="admin-section" id="admin-howto">
   <div class="admin-page-title">Как мы путешествуем</div>
   <div class="admin-page-sub">Управление видами транспорта: включение/отключение, иконки, описания карточек</div>
 
@@ -525,6 +525,17 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 <div class="modal-overlay" id="program-modal"><div class="modal"><div class="modal-header"><h2 class="modal-title" id="modal-program-title">Добавить программу</h2><button class="modal-close" onclick="closeModal('program-modal')">✕</button></div><div class="modal-grid"><div class="form-group full"><label>Фото программы</label><div class="photo-upload-area" onclick="document.getElementById('program-photo-input').click()"><span>📸 Нажмите, чтобы выбрать фото</span><input type="file" id="program-photo-input" accept="image/*" style="display:none" onchange="previewProgramPhoto(event)"></div><img id="program-photo-preview" class="photo-preview" style="display:none;"><input type="hidden" id="m-photo" value=""></div><div class="form-group full"><label>Название программы</label><input type="text" class="form-input" id="m-name" placeholder="Алтай: путь к Белухе"></div><div class="form-group"><label>Сезон</label><select class="filter-select" id="m-season"><option value="весна">Весна</option><option value="лето">Лето</option><option value="осень">Осень</option><option value="зима">Зима</option></select></div><div class="form-group"><label>Транспорт</label><select class="filter-select" id="m-transport"><option value="поезд">Поезд</option><option value="самолёт">Самолёт</option><option value="авто">Авто</option></select></div><div class="form-group"><label>Длительность (дней)</label><input type="number" class="form-input" id="m-days" placeholder="7"></div><div class="form-group"><label>Макс. участников</label><input type="number" class="form-input" id="m-max-people" placeholder="10"></div><div class="form-group"><label>Цена (₽)</label><input type="number" class="form-input" id="m-price" placeholder="65000"></div><div class="form-group"><label>Страна/регион</label><input type="text" class="form-input" id="m-country" placeholder="Россия, Алтай"></div><div class="form-group full"><label>Краткое описание</label><input type="text" class="form-input" id="m-short-desc" placeholder="Суть программы одним предложением"></div><div class="form-group full"><label>Полное описание</label><textarea class="form-textarea" id="m-full-desc" placeholder="Подробный рассказ о маршруте..."></textarea></div><div class="form-group full"><label>Теги (через запятую)</label><input type="text" class="form-input" id="m-tags" placeholder="горы, лес, активный"></div><div class="form-group full"><label>Что включено (каждый пункт с новой строки)</label><textarea class="form-textarea" id="m-includes" placeholder="Трансфер из аэропорта&#10;Проживание в гестхаусах&#10;Все завтраки и ужины"></textarea></div><div class="form-group full"><label class="checkbox-label" id="featured-label" onclick="toggleFeaturedLabel()"><input type="checkbox" id="m-featured"> ⭐ Показывать на главной странице (карусель «Избранные»)</label></div></div><div style="display:flex;justify-content:flex-end;gap:10px;margin-top:22px;"><button class="btn btn-outline" onclick="closeModal('program-modal')">Отмена</button><button class="btn btn-primary" onclick="saveProgram()">Сохранить программу</button></div></div></div>
 <div class="modal-overlay" id="user-stats-modal"><div class="modal"><div class="modal-header"><h2 class="modal-title">Статистика участника</h2><button class="modal-close" onclick="closeModal('user-stats-modal')">✕</button></div><div id="user-stats-content"></div></div></div>
 <div class="modal-overlay" id="revenue-detail-modal"><div class="modal"><div class="modal-header"><h2 class="modal-title" id="revenue-modal-title">Детали выручки</h2><button class="modal-close" onclick="closeModal('revenue-detail-modal')">✕</button></div><div id="revenue-detail-content"></div></div></div>
+
+<!-- ===== МОДАЛ ЗАЯВКИ ===== -->
+<div class="modal-overlay" id="lead-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h2 class="modal-title">Заявка</h2>
+      <button class="modal-close" onclick="closeModal('lead-modal')">✕</button>
+    </div>
+    <div id="lead-modal-content"></div>
+  </div>
+</div>
 <div class="auth-overlay" id="auth-overlay"><div class="auth-box"><div class="auth-logo"><p>ВПУТЕШЕСТВИЕВМЕСТЕ</p><span>Войдите, чтобы получить доступ к сообществу</span></div><div class="auth-tabs"><button class="auth-tab active" onclick="switchAuthTab('login')">Войти</button><button class="auth-tab" onclick="switchAuthTab('register')">Регистрация</button></div><div class="auth-form active" id="auth-login"><div class="auth-error" id="login-error">Неверный логин или пароль</div><div class="form-group"><label>Логин</label><input type="text" class="form-input" id="login-username" placeholder="marina"></div><div class="form-group"><label>Пароль</label><input type="password" class="form-input" id="login-password" placeholder="••••••"></div><button class="btn btn-primary auth-btn" onclick="doLogin()">Войти</button><div style="text-align:center; margin-top:10px;"><a href="#" onclick="showResetPassword()" style="font-size:12px; color:var(--accent2);">Забыли пароль?</a></div><div class="auth-hint">Тест: marina / owner — admin / admin — user / user</div></div><div class="auth-form" id="auth-register"><div class="auth-error" id="register-error"></div><div class="form-group"><label>Имя</label><input type="text" class="form-input" id="reg-name" placeholder="Иван Иванов"></div><div class="form-group"><label>Логин</label><input type="text" class="form-input" id="reg-username" placeholder="ivan_travels"></div><div class="form-group"><label>Email</label><input type="email" class="form-input" id="reg-email" placeholder="ivan@mail.ru"></div><div class="form-group"><label>Пароль</label><input type="password" class="form-input" id="reg-password" placeholder="••••••"></div><div class="form-group"><label>Код приглашения</label><input type="text" class="form-input" id="reg-invite" placeholder="Код от Марины"></div><button class="btn btn-primary auth-btn" onclick="doRegister()">Зарегистрироваться</button><div class="auth-hint">Код для теста: <span id="hint-invite-code">VPUTI2026</span></div></div><div style="text-align:center;margin-top:14px;"><button class="btn btn-outline btn-sm" onclick="closeAuth()">Закрыть</button></div></div></div>
 <div id="toast"></div>
 
@@ -938,7 +949,7 @@ function loadAdminUsers(isOwner) {
 }
 function updateUserDiscount(userId, discount) { const u = users.find(x=>x.id===userId); if (!u) return; u.discount = parseInt(discount) || 0; saveState('users', users); showToast('Скидка обновлена'); }
 function changeUserRole(userId, newRole) { const u = users.find(x=>x.id===userId); if (!u) return; u.role = newRole; saveState('users', users); if (currentUser && currentUser.id === userId) { currentUser.role = newRole; updateNavForUser(); } showToast(`Роль пользователя изменена`); }
-function loadAdminLeads() { document.getElementById('leads-tbody').innerHTML = leads.map(l => `<tr><td><strong>${l.name}</strong></td><td style="color:var(--text-muted);">${l.contact}</td><td>${l.message}</td><td style="color:var(--text-muted);white-space:nowrap;">${l.date}</td></tr>`).join(''); }
+function loadAdminLeads() { document.getElementById('leads-tbody').innerHTML = leads.map(l => `<tr style="cursor:pointer;" onclick="openLeadModal(${l.id})" title="Нажмите для действий"><td><strong>${l.name}</strong></td><td style="color:var(--accent);">${l.contact}</td><td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.message || '—'}</td><td style="color:var(--text-muted);white-space:nowrap;">${l.date}</td><td><button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();openLeadModal(${l.id})">Открыть →</button></td></tr>`).join(''); }
 function loadRevenueChart() { const months = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек']; const byMonth = Array(12).fill(0); purchases.forEach(p => { const m = new Date(p.date).getMonth(); byMonth[m] += p.price; }); const maxVal = Math.max(...byMonth) || 1; document.getElementById('revenue-chart').innerHTML = months.map((m,i) => { const h = Math.round((byMonth[i]/maxVal)*110) + 4; const k = byMonth[i] > 0 ? (byMonth[i]/1000).toFixed(0)+'к' : '—'; return `<div class="rev-bar-wrap" onclick="showRevenueDetails(${i})"><div class="rev-bar" style="height:${h}px;"></div><div class="rev-month">${m}</div><div class="rev-amount">${k}</div></div>`; }).join(''); }
 function showRevenueDetails(monthIndex) { const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']; const monthPurchases = purchases.filter(p => new Date(p.date).getMonth() === monthIndex); if (monthPurchases.length === 0) { document.getElementById('revenue-detail-content').innerHTML = '<p style="color:var(--text-muted);">Нет покупок за этот месяц</p>'; openModal('revenue-detail-modal'); return; } const details = monthPurchases.map(pu => { const user = users.find(u => u.id === pu.userId); const prog = programs.find(p => p.id === pu.programId); return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><div><div style="font-weight:600;">${user ? user.name : 'Пользователь'}</div><div style="font-size:12px;color:var(--text-muted);">${prog ? prog.name : 'Программа'}</div></div><div style="font-weight:600;color:var(--accent2);">${pu.price.toLocaleString('ru')} ₽</div></div>`; }).join(''); document.getElementById('revenue-detail-content').innerHTML = `<h3 style="font-family:var(--font-family);font-size:20px;margin-bottom:15px;">${months[monthIndex]} ${new Date().getFullYear()}</h3>${details}<div style="margin-top:15px;padding-top:10px;border-top:2px solid var(--accent);display:flex;justify-content:space-between;font-weight:700;"><span>Итого:</span><span>${monthPurchases.reduce((s,p)=>s+p.price,0).toLocaleString('ru')} ₽</span></div>`; openModal('revenue-detail-modal'); }
 function showUserStats(userId) { const u = users.find(x=>x.id===userId); const userPurchases = purchases.filter(p=>p.userId===userId); const total = userPurchases.reduce((s,p)=>s+p.price,0); document.getElementById('user-stats-content').innerHTML = `<div style="margin-bottom:18px;display:flex;align-items:center;gap:14px;"><div class="user-avatar" style="width:52px;height:52px;font-size:22px;">${u.name[0]}</div><div><div style="font-size:20px;font-family:var(--font-family);font-weight:500;">${u.name}</div><div style="font-size:13px;color:var(--text-muted);">${u.email}</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;"><div class="stat-card"><div class="stat-label">Путешествий</div><div class="stat-value" style="font-size:32px;">${userPurchases.length}</div></div><div class="stat-card"><div class="stat-label">Потрачено</div><div class="stat-value" style="font-size:32px;">${(total/1000).toFixed(0)}к ₽</div></div></div><h4 style="font-family:var(--font-family);font-size:20px;font-weight:500;margin-bottom:10px;">История покупок</h4>${userPurchases.length === 0 ? '<p style="color:var(--text-muted);">Пока нет покупок.</p>' : userPurchases.map(pu => { const prog = programs.find(p=>p.id===pu.programId); return `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><div><div style="font-weight:600;">${prog?prog.name:'—'}</div><div style="font-size:12px;color:var(--text-muted);">${pu.date}</div></div><div style="font-family:var(--font-family);font-size:19px;font-weight:600;color:var(--accent2);">${pu.price.toLocaleString('ru')} ₽</div></div>`; }).join('')}`; openModal('user-stats-modal'); }
@@ -1099,7 +1110,23 @@ function initEnterHandlers() { const loginFields = ['login-username', 'login-pas
 // === ОБРАБОТЧИК ЗАГРУЗКИ ФОТО ОСНОВАТЕЛЯ =====================
 // ============================================================
 const founderPhotoInput = document.getElementById('founder-photo-input');
-if (founderPhotoInput) { founderPhotoInput.onchange = function(event) { const file = event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = function(e) { const preview = document.getElementById('founder-photo-preview'); preview.src = e.target.result; preview.style.display = 'block'; document.getElementById('founder-photo-url').value = e.target.result; }; reader.readAsDataURL(file); } }; }
+if (founderPhotoInput) {
+  founderPhotoInput.onchange = async function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    showToast('Загрузка фото основателя...');
+    try {
+      const url = await uploadImage(file, 'founder');
+      const preview = document.getElementById('founder-photo-preview');
+      preview.src = url;
+      preview.style.display = 'block';
+      document.getElementById('founder-photo-url').value = url;
+      showToast('Фото основателя загружено ✓');
+    } catch(e) {
+      showToast('Ошибка загрузки: ' + e.message);
+    }
+  };
+}
 
 // ============================================================
 // === ИНИЦИАЛИЗАЦИЯ ===========================================
@@ -1211,29 +1238,53 @@ async function uploadImage(file, folder) {
 
 // === POST ЗАПРОС (для записи данных) ========================
 // ============================================================
-async function gasPost(body) {
-  console.log('Sending to Sheets:', body);
-  try {
-    const response = await fetch(GAS_URL, {
-      method: 'POST',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+// POST через JSONP (Google Apps Script не поддерживает CORS preflight)
+// Данные передаются как base64-encoded параметр, чтобы обойти ограничения URL
+function gasPost(body) {
+  return new Promise((resolve, reject) => {
+    const callbackName = '_gasPostCb_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+    const timeout = setTimeout(() => {
+      delete window[callbackName];
+      const script = document.querySelector(`script[data-postcb="${callbackName}"]`);
+      if (script) script.remove();
+      reject(new Error('Google Sheets POST timeout'));
+    }, 20000);
+
+    window[callbackName] = function(data) {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      const script = document.querySelector(`script[data-postcb="${callbackName}"]`);
+      if (script) script.remove();
+      resolve(data);
+    };
+
+    // Кодируем тело как base64 чтобы безопасно передать через URL
+    let encoded;
+    try {
+      encoded = btoa(unescape(encodeURIComponent(JSON.stringify(body))));
+    } catch(e) {
+      encoded = btoa(JSON.stringify(body));
     }
-    
-    return await response.json();
-    
-  } catch(e) {
-    console.warn('POST request failed:', e);
-    return { ok: false, error: e.message };
-  }
+
+    const queryParams = new URLSearchParams({
+      method: 'post',
+      payload: encoded,
+      callback: callbackName,
+      t: Date.now()
+    });
+
+    const script = document.createElement('script');
+    script.src = `${GAS_URL}?${queryParams.toString()}`;
+    script.setAttribute('data-postcb', callbackName);
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      script.remove();
+      reject(new Error('Failed to POST via JSONP'));
+    };
+    document.head.appendChild(script);
+    console.log('Sending to Sheets (JSONP):', body.action, body.sheet);
+  });
 }
 
 // Сохранение программы в Google Sheets
@@ -1281,22 +1332,33 @@ function openLeadModal(leadId) {
   const lead = leads.find(l => l.id === leadId);
   if (!lead) return;
   
-  const isPhone = /^[\d\s\(\)\+-]{7,}$/.test(lead.contact);
+  const isPhone = /^[\d\s\(\)\+\-]{7,}$/.test(lead.contact);
   const isEmail = lead.contact.includes('@');
+  const tgMatch = lead.contact.match(/@[\w]+/);
   
   const modalContent = document.getElementById('lead-modal-content');
   modalContent.innerHTML = `
-    <div style="margin-bottom:20px;">
-      <div><strong>Имя:</strong> ${lead.name}</div>
-      <div><strong>Контакт:</strong> ${lead.contact}</div>
-      <div><strong>Сообщение:</strong> ${lead.message || '—'}</div>
-      <div><strong>Дата:</strong> ${lead.date}</div>
+    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:20px;border:1px solid var(--border);">
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;">
+        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);padding-top:2px;">Имя</span>
+        <strong>${lead.name}</strong>
+        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);padding-top:2px;">Контакт</span>
+        <span style="color:var(--accent);">${lead.contact}</span>
+        ${lead.message ? `
+        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);padding-top:2px;">Сообщение</span>
+        <span style="color:var(--text-muted);line-height:1.6;">${lead.message}</span>` : ''}
+        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);padding-top:2px;">Дата</span>
+        <span style="color:var(--text-muted);">${lead.date}</span>
+      </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      ${isPhone ? `<a href="tel:${lead.contact}" class="btn btn-primary">📞 Позвонить</a>` : ''}
-      ${isEmail ? `<a href="mailto:${lead.contact}" class="btn btn-primary">✉️ Написать</a>` : ''}
-      <button class="btn btn-edit" onclick="addUserFromLead(${lead.id})">👤 Добавить пользователя</button>
-      <button class="btn btn-danger" onclick="deleteLead(${lead.id})">🗑 Удалить заявку</button>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      ${isPhone ? `<a href="tel:${lead.contact}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">📞 Позвонить</a>` : ''}
+      ${isEmail ? `<a href="mailto:${lead.contact}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">✉️ Написать письмо</a>` : ''}
+      ${tgMatch ? `<a href="https://t.me/${tgMatch[0].slice(1)}" target="_blank" class="btn btn-outline" style="width:100%;justify-content:center;text-decoration:none;">💬 Открыть в Telegram</a>` : ''}
+      ${!isPhone && !isEmail && !tgMatch ? `<a href="#" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;" onclick="navigator.clipboard.writeText('${lead.contact}');showToast('Скопировано');return false;">📋 Скопировать контакт</a>` : ''}
+      <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
+      <button class="btn btn-edit" style="width:100%;justify-content:center;" onclick="addUserFromLead(${lead.id})">👤 Создать аккаунт участника</button>
+      <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="deleteLead(${lead.id})">🗑 Удалить заявку</button>
     </div>
   `;
   
