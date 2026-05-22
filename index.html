@@ -417,6 +417,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   <div class="mob-item active" data-section="programs">🗺 Программы</div>
   <div class="mob-item" data-section="users">👥 Участники</div>
   <div class="mob-item" data-section="leads">📩 Заявки</div>
+  <div class="mob-item" data-section="groups">👥 Группы</div>
   <div class="mob-item" data-section="settings">⚙️ Настройки</div>
   <div class="mob-item" data-section="founder">👤 Основатель</div>
   <div class="mob-item" data-section="contacts">📞 Контакты</div>
@@ -465,7 +466,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 </div><div class="gallery-grid" id="user-gallery"></div></div></div></div></div></div>
 
 <!-- ===== АДМИНИСТРАТИВНАЯ ПАНЕЛЬ ===== -->
-<div id="page-admin" class="hidden admin-panel"><div class="admin-layout"><aside class="admin-sidebar"><div class="admin-sidebar-logo">⚙ Управление</div><div class="admin-nav-item active" onclick="switchAdmin('dashboard')"><span class="admin-nav-icon">📊</span> Дашборд</div><div class="admin-nav-item" onclick="switchAdmin('programs')"><span class="admin-nav-icon">🗺</span> Программы</div><div class="admin-nav-item" onclick="switchAdmin('users')"><span class="admin-nav-icon">👥</span> Пользователи</div><div class="admin-nav-item" onclick="switchAdmin('leads')"><span class="admin-nav-icon">📩</span> Заявки</div><div class="admin-nav-item" onclick="switchAdmin('settings')"><span class="admin-nav-icon">⚙️</span> Настройки</div><div class="admin-nav-item" onclick="switchAdmin('founder')"><span class="admin-nav-icon">👤</span> Об основателе</div><div class="admin-nav-item" onclick="switchAdmin('howto')"><span class="admin-nav-icon">🚂</span> Как мы ездим</div><div class="admin-nav-item" onclick="switchAdmin('contacts')"><span class="admin-nav-icon">📞</span> Контакты</div><div class="admin-nav-item" onclick="showPage('home')" style="margin-top:32px;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;"><span class="admin-nav-icon">🏠</span> На сайт</div></aside><main class="admin-main"><div class="admin-section active" id="admin-dashboard"><div class="admin-page-title">Дашборд</div><div class="admin-page-sub">Сводная статистика по сайту</div><div class="stats-grid" id="stats-grid"></div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:28px;"><h3 style="font-family:var(--font-family);font-size:22px;font-weight:500;margin-bottom:22px;">Выручка по месяцам</h3><div class="revenue-grid" id="revenue-chart"></div></div></div><div class="admin-section" id="admin-programs"><div class="admin-page-title">Программы</div><div class="admin-page-sub">Управление маршрутами путешествий</div><div class="admin-bar-top"><button class="btn btn-primary" onclick="openAddProgram()">+ Добавить программу</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Фото</th><th>Название</th><th>Сезон</th><th>Транспорт</th><th>Дней</th><th>Цена</th><th>Действия</th></tr></thead><tbody id="programs-tbody"></tbody></table></div></div><div class="admin-section" id="admin-users"><div class="admin-page-title">Пользователи</div><div class="admin-page-sub">Список зарегистрированных участников</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Логин</th><th>Роль</th><th>Путешествий</th><th>Скидка (%)</th><th>Действия</th></tr></thead><tbody id="users-tbody"></tbody></table></div></div><div class="admin-section" id="admin-leads"><div class="admin-page-title">Заявки</div><div class="admin-page-sub">Входящие запросы с сайта — нажмите на строку для действий</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Контакт</th><th>Сообщение</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="leads-tbody"></tbody></table></div></div><div class="admin-section" id="admin-settings"><div class="admin-page-title">Настройки сайта</div><div class="admin-page-sub">Управление кодом приглашения</div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><div class="form-group"><label>Код приглашения для регистрации</label><input type="text" class="form-input" id="invite-code" placeholder="VPUTI2026"><button class="btn btn-primary" style="margin-top:10px;" onclick="saveInviteCode()">Сохранить код</button><p class="auth-hint" style="margin-top:10px;">Текущий код: <span id="current-invite-code">VPUTI2026</span></p></div></div></div><div class="admin-section" id="admin-founder"><div class="admin-page-title">Об основателе клуба</div><div class="admin-page-sub">Редактирование раздела «Основатель клуба» на главной странице</div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><div class="form-group"><label>Имя (заголовок)</label><input type="text" class="form-input" id="founder-admin-name" placeholder="Марина Пищальникова"></div><div class="form-group"><label>Годы опыта (число с +)</label><input type="text" class="form-input" id="founder-admin-years" placeholder="7+"></div><div class="form-group"><label>Фото основателя (URL или загрузите)</label><div class="photo-upload-area" onclick="document.getElementById('founder-photo-input').click()"><span>📸 Нажмите, чтобы выбрать фото</span><input type="file" id="founder-photo-input" accept="image/*" style="display:none"></div><img id="founder-photo-preview" class="photo-preview" style="display:none; max-width:200px;"><input type="hidden" id="founder-photo-url" value=""></div><div class="form-group"><label>Основной текст (первый абзац)</label><textarea class="form-textarea" id="founder-admin-bio1" style="min-height:100px;"></textarea></div><div class="form-group"><label>Второй абзац</label><textarea class="form-textarea" id="founder-admin-bio2" style="min-height:100px;"></textarea></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;"><div><div class="form-group"><label>Ценность 1 — Заголовок</label><input type="text" class="form-input" id="val1-title"></div><div class="form-group"><label>Ценность 1 — Текст</label><input type="text" class="form-input" id="val1-text"></div></div><div><div class="form-group"><label>Ценность 2 — Заголовок</label><input type="text" class="form-input" id="val2-title"></div><div class="form-group"><label>Ценность 2 — Текст</label><input type="text" class="form-input" id="val2-text"></div></div><div><div class="form-group"><label>Ценность 3 — Заголовок</label><input type="text" class="form-input" id="val3-title"></div><div class="form-group"><label>Ценность 3 — Текст</label><input type="text" class="form-input" id="val3-text"></div></div></div><button class="btn btn-primary" onclick="saveFounderContent()">Сохранить и применить</button></div></div><div class="admin-section" id="admin-howto">
+<div id="page-admin" class="hidden admin-panel"><div class="admin-layout"><aside class="admin-sidebar"><div class="admin-sidebar-logo">⚙ Управление</div><div class="admin-nav-item active" onclick="switchAdmin('dashboard')"><span class="admin-nav-icon">📊</span> Дашборд</div><div class="admin-nav-item" onclick="switchAdmin('programs')"><span class="admin-nav-icon">🗺</span> Программы</div><div class="admin-nav-item" onclick="switchAdmin('users')"><span class="admin-nav-icon">👥</span> Пользователи</div><div class="admin-nav-item" onclick="switchAdmin('leads')"><span class="admin-nav-icon">📩</span> Заявки</div><div class="admin-nav-item" onclick="switchAdmin('groups')"><span class="admin-nav-icon">👥</span> Группы</div><div class="admin-nav-item" onclick="switchAdmin('settings')"><span class="admin-nav-icon">⚙️</span> Настройки</div><div class="admin-nav-item" onclick="switchAdmin('founder')"><span class="admin-nav-icon">👤</span> Об основателе</div><div class="admin-nav-item" onclick="switchAdmin('howto')"><span class="admin-nav-icon">🚂</span> Как мы ездим</div><div class="admin-nav-item" onclick="switchAdmin('contacts')"><span class="admin-nav-icon">📞</span> Контакты</div><div class="admin-nav-item" onclick="showPage('home')" style="margin-top:32px;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;"><span class="admin-nav-icon">🏠</span> На сайт</div></aside><main class="admin-main"><div class="admin-section active" id="admin-dashboard"><div class="admin-page-title">Дашборд</div><div class="admin-page-sub">Сводная статистика по сайту</div><div class="stats-grid" id="stats-grid"></div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:28px;"><h3 style="font-family:var(--font-family);font-size:22px;font-weight:500;margin-bottom:22px;">Выручка по месяцам</h3><div class="revenue-grid" id="revenue-chart"></div></div></div><div class="admin-section" id="admin-programs"><div class="admin-page-title">Программы</div><div class="admin-page-sub">Управление маршрутами путешествий</div><div class="admin-bar-top"><button class="btn btn-primary" onclick="openAddProgram()">+ Добавить программу</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Фото</th><th>Название</th><th>Сезон</th><th>Транспорт</th><th>Дней</th><th>Цена</th><th>Действия</th></tr></thead><tbody id="programs-tbody"></tbody></table></div></div><div class="admin-section" id="admin-users"><div class="admin-page-title">Пользователи</div><div class="admin-page-sub">Список зарегистрированных участников</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Логин</th><th>Роль</th><th>Путешествий</th><th>Скидка (%)</th><th>Действия</th></tr></thead><tbody id="users-tbody"></tbody></table></div></div><div class="admin-section" id="admin-leads"><div class="admin-page-title">Заявки</div><div class="admin-page-sub">Входящие запросы с сайта — нажмите на строку для действий</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Контакт</th><th>Сообщение</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="leads-tbody"></tbody></table></div></div><div class="admin-section" id="admin-settings"><div class="admin-page-title">Настройки сайта</div><div class="admin-page-sub">Управление кодом приглашения</div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><div class="form-group"><label>Код приглашения для регистрации</label><input type="text" class="form-input" id="invite-code" placeholder="VPUTI2026"><button class="btn btn-primary" style="margin-top:10px;" onclick="saveInviteCode()">Сохранить код</button><p class="auth-hint" style="margin-top:10px;">Текущий код: <span id="current-invite-code">VPUTI2026</span></p></div></div></div><div class="admin-section" id="admin-founder"><div class="admin-page-title">Об основателе клуба</div><div class="admin-page-sub">Редактирование раздела «Основатель клуба» на главной странице</div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><div class="form-group"><label>Имя (заголовок)</label><input type="text" class="form-input" id="founder-admin-name" placeholder="Марина Пищальникова"></div><div class="form-group"><label>Годы опыта (число с +)</label><input type="text" class="form-input" id="founder-admin-years" placeholder="7+"></div><div class="form-group"><label>Фото основателя (URL или загрузите)</label><div class="photo-upload-area" onclick="document.getElementById('founder-photo-input').click()"><span>📸 Нажмите, чтобы выбрать фото</span><input type="file" id="founder-photo-input" accept="image/*" style="display:none"></div><img id="founder-photo-preview" class="photo-preview" style="display:none; max-width:200px;"><input type="hidden" id="founder-photo-url" value=""></div><div class="form-group"><label>Основной текст (первый абзац)</label><textarea class="form-textarea" id="founder-admin-bio1" style="min-height:100px;"></textarea></div><div class="form-group"><label>Второй абзац</label><textarea class="form-textarea" id="founder-admin-bio2" style="min-height:100px;"></textarea></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;"><div><div class="form-group"><label>Ценность 1 — Заголовок</label><input type="text" class="form-input" id="val1-title"></div><div class="form-group"><label>Ценность 1 — Текст</label><input type="text" class="form-input" id="val1-text"></div></div><div><div class="form-group"><label>Ценность 2 — Заголовок</label><input type="text" class="form-input" id="val2-title"></div><div class="form-group"><label>Ценность 2 — Текст</label><input type="text" class="form-input" id="val2-text"></div></div><div><div class="form-group"><label>Ценность 3 — Заголовок</label><input type="text" class="form-input" id="val3-title"></div><div class="form-group"><label>Ценность 3 — Текст</label><input type="text" class="form-input" id="val3-text"></div></div></div><button class="btn btn-primary" onclick="saveFounderContent()">Сохранить и применить</button></div></div><div class="admin-section" id="admin-howto">
   <div class="admin-page-title">Как мы путешествуем</div>
   <div class="admin-page-sub">Управление видами транспорта: включение/отключение, иконки, описания карточек</div>
 
@@ -519,6 +520,16 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   </div>
 </div>
 
+
+<div class="admin-section" id="admin-groups">
+  <div class="admin-page-title">Группы</div>
+  <div class="admin-page-sub">Формирование групп для программ путешествий</div>
+  <div class="admin-bar-top">
+    <button class="btn btn-primary" onclick="openAddGroup()">+ Создать группу</button>
+  </div>
+  <div id="groups-list"></div>
+</div>
+
 <div class="admin-section" id="admin-contacts"><div class="admin-page-title">Контактная информация</div><div class="admin-page-sub">Данные, отображаемые в разделе «Написать Марине»</div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><div class="form-group"><label>Телефон</label><input type="text" class="form-input" id="admin-contact-phone" placeholder="+7 (xxx) xxx-xx-xx"></div><div class="form-group"><label>Email</label><input type="text" class="form-input" id="admin-contact-email" placeholder="marina@vputi.ru"></div><div class="form-group"><label>Telegram</label><input type="text" class="form-input" id="admin-contact-tg" placeholder="@vputi_together"></div><button class="btn btn-primary" onclick="saveContacts()">Сохранить и применить</button></div></div></main></div></div>
 
 <!-- ===== МОДАЛЬНЫЕ ОКНА ===== -->
@@ -534,6 +545,28 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
       <button class="modal-close" onclick="closeModal('lead-modal')">✕</button>
     </div>
     <div id="lead-modal-content"></div>
+  </div>
+</div>
+
+<!-- ===== МОДАЛ ГРУППЫ ===== -->
+<div class="modal-overlay" id="group-modal">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="group-modal-title">Создать группу</h2>
+      <button class="modal-close" onclick="closeModal('group-modal')">✕</button>
+    </div>
+    <div id="group-modal-content"></div>
+  </div>
+</div>
+
+<!-- ===== МОДАЛ УЧАСТНИКА ГРУППЫ ===== -->
+<div class="modal-overlay" id="group-member-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h2 class="modal-title">Добавить участника</h2>
+      <button class="modal-close" onclick="closeModal('group-member-modal')">✕</button>
+    </div>
+    <div id="group-member-content"></div>
   </div>
 </div>
 <div class="auth-overlay" id="auth-overlay"><div class="auth-box"><div class="auth-logo"><p>ВПУТЕШЕСТВИЕВМЕСТЕ</p><span>Войдите, чтобы получить доступ к сообществу</span></div><div class="auth-tabs"><button class="auth-tab active" onclick="switchAuthTab('login')">Войти</button><button class="auth-tab" onclick="switchAuthTab('register')">Регистрация</button></div><div class="auth-form active" id="auth-login"><div class="auth-error" id="login-error">Неверный логин или пароль</div><div class="form-group"><label>Логин</label><input type="text" class="form-input" id="login-username" placeholder="marina"></div><div class="form-group"><label>Пароль</label><input type="password" class="form-input" id="login-password" placeholder="••••••"></div><button class="btn btn-primary auth-btn" onclick="doLogin()">Войти</button><div style="text-align:center; margin-top:10px;"><a href="#" onclick="showResetPassword()" style="font-size:12px; color:var(--accent2);">Забыли пароль?</a></div><div class="auth-hint">Тест: marina / owner — admin / admin — user / user</div></div><div class="auth-form" id="auth-register"><div class="auth-error" id="register-error"></div><div class="form-group"><label>Имя</label><input type="text" class="form-input" id="reg-name" placeholder="Иван Иванов"></div><div class="form-group"><label>Логин</label><input type="text" class="form-input" id="reg-username" placeholder="ivan_travels"></div><div class="form-group"><label>Email</label><input type="email" class="form-input" id="reg-email" placeholder="ivan@mail.ru"></div><div class="form-group"><label>Пароль</label><input type="password" class="form-input" id="reg-password" placeholder="••••••"></div><div class="form-group"><label>Код приглашения</label><input type="text" class="form-input" id="reg-invite" placeholder="Код от Марины"></div><button class="btn btn-primary auth-btn" onclick="doRegister()">Зарегистрироваться</button><div class="auth-hint">Код для теста: <span id="hint-invite-code">VPUTI2026</span></div></div><div style="text-align:center;margin-top:14px;"><button class="btn btn-outline btn-sm" onclick="closeAuth()">Закрыть</button></div></div></div>
@@ -882,11 +915,12 @@ function switchTab(tab) { document.querySelectorAll('.tab-btn').forEach((b,i) =>
 function switchAdmin(section) {
   const isOwner = currentUser && currentUser.role === 'owner';
   if (section === 'dashboard' && !isOwner) { showToast('Доступ запрещён'); return; }
-  const sections = ['dashboard','programs','users','leads','settings','founder','howto','contacts'];
+  const sections = ['dashboard','programs','users','leads','groups','settings','founder','howto','contacts'];
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.admin-nav-item').forEach((n,i) => n.classList.toggle('active', sections[i] === section));
   const el = document.getElementById('admin-'+section);
   if (el) el.classList.add('active');
+  if (section === 'groups') loadAdminGroups();
   if (section === 'founder') loadFounderAdmin();
   if (section === 'howto') loadHowAdmin();
   if (section === 'contacts') loadContactsAdmin();
@@ -906,6 +940,7 @@ function loadAdmin() {
   loadAdminPrograms();
   loadAdminUsers(isOwner);
   loadAdminLeads();
+  loadAdminGroups();
   const activeSection = document.querySelector('.admin-section.active');
   if (!isOwner && activeSection && activeSection.id === 'admin-dashboard') { switchAdmin('programs'); }
 }
@@ -1143,36 +1178,29 @@ let sheetsInitialized = false;
 // ============================================================
 function gasGet(params) {
   return new Promise((resolve, reject) => {
-    const callbackName = '_gasCallback_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
-    const timeout = setTimeout(() => {
-      delete window[callbackName];
-      const script = document.querySelector(`script[data-callback="${callbackName}"]`);
-      if (script) script.remove();
-      reject(new Error('Google Sheets timeout'));
-    }, 15000);
-
-    window[callbackName] = function(data) {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      const script = document.querySelector(`script[data-callback="${callbackName}"]`);
-      if (script) script.remove();
+    const cbId = '_gc' + Date.now() + Math.random().toString(36).slice(2,8);
+    window[cbId] = function(data) {
+      clearTimeout(timer);
+      try { delete window[cbId]; } catch(e){}
+      const s = document.getElementById('_gs_' + cbId);
+      if (s && s.parentNode) s.parentNode.removeChild(s);
       resolve(data);
     };
-
-    const queryParams = new URLSearchParams({
-      ...params,
-      callback: callbackName,
-      t: Date.now()
-    });
-
+    const timer = setTimeout(() => {
+      try { delete window[cbId]; } catch(e){}
+      const s = document.getElementById('_gs_' + cbId);
+      if (s && s.parentNode) s.parentNode.removeChild(s);
+      reject(new Error('Google Sheets timeout'));
+    }, 30000);
+    const qs = new URLSearchParams({ ...params, callback: cbId, _t: Date.now() });
     const script = document.createElement('script');
-    script.src = `${GAS_URL}?${queryParams.toString()}`;
-    script.setAttribute('data-callback', callbackName);
+    script.id = '_gs_' + cbId;
+    script.src = GAS_URL + '?' + qs.toString();
     script.onerror = () => {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      script.remove();
-      reject(new Error('Failed to load script'));
+      clearTimeout(timer);
+      try { delete window[cbId]; } catch(e){}
+      if (script.parentNode) script.parentNode.removeChild(script);
+      reject(new Error('Script load error'));
     };
     document.head.appendChild(script);
   });
@@ -1876,6 +1904,358 @@ function loadHowAdmin() {
 }
 
 
+
+// ============================================================
+// === ГРУППЫ ==================================================
+// ============================================================
+let editingGroupId = null;
+let addMemberGroupId = null;
+
+const GROUP_STATUSES = ['набор','укомплектована','в пути','завершена','отменена'];
+const PAYMENT_METHODS = ['наличные','перевод на карту','СБП','предоплата','рассрочка'];
+
+function loadAdminGroups() {
+  const container = document.getElementById('groups-list');
+  if (!container) return;
+  if (groups.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted);"><div style="font-size:48px;margin-bottom:14px;">👥</div><p>Групп пока нет. Создайте первую!</p></div>';
+    return;
+  }
+  container.innerHTML = groups.map(g => {
+    const prog = programs.find(p => p.id === g.programId);
+    const filled = (g.members || []).length;
+    const max = g.maxPeople || (prog ? prog.maxPeople : 10);
+    const pct = max > 0 ? Math.min(100, Math.round(filled / max * 100)) : 0;
+    const statusColor = {набор:'tag-green',укомплектована:'tag-orange',завершена:'tag-green','в пути':'tag-orange',отменена:'tag-orange'}[g.status] || 'tag-green';
+    const totalPaid = (g.members||[]).reduce((s,m) => s + (parseFloat(m.amount)||0), 0);
+    return `
+    <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:16px;overflow:hidden;">
+      <div style="padding:20px 22px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+            <strong style="font-size:17px;font-family:var(--font-family);">${g.name}</strong>
+            <span class="tag ${statusColor}">${g.status}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">🗺 ${prog ? prog.name : (g.programName || '—')}</div>
+          ${g.startDate ? `<div style="font-size:13px;color:var(--text-muted);">📅 ${g.startDate}${g.endDate ? ' — ' + g.endDate : ''}</div>` : ''}
+        </div>
+        <div style="text-align:center;min-width:100px;">
+          <div style="font-size:28px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${filled}/${max}</div>
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">участников</div>
+          <div style="background:var(--bg2);border-radius:4px;height:6px;margin-top:6px;overflow:hidden;">
+            <div style="background:${pct>=100?'var(--accent2)':'var(--accent)'};height:100%;width:${pct}%;border-radius:4px;transition:width 0.4s;"></div>
+          </div>
+        </div>
+        <div style="text-align:center;min-width:100px;">
+          <div style="font-size:22px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${totalPaid.toLocaleString('ru')} ₽</div>
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">сумма</div>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;">
+          <button class="btn btn-outline btn-sm" onclick="openAddMember(${g.id})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
+          <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="openEditGroup(${g.id})">✏️ Изменить</button>
+          <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;" onclick="deleteGroup(${g.id})">🗑</button>
+        </div>
+      </div>
+      ${(g.members||[]).length > 0 ? `
+      <div style="border-top:1px solid var(--border);overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">
+          <thead><tr style="background:var(--bg);">
+            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Участник</th>
+            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Контакт</th>
+            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Сумма</th>
+            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Оплата</th>
+            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Заметка</th>
+            <th style="padding:8px 14px;"></th>
+          </tr></thead>
+          <tbody>
+            ${(g.members||[]).map((m,mi) => `
+            <tr style="border-top:1px solid var(--border);">
+              <td style="padding:9px 14px;font-weight:600;">${m.name}</td>
+              <td style="padding:9px 14px;color:var(--accent);font-size:12px;">${m.contact || '—'}</td>
+              <td style="padding:9px 14px;font-weight:600;color:var(--accent2);">${m.amount ? Number(m.amount).toLocaleString('ru') + ' ₽' : '—'}</td>
+              <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;">${m.payMethod || '—'}</td>
+              <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.note || ''}</td>
+              <td style="padding:9px 14px;"><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="removeMember(${g.id}, ${mi})">✕</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function openAddGroup() {
+  editingGroupId = null;
+  document.getElementById('group-modal-title').textContent = 'Создать группу';
+  const content = document.getElementById('group-modal-content');
+  content.innerHTML = buildGroupForm({});
+  openModal('group-modal');
+}
+
+function openEditGroup(id) {
+  const g = groups.find(x => x.id === id);
+  if (!g) return;
+  editingGroupId = id;
+  document.getElementById('group-modal-title').textContent = 'Редактировать группу';
+  const content = document.getElementById('group-modal-content');
+  content.innerHTML = buildGroupForm(g);
+  openModal('group-modal');
+}
+
+function buildGroupForm(g) {
+  const progOptions = programs.map(p =>
+    `<option value="${p.id}" ${g.programId === p.id ? 'selected' : ''}>${p.name} (макс. ${p.maxPeople} чел.)</option>`
+  ).join('');
+  const statusOptions = GROUP_STATUSES.map(s =>
+    `<option value="${s}" ${(g.status || 'набор') === s ? 'selected' : ''}>${s}</option>`
+  ).join('');
+  return `
+    <div class="modal-grid">
+      <div class="form-group full">
+        <label>Название группы</label>
+        <input type="text" class="form-input" id="gm-name" placeholder="Алтай — лето 2026, группа 1" value="${g.name || ''}">
+      </div>
+      <div class="form-group full">
+        <label>Программа путешествия</label>
+        <select class="filter-select" id="gm-program" onchange="updateGroupMaxPeople()">
+          <option value="">— выберите программу —</option>
+          ${progOptions}
+        </select>
+        <div id="gm-capacity-hint" style="font-size:12px;color:var(--text-muted);margin-top:5px;"></div>
+      </div>
+      <div class="form-group">
+        <label>Дата начала</label>
+        <input type="date" class="form-input" id="gm-start" value="${g.startDate || ''}">
+      </div>
+      <div class="form-group">
+        <label>Дата окончания</label>
+        <input type="date" class="form-input" id="gm-end" value="${g.endDate || ''}">
+      </div>
+      <div class="form-group">
+        <label>Макс. участников</label>
+        <input type="number" class="form-input" id="gm-max" value="${g.maxPeople || ''}" placeholder="Берётся из программы">
+      </div>
+      <div class="form-group">
+        <label>Статус</label>
+        <select class="filter-select" id="gm-status">${statusOptions}</select>
+      </div>
+      <div class="form-group full">
+        <label>Заметки</label>
+        <textarea class="form-textarea" id="gm-notes" style="min-height:70px;" placeholder="Любые заметки по группе...">${g.notes || ''}</textarea>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
+      <button class="btn btn-outline" onclick="closeModal('group-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveGroup()">Сохранить группу</button>
+    </div>
+  `;
+}
+
+function updateGroupMaxPeople() {
+  const sel = document.getElementById('gm-program');
+  const maxEl = document.getElementById('gm-max');
+  const hint = document.getElementById('gm-capacity-hint');
+  if (!sel.value) { if (hint) hint.textContent = ''; return; }
+  const prog = programs.find(p => p.id === parseInt(sel.value));
+  if (!prog) return;
+  if (maxEl && !maxEl.value) maxEl.value = prog.maxPeople;
+  if (hint) hint.textContent = `В программе указано макс. ${prog.maxPeople} участников`;
+}
+
+function saveGroup() {
+  const name = (document.getElementById('gm-name').value || '').trim();
+  const programId = parseInt(document.getElementById('gm-program').value) || null;
+  const startDate = document.getElementById('gm-start').value;
+  const endDate = document.getElementById('gm-end').value;
+  const status = document.getElementById('gm-status').value;
+  const notes = document.getElementById('gm-notes').value;
+  let maxPeople = parseInt(document.getElementById('gm-max').value) || 0;
+
+  if (!name) { showToast('Укажите название группы'); return; }
+
+  const prog = programs.find(p => p.id === programId);
+  if (prog && (!maxPeople || maxPeople > prog.maxPeople)) {
+    maxPeople = prog.maxPeople;
+  }
+
+  if (editingGroupId) {
+    const g = groups.find(x => x.id === editingGroupId);
+    if (g) {
+      g.name = name; g.programId = programId; g.programName = prog ? prog.name : '';
+      g.startDate = startDate; g.endDate = endDate; g.status = status;
+      g.notes = notes; g.maxPeople = maxPeople;
+    }
+    showToast('Группа обновлена ✓');
+  } else {
+    const newGroup = {
+      id: groups.length > 0 ? Math.max(...groups.map(g => g.id)) + 1 : 1,
+      name, programId, programName: prog ? prog.name : '',
+      startDate, endDate, status, notes, maxPeople, members: [],
+      createdAt: new Date().toISOString().slice(0,10)
+    };
+    groups.push(newGroup);
+    showToast('Группа создана ✓');
+  }
+  saveState('groups', groups);
+  closeModal('group-modal');
+  loadAdminGroups();
+}
+
+function deleteGroup(id) {
+  if (!confirm('Удалить группу и всех её участников?')) return;
+  groups = groups.filter(g => g.id !== id);
+  saveState('groups', groups);
+  loadAdminGroups();
+  showToast('Группа удалена');
+}
+
+// ===== УЧАСТНИКИ =====
+function openAddMember(groupId) {
+  const g = groups.find(x => x.id === groupId);
+  if (!g) return;
+  const filled = (g.members||[]).length;
+  const max = g.maxPeople || 999;
+  if (filled >= max) { showToast('Группа уже укомплектована'); return; }
+  addMemberGroupId = groupId;
+
+  const registeredOptions = users
+    .filter(u => u.role === 'user')
+    .map(u => `<option value="reg_${u.id}">${u.name} (${u.username})</option>`)
+    .join('');
+
+  const payMethodOptions = PAYMENT_METHODS.map(m =>
+    `<option value="${m}">${m}</option>`).join('');
+
+  const prog = programs.find(p => p.id === g.programId);
+  const defaultAmount = prog ? prog.price : '';
+
+  document.getElementById('group-member-content').innerHTML = `
+    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
+      Группа: <strong style="color:var(--text);">${g.name}</strong> — мест занято: <strong>${filled}/${max}</strong>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="btn btn-outline btn-sm" id="tab-registered" onclick="switchMemberTab('registered')" style="background:var(--accent-light);border-color:var(--accent);color:var(--accent);">
+        👤 Зарегистрированный
+      </button>
+      <button class="btn btn-outline btn-sm" id="tab-manual" onclick="switchMemberTab('manual')">
+        ✏️ Вручную
+      </button>
+    </div>
+
+    <div id="member-tab-registered">
+      <div class="form-group">
+        <label>Выбрать участника сайта</label>
+        <select class="filter-select" id="gm-reg-user">
+          <option value="">— выберите —</option>
+          ${registeredOptions}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>Сумма (₽)</label>
+          <input type="number" class="form-input" id="gm-reg-amount" value="${defaultAmount}" placeholder="65000">
+        </div>
+        <div class="form-group">
+          <label>Способ оплаты</label>
+          <select class="filter-select" id="gm-reg-method">${payMethodOptions}</select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Заметка</label>
+        <input type="text" class="form-input" id="gm-reg-note" placeholder="Любая заметка...">
+      </div>
+    </div>
+
+    <div id="member-tab-manual" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>ФИО</label>
+          <input type="text" class="form-input" id="gm-man-name" placeholder="Иванов Иван Иванович">
+        </div>
+        <div class="form-group">
+          <label>Телефон / email</label>
+          <input type="text" class="form-input" id="gm-man-contact" placeholder="+7 (900) 000-00-00">
+        </div>
+        <div class="form-group">
+          <label>Сумма (₽)</label>
+          <input type="number" class="form-input" id="gm-man-amount" value="${defaultAmount}" placeholder="65000">
+        </div>
+        <div class="form-group">
+          <label>Способ оплаты</label>
+          <select class="filter-select" id="gm-man-method">${payMethodOptions}</select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Заметка</label>
+        <input type="text" class="form-input" id="gm-man-note" placeholder="Любая заметка...">
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeModal('group-member-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="addMemberToGroup()">Добавить участника</button>
+    </div>
+  `;
+  openModal('group-member-modal');
+}
+
+function switchMemberTab(tab) {
+  document.getElementById('member-tab-registered').style.display = tab === 'registered' ? '' : 'none';
+  document.getElementById('member-tab-manual').style.display = tab === 'manual' ? '' : 'none';
+  const btnReg = document.getElementById('tab-registered');
+  const btnMan = document.getElementById('tab-manual');
+  if (btnReg) { btnReg.style.background = tab === 'registered' ? 'var(--accent-light)' : ''; btnReg.style.borderColor = tab === 'registered' ? 'var(--accent)' : ''; btnReg.style.color = tab === 'registered' ? 'var(--accent)' : ''; }
+  if (btnMan) { btnMan.style.background = tab === 'manual' ? 'var(--accent-light)' : ''; btnMan.style.borderColor = tab === 'manual' ? 'var(--accent)' : ''; btnMan.style.color = tab === 'manual' ? 'var(--accent)' : ''; }
+}
+
+function addMemberToGroup() {
+  const g = groups.find(x => x.id === addMemberGroupId);
+  if (!g) return;
+  const max = g.maxPeople || 999;
+  if ((g.members||[]).length >= max) { showToast('Достигнут лимит участников'); return; }
+
+  const isManual = document.getElementById('member-tab-manual').style.display !== 'none';
+  let member;
+
+  if (isManual) {
+    const name = (document.getElementById('gm-man-name').value || '').trim();
+    const contact = (document.getElementById('gm-man-contact').value || '').trim();
+    const amount = document.getElementById('gm-man-amount').value;
+    const payMethod = document.getElementById('gm-man-method').value;
+    const note = document.getElementById('gm-man-note').value;
+    if (!name) { showToast('Укажите ФИО участника'); return; }
+    member = { name, contact, amount, payMethod, note, type: 'manual' };
+  } else {
+    const sel = document.getElementById('gm-reg-user').value;
+    if (!sel) { showToast('Выберите участника'); return; }
+    const uid = parseInt(sel.replace('reg_', ''));
+    const u = users.find(x => x.id === uid);
+    if (!u) { showToast('Пользователь не найден'); return; }
+    const amount = document.getElementById('gm-reg-amount').value;
+    const payMethod = document.getElementById('gm-reg-method').value;
+    const note = document.getElementById('gm-reg-note').value;
+    member = { name: u.name, contact: u.email || u.username, amount, payMethod, note, userId: u.id, type: 'registered' };
+  }
+
+  if (!g.members) g.members = [];
+  g.members.push(member);
+  saveState('groups', groups);
+  closeModal('group-member-modal');
+  loadAdminGroups();
+  showToast('Участник добавлен ✓');
+}
+
+function removeMember(groupId, memberIndex) {
+  if (!confirm('Удалить участника из группы?')) return;
+  const g = groups.find(x => x.id === groupId);
+  if (!g || !g.members) return;
+  g.members.splice(memberIndex, 1);
+  saveState('groups', groups);
+  loadAdminGroups();
+  showToast('Участник удалён');
+}
+// ============================================================
 function init() {
   updateTransportSelects();
   renderPrograms(programs); renderGallery(); renderHowCards(); renderFeaturedCarousel(); applyFounderContent(); applyContactsContent(); updateNavForUser(); initEnterHandlers(); initSheetsSync();
@@ -2024,6 +2404,8 @@ function renderMobAdminSection(section) {
     box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Участники</h2>'+users.map(u => '<div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;"><strong style="font-size:14px;">'+u.name+'</strong><span class="tag '+(u.role==='owner'?'tag-orange':u.role==='admin'?'tag-orange':'tag-green')+'">'+(u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Участник')+'</span></div><div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">'+u.username+' · '+u.email+'</div>'+(isOwner ? '<select class="filter-select" style="font-size:12px;padding:5px;width:100%;margin-top:4px;" onchange="changeUserRole('+u.id+',this.value)"><option value="owner"'+(u.role==='owner'?' selected':'')+'>Владелец</option><option value="admin"'+(u.role==='admin'?' selected':'')+'>Админ</option><option value="user"'+(u.role==='user'?' selected':'')+'>Участник</option></select>' : '')+'</div>').join('');
   } else if (section === 'leads') {
     box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Заявки ('+leads.length+')</h2>'+(leads.length===0?'<p style="color:var(--text-muted);">Пока нет заявок.</p>':leads.slice().reverse().map(l => '<div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><strong>'+l.name+'</strong><span style="font-size:11px;color:var(--text-muted);">'+l.date+'</span></div><div style="font-size:12px;color:var(--accent);margin-bottom:3px;">'+l.contact+'</div><div style="font-size:13px;color:var(--text-muted);">'+(l.message||'—')+'</div></div>').join(''));
+  } else if (section === 'groups') {
+    box.innerHTML = '<h2 style='font-size:22px;font-weight:500;margin-bottom:14px;'>Группы</h2><p style='color:var(--text-muted);font-size:14px;'>Управление группами доступно в полной версии панели на десктопе.<br>На мобильном откройте страницу на компьютере или в горизонтальной ориентации.</p><button class='btn btn-primary' style='margin-top:14px;width:100%;' onclick='openAddGroup();'>+ Создать группу</button>'+groups.map(g=>'<div style='background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;margin-top:9px;'><div style='display:flex;justify-content:space-between;align-items:center;'><strong>'+g.name+'</strong><span class='tag tag-green'>'+g.status+'</span></div><div style='font-size:12px;color:var(--text-muted);margin-top:4px;'>'+((g.members||[]).length)+'/'+g.maxPeople+' участников</div></div>').join('');
   } else if (section === 'settings') {
     box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Настройки</h2><div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:7px;">Код приглашения</label><input type="text" class="form-input" id="mob-invite" value="'+inviteCodeSetting+'" style="margin-bottom:8px;"><button class="btn btn-primary btn-sm" onclick="saveMobInvite()">Сохранить код</button></div>';
   } else if (section === 'founder') {
