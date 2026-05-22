@@ -2005,7 +2005,7 @@ function openEditGroup(id) {
 
 function buildGroupForm(g) {
   const progOptions = programs.map(p =>
-    `<option value="${p.id}" ${g.programId === p.id ? 'selected' : ''}>${p.name} (макс. ${p.maxPeople} чел.)</option>`
+    `<option value="${p.id}" ${g.programId === p.id ? 'selected' : ''}>${p.name} · ${p.days} дн. · макс. ${p.maxPeople} чел.</option>`
   ).join('');
   const statusOptions = GROUP_STATUSES.map(s =>
     `<option value="${s}" ${(g.status || 'набор') === s ? 'selected' : ''}>${s}</option>`
