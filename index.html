@@ -130,7 +130,15 @@ img { max-width: 100%; display: block; }
 .about-value-text { font-size: 13px; color: var(--text-muted); }
 
 /* ===== КАК МЫ ПУТЕШЕСТВУЕМ ===== */
-.how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 60px; }
+.how-grid { display: grid; gap: 20px; margin-bottom: 60px; justify-items: center; }
+.how-grid.count-1 { grid-template-columns: minmax(260px, 380px); justify-content: center; }
+.how-grid.count-2 { grid-template-columns: repeat(2, minmax(220px, 380px)); justify-content: center; }
+.how-grid.count-3 { grid-template-columns: repeat(3, 1fr); justify-items: stretch; }
+.how-grid.count-4 { grid-template-columns: repeat(2, minmax(220px, 400px)); justify-content: center; }
+.how-grid.count-5 { grid-template-columns: repeat(3, 1fr); justify-items: stretch; }
+.how-grid.count-6 { grid-template-columns: repeat(3, 1fr); justify-items: stretch; }
+.how-grid.count-many { grid-template-columns: repeat(3, 1fr); justify-items: stretch; }
+.how-grid .how-card { width: 100%; }
 .how-card { background: var(--surface); border-radius: var(--radius); padding: 32px 26px; border: 1px solid var(--border); transition: all 0.3s; }
 .how-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
 .how-photo { width: 80px; height: 80px; border-radius: 50%; background: var(--accent-light); margin: 0 auto 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
@@ -381,7 +389,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 .admin-mobile-bar .mob-item.active,
 .admin-mobile-bar .mob-item:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
 
-@media (max-width: 768px) { .container { padding: 0 16px; } .navbar-inner { flex-wrap: wrap; gap: 10px; padding: 12px 16px; } .logo { font-size: 16px; } .nav-links { display: none; } .hero { min-height: auto; padding-top: 100px; padding-bottom: 60px; } .hero h1 { font-size: clamp(36px, 8vw, 48px); } .hero-sub { font-size: 14px; } .hero-actions { flex-direction: column; gap: 12px; } .hero-actions .btn { width: 100%; justify-content: center; } .hero-stats { flex-wrap: wrap; gap: 24px; margin-top: 40px; padding-top: 30px; } .about-grid, .contact-wrap { grid-template-columns: 1fr; gap: 40px; } .about-photo-wrap { max-width: 280px; margin: 0 auto; } .section { padding: 60px 0; } .section-title { font-size: 32px; } .how-grid { grid-template-columns: 1fr; gap: 16px; } .programs-grid { grid-template-columns: 1fr; } .filter-bar { padding: 16px; } .filter-row { grid-template-columns: 1fr; gap: 12px; } .filter-tags { gap: 6px; } .filter-tag { padding: 4px 10px; font-size: 11px; } .carousel-item { flex: 0 0 calc(85% - 12px); } .steps { flex-direction: column; gap: 20px; } .steps::before { display: none; } .step { text-align: left; display: flex; gap: 15px; align-items: flex-start; padding: 0; } .step-num { margin: 0; flex-shrink: 0; } .footer-grid { grid-template-columns: 1fr; gap: 30px; text-align: center; } .footer-brand p { max-width: 100%; } .footer-bottom { flex-direction: column; text-align: center; } .admin-layout { grid-template-columns: 1fr; }
+@media (max-width: 768px) { .container { padding: 0 16px; } .navbar-inner { flex-wrap: wrap; gap: 10px; padding: 12px 16px; } .logo { font-size: 16px; } .nav-links { display: none; } .hero { min-height: auto; padding-top: 100px; padding-bottom: 60px; } .hero h1 { font-size: clamp(36px, 8vw, 48px); } .hero-sub { font-size: 14px; } .hero-actions { flex-direction: column; gap: 12px; } .hero-actions .btn { width: 100%; justify-content: center; } .hero-stats { flex-wrap: wrap; gap: 24px; margin-top: 40px; padding-top: 30px; } .about-grid, .contact-wrap { grid-template-columns: 1fr; gap: 40px; } .about-photo-wrap { max-width: 280px; margin: 0 auto; } .section { padding: 60px 0; } .section-title { font-size: 32px; } .how-grid, .how-grid.count-1, .how-grid.count-2, .how-grid.count-3, .how-grid.count-4, .how-grid.count-5, .how-grid.count-6, .how-grid.count-many { grid-template-columns: 1fr; gap: 16px; justify-content: stretch; } .programs-grid { grid-template-columns: 1fr; } .filter-bar { padding: 16px; } .filter-row { grid-template-columns: 1fr; gap: 12px; } .filter-tags { gap: 6px; } .filter-tag { padding: 4px 10px; font-size: 11px; } .carousel-item { flex: 0 0 calc(85% - 12px); } .steps { flex-direction: column; gap: 20px; } .steps::before { display: none; } .step { text-align: left; display: flex; gap: 15px; align-items: flex-start; padding: 0; } .step-num { margin: 0; flex-shrink: 0; } .footer-grid { grid-template-columns: 1fr; gap: 30px; text-align: center; } .footer-brand p { max-width: 100%; } .footer-bottom { flex-direction: column; text-align: center; } .admin-layout { grid-template-columns: 1fr; }
   #admin-btn { display: none !important; }
   .mobile-admin-toggle { display: inline-flex !important; } .admin-sidebar { display: none; } .admin-main { padding: 20px; } .admin-page-title { font-size: 28px; } .stats-grid { grid-template-columns: 1fr 1fr; gap: 12px; } .stat-value { font-size: 28px; } .admin-table { font-size: 11px; } .admin-table th, .admin-table td { padding: 8px 10px; } .td-actions { flex-direction: column; gap: 5px; } .modal { padding: 20px; } .modal-title { font-size: 22px; } .modal-grid { grid-template-columns: 1fr; } .program-detail-grid { grid-template-columns: 1fr; } .program-detail-title { font-size: 32px; } .booking-card { position: static; margin-top: 20px; } .profile-grid { grid-template-columns: 1fr; } .profile-card { max-width: 300px; margin: 0 auto; } .dashboard-tabs { width: 100%; justify-content: center; } .tab-btn { padding: 6px 12px; font-size: 12px; } .trip-item { flex-direction: column; text-align: center; } .revenue-grid { grid-template-columns: repeat(6, 1fr); } .rev-month { font-size: 9px; } .rev-amount { font-size: 9px; } .auth-box { padding: 30px 24px; margin: 0 16px; } .auth-logo p { font-size: 22px; } }
 @media (max-width: 480px) { .container { padding: 0 12px; } .hero h1 { font-size: 32px; } .section-title { font-size: 28px; } .about-value { gap: 10px; } .about-value-icon { width: 32px; height: 32px; font-size: 14px; } .stats-grid { grid-template-columns: 1fr; } .revenue-grid { grid-template-columns: repeat(4, 1fr); } .program-title { font-size: 18px; } .program-price { font-size: 20px; } .carousel-item { flex: 0 0 calc(95% - 12px); } .admin-main { padding: 16px; } }
@@ -811,7 +819,12 @@ function renderGallery() { document.getElementById('gallery-grid').innerHTML = g
 // ============================================================
 function renderHowCards() {
   const cards = ALL_TRANSPORTS.filter(t => enabledTransports.includes(t.val));
-  document.getElementById('how-cards-grid').innerHTML = cards.length === 0
+  const grid = document.getElementById('how-cards-grid');
+  // Убираем все классы count-* и ставим нужный
+  grid.className = grid.className.replace(/\bcount-\S+/g, '').trim();
+  const n = cards.length;
+  grid.classList.add(n <= 6 ? 'count-' + n : 'count-many');
+  grid.innerHTML = cards.length === 0
     ? '<p style="color:var(--text-muted);text-align:center;grid-column:1/-1;">Нет активных видов транспорта.</p>'
     : cards.map(t => {
         const imgSrc = t.photo || t.icon || null;
@@ -1151,7 +1164,30 @@ async function deleteProgram(id) { const ok = await confirmDialog('Програ�
 // === РЕДАКТИРОВАНИЕ КОНТЕНТА =================================
 // ============================================================
 function loadFounderAdmin() { const f = founderContent; document.getElementById('founder-admin-name').value = f.name; document.getElementById('founder-admin-years').value = f.years; document.getElementById('founder-admin-bio1').value = f.bio1; document.getElementById('founder-admin-bio2').value = f.bio2; document.getElementById('val1-title').value = f.val1title; document.getElementById('val1-text').value = f.val1text; document.getElementById('val2-title').value = f.val2title; document.getElementById('val2-text').value = f.val2text; document.getElementById('val3-title').value = f.val3title; document.getElementById('val3-text').value = f.val3text; if (f.photo) { document.getElementById('founder-photo-preview').src = f.photo; document.getElementById('founder-photo-preview').style.display = 'block'; document.getElementById('founder-photo-url').value = f.photo; } }
-function saveFounderContent() { founderContent = { name: document.getElementById('founder-admin-name').value, years: document.getElementById('founder-admin-years').value, photo: document.getElementById('founder-photo-url').value, bio1: document.getElementById('founder-admin-bio1').value, bio2: document.getElementById('founder-admin-bio2').value, val1title: document.getElementById('val1-title').value, val1text: document.getElementById('val1-text').value, val2title: document.getElementById('val2-title').value, val2text: document.getElementById('val2-text').value, val3title: document.getElementById('val3-title').value, val3text: document.getElementById('val3-text').value }; saveState('founderContent', founderContent); applyFounderContent(); showToast('Раздел «Об основателе» обновлён ✓'); }
+async function saveFounderContent() {
+  founderContent = {
+    name: document.getElementById('founder-admin-name').value,
+    years: document.getElementById('founder-admin-years').value,
+    photo: document.getElementById('founder-photo-url').value,
+    bio1: document.getElementById('founder-admin-bio1').value,
+    bio2: document.getElementById('founder-admin-bio2').value,
+    val1title: document.getElementById('val1-title').value,
+    val1text: document.getElementById('val1-text').value,
+    val2title: document.getElementById('val2-title').value,
+    val2text: document.getElementById('val2-text').value,
+    val3title: document.getElementById('val3-title').value,
+    val3text: document.getElementById('val3-text').value
+  };
+  saveState('founderContent', founderContent);
+  applyFounderContent();
+  // Синхронизируем с Google Sheets
+  try {
+    await saveSettingToSheets('founderContent', founderContent);
+    showToast('Раздел «Об основателе» обновлён и синхронизирован ✓');
+  } catch(e) {
+    showToast('Сохранено локально, ошибка синхронизации: ' + e.message);
+  }
+}
 function loadHowAdmin() {
   renderTransportList();
   renderHowEditorCards();
