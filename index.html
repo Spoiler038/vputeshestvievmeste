@@ -461,24 +461,31 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 <!-- ===== ЛИЧНЫЙ КАБИНЕТ ===== -->
 <div id="page-dashboard" class="hidden"><div class="dashboard"><div class="dashboard-header"><div class="container dashboard-header-inner"><h1 style="font-family:var(--font-family);font-size:34px;font-weight:500;">Личный кабинет</h1><div class="dashboard-tabs"><button class="tab-btn active" onclick="switchTab('profile')">Профиль</button><button class="tab-btn" onclick="switchTab('trips')">Мои путешествия</button><button class="tab-btn" onclick="switchTab('photos')">Фотоальбом</button></div></div></div><div class="dashboard-body"><div class="container"><div class="tab-content active" id="tab-profile"><div class="profile-grid"><div class="profile-card"><div class="profile-avatar" id="profile-avatar-big" onclick="document.getElementById('avatar-upload-big').click()"><span id="profile-avatar-text">М</span><div class="avatar-upload-overlay">📷 Сменить фото</div><input type="file" id="avatar-upload-big" accept="image/*" style="display:none"></div><div class="profile-name" id="profile-name-big">Имя</div><div class="profile-role" id="profile-role-display">участник</div><div class="profile-info-grid" id="profile-info-list"></div><button class="btn btn-outline btn-sm" style="margin-top:10px; width:100%;" onclick="showPage('home')">← На сайт</button><button class="btn btn-outline btn-sm" style="margin-top:10px; width:100%;" onclick="logout()">🚪 Выйти</button></div><div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-bottom:22px;">Редактировать профиль</h3><div class="form-group"><label>Имя</label><input type="text" class="form-input" id="edit-name"></div><div class="form-group"><label>Email</label><input type="email" class="form-input" id="edit-email"></div><div class="form-group"><label>О себе</label><textarea class="form-textarea" id="edit-bio" placeholder="Несколько слов о себе..."></textarea></div><button class="btn btn-primary" onclick="saveProfile()">Сохранить изменения</button><div style="margin-top:30px; border-top:1px solid var(--border); padding-top:20px;"><h4 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:15px;">Сменить пароль</h4><div class="form-group"><label>Текущий пароль</label><input type="password" class="form-input" id="current-password" placeholder="••••••"></div><div class="form-group"><label>Новый пароль</label><input type="password" class="form-input" id="new-password" placeholder="••••••"></div><div class="form-group"><label>Подтверждение</label><input type="password" class="form-input" id="confirm-password" placeholder="••••••"></div><button class="btn btn-outline" onclick="changePassword()">Сменить пароль</button></div></div></div></div></div><div class="tab-content" id="tab-trips"><h2 style="font-family:var(--font-family);font-size:34px;font-weight:500;margin-bottom:28px;">Мои путешествия</h2><div class="my-trips" id="my-trips-list"></div></div><div class="tab-content" id="tab-photos"><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-bottom:28px;">
   <h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-bottom:7px;">Добавить фото</h3>
-  <p style="font-size:14px;color:var(--text-muted);margin-bottom:18px;">Загрузите файл с устройства или вставьте ссылку на фото.</p>
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-    <div style="flex:1;min-width:200px;">
+  <p style="font-size:14px;color:var(--text-muted);margin-bottom:18px;">Загрузите фото из поездки. Можно прикрепить к программе путешествия.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+    <div>
       <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Файл с устройства</label>
       <input type="file" class="form-input" id="photo-file" accept="image/jpeg,image/png,image/webp,image/gif" style="cursor:pointer;">
     </div>
-    <div style="flex:1;min-width:200px;">
+    <div>
       <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Или ссылка на фото</label>
       <input type="text" class="form-input" id="photo-url" placeholder="https://example.com/photo.jpg">
     </div>
-    <div style="flex:1;min-width:160px;">
+    <div>
+      <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Программа путешествия</label>
+      <select class="filter-select" id="photo-program">
+        <option value="">— Общее фото —</option>
+      </select>
+    </div>
+    <div>
       <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Подпись</label>
-      <input type="text" class="form-input" id="photo-caption" placeholder="Название места">
+      <input type="text" class="form-input" id="photo-caption" placeholder="Название места или момента">
     </div>
   </div>
   <button class="btn btn-primary" onclick="addPhoto()" id="photo-upload-btn">Добавить фото</button>
   <div id="photo-upload-status" style="display:none;margin-top:10px;font-size:13px;color:var(--text-muted);"></div>
-</div><div class="gallery-grid" id="user-gallery"></div></div></div></div></div></div>
+</div>
+<div id="user-gallery-by-program"></div></div></div></div></div></div>
 
 <!-- ===== АДМИНИСТРАТИВНАЯ ПАНЕЛЬ ===== -->
 <div id="page-admin" class="hidden admin-panel"><div class="admin-layout"><aside class="admin-sidebar"><div class="admin-sidebar-logo">⚙ Управление</div><div class="admin-nav-item active" onclick="switchAdmin('dashboard')"><span class="admin-nav-icon">📊</span> Дашборд</div><div class="admin-nav-item" onclick="switchAdmin('programs')"><span class="admin-nav-icon">🗺</span> Программы</div><div class="admin-nav-item" onclick="switchAdmin('users')"><span class="admin-nav-icon">👥</span> Пользователи</div><div class="admin-nav-item" onclick="switchAdmin('leads')"><span class="admin-nav-icon">📩</span> Заявки</div><div class="admin-nav-item" onclick="switchAdmin('groups')"><span class="admin-nav-icon">👥</span> Группы</div><div class="admin-nav-item" onclick="switchAdmin('settings')"><span class="admin-nav-icon">⚙️</span> Настройки</div><div class="admin-nav-item" onclick="switchAdmin('founder')"><span class="admin-nav-icon">👤</span> Об основателе</div><div class="admin-nav-item" onclick="switchAdmin('howto')"><span class="admin-nav-icon">🚂</span> Как мы ездим</div><div class="admin-nav-item" onclick="switchAdmin('contacts')"><span class="admin-nav-icon">📞</span> Контакты</div><div class="admin-nav-item" onclick="showPage('home')" style="margin-top:32px;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;"><span class="admin-nav-icon">🏠</span> На сайт</div></aside><main class="admin-main"><div class="admin-section active" id="admin-dashboard"><div class="admin-page-title">Дашборд</div><div class="admin-page-sub">Сводная статистика по сайту</div><div class="stats-grid" id="stats-grid"></div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:28px;"><h3 style="font-family:var(--font-family);font-size:22px;font-weight:500;margin-bottom:22px;">Выручка по месяцам</h3><div class="revenue-grid" id="revenue-chart"></div></div></div><div class="admin-section" id="admin-programs"><div class="admin-page-title">Программы</div><div class="admin-page-sub">Управление маршрутами путешествий</div><div class="admin-bar-top"><button class="btn btn-primary" onclick="openAddProgram()">+ Добавить программу</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Фото</th><th>Название</th><th>Сезон</th><th>Транспорт</th><th>Дней</th><th>Цена</th><th>Действия</th></tr></thead><tbody id="programs-tbody"></tbody></table></div></div><div class="admin-section" id="admin-users"><div class="admin-page-title">Пользователи</div><div class="admin-page-sub">Список зарегистрированных участников</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Логин</th><th>Роль</th><th>Путешествий</th><th>Скидка (%)</th><th>Действия</th></tr></thead><tbody id="users-tbody"></tbody></table></div></div><div class="admin-section" id="admin-leads"><div class="admin-page-title">Заявки</div><div class="admin-page-sub">Входящие запросы с сайта — нажмите на строку для действий</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Контакт</th><th>Сообщение</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="leads-tbody"></tbody></table></div></div><div class="admin-section" id="admin-settings"><div class="admin-page-title">Настройки сайта</div><div class="admin-page-sub">Код приглашения и теги предпочтений</div>
@@ -624,6 +631,18 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
       <button class="btn btn-outline" onclick="confirmResolve(false)">Отмена</button>
       <button class="btn btn-danger" id="confirm-ok-btn" onclick="confirmResolve(true)">Подтвердить</button>
     </div>
+  </div>
+</div>
+
+
+<!-- ===== МОДАЛ СОЗДАНИЯ УЧАСТНИКА ИЗ ЗАЯВКИ ===== -->
+<div class="modal-overlay" id="create-user-modal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h2 class="modal-title">👤 Создать аккаунт участника</h2>
+      <button class="modal-close" onclick="closeModal('create-user-modal')">✕</button>
+    </div>
+    <div id="create-user-content"></div>
   </div>
 </div>
 
@@ -918,12 +937,16 @@ async function addPhoto() {
   if (!file && !url) { showToast('Выберите файл или укажите ссылку'); return; }
   
   async function saveGalleryItem(photoUrl) {
+    const programSelect = document.getElementById('photo-program');
+    const programId = programSelect ? (parseInt(programSelect.value) || null) : null;
     const item = { 
       id: gallery.length > 0 ? Math.max(...gallery.map(g => parseInt(g.id) || 0)) + 1 : 1,
       url: photoUrl, 
       emoji: null, 
       caption, 
-      author: currentUser.name.split(' ')[0], 
+      author: currentUser.name.split(' ')[0],
+      userId: currentUser.id,
+      programId: programId,
       createdAt: new Date().toISOString().slice(0,10)
     };
     
@@ -931,7 +954,7 @@ async function addPhoto() {
     saveState('gallery', gallery);
     
     // Синхронизация с Google Sheets
-    if (GAS_URL && GAS_URL !== 'https://script.google.com/macros/s/AKfycbzR9bjQyCsM0WSbbTokFeRMM1MDYfQSMgokaH5vyT9PFlArGv6QEPPL0q9oId7U3K1b/exec') {
+    if (GAS_URL && GAS_URL !== 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') {
       try {
         await gasPost({ action: 'upsert', sheet: 'gallery', data: item });
       } catch(e) { console.warn('Gallery sync error:', e); }
@@ -969,7 +992,67 @@ async function addPhoto() {
 
   
 async function saveGalleryItemToSheets(item) { if (typeof gasPost === 'function') await gasPost({ action: 'upsert', sheet: 'gallery', data: item }); }
-function renderUserGallery(userId) { const u = users.find(x => x.id === userId); if (!u) return; const shortName = u.name.split(' ')[0]; const userPhotos = gallery.filter(g => g.author === shortName); document.getElementById('user-gallery').innerHTML = userPhotos.length === 0 ? '<p style="color:var(--text-muted);">Пока нет фотографий.</p>' : userPhotos.map(item => `<div class="gallery-item">${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>${item.emoji}</span>`}<div class="gallery-meta">${item.caption}</div></div>`).join(''); }
+function renderUserGallery(userId) {
+  const u = users.find(x => x.id === userId);
+  if (!u) return;
+  const container = document.getElementById('user-gallery-by-program');
+  if (!container) return;
+
+  // Обновляем селект программ — только те, в которых был участник
+  const userPurchases = purchases.filter(p => p.userId === userId);
+  const sel = document.getElementById('photo-program');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— Общее фото —</option>';
+    userPurchases.forEach(pu => {
+      const prog = programs.find(p => p.id === pu.programId);
+      if (!prog) return;
+      const opt = document.createElement('option');
+      opt.value = prog.id;
+      opt.textContent = prog.name;
+      sel.appendChild(opt);
+    });
+    if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+  }
+
+  const userPhotos = gallery.filter(g =>
+    g.userId === userId || g.author === u.name.split(' ')[0]
+  );
+
+  if (userPhotos.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-muted);">Пока нет фотографий. Добавьте первое!</p>';
+    return;
+  }
+
+  // Группируем по программам
+  const byProgram = {};
+  userPhotos.forEach(item => {
+    const key = item.programId || 'general';
+    if (!byProgram[key]) byProgram[key] = [];
+    byProgram[key].push(item);
+  });
+
+  container.innerHTML = Object.entries(byProgram).map(([progId, photos]) => {
+    const prog = progId !== 'general' ? programs.find(p => p.id === parseInt(progId)) : null;
+    const title = prog ? prog.name : 'Общие фото';
+    const emoji = prog ? '🗺' : '📷';
+    return `
+      <div style="margin-bottom:32px;">
+        <h4 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+          ${emoji} ${title}
+        </h4>
+        <div class="gallery-grid">
+          ${photos.map(item => `
+            <div class="gallery-item">
+              ${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>${item.emoji||'📷'}</span>`}
+              <div class="gallery-meta">${item.caption}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
 function switchTab(tab) { document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['profile','trips','photos'][i] === tab)); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('tab-'+tab).classList.add('active'); }
 
 // ============================================================
@@ -1254,7 +1337,7 @@ if (founderPhotoInput) {
 // === ИНИЦИАЛИЗАЦИЯ ===========================================
 // ============================================================
 // === GOOGLE SHEETS SYNC ===
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzR9bjQyCsM0WSbbTokFeRMM1MDYfQSMgokaH5vyT9PFlArGv6QEPPL0q9oId7U3K1b/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec';
 
 // Переменная для отслеживания инициализации
 let sheetsInitialized = false;
@@ -1484,39 +1567,104 @@ function openLeadModal(leadId) {
 function addUserFromLead(leadId) {
   const lead = leads.find(l => l.id === leadId);
   if (!lead) return;
-  
-  const username = prompt('Придумайте логин для пользователя:', lead.name.toLowerCase().replace(/\s/g, '_'));
-  if (!username) return;
-  
+  const contactStr = String(lead.contact || '');
+  const suggestedLogin = lead.name.toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zа-яё0-9_]/gi, '')
+    .slice(0, 20) || 'user_' + Date.now().toString().slice(-4);
+  const tempPassword = Math.random().toString(36).slice(2, 10);
+
+  const content = document.getElementById('create-user-content');
+  content.innerHTML = `
+    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:18px;font-size:13px;">
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;">
+        <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;padding-top:2px;">Имя</span>
+        <strong>${lead.name}</strong>
+        <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;padding-top:2px;">Контакт</span>
+        <span style="color:var(--accent);">${contactStr}</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Логин</label>
+      <input type="text" class="form-input" id="new-user-login" value="${suggestedLogin}" placeholder="ivan_travels">
+      <div id="login-check-hint" style="font-size:12px;margin-top:5px;color:var(--text-muted);"></div>
+    </div>
+    <div class="form-group">
+      <label>Временный пароль</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" class="form-input" id="new-user-password" value="${tempPassword}" style="flex:1;">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('new-user-password').value=Math.random().toString(36).slice(2,10);" title="Сгенерировать новый">🔄</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Участник сможет сменить пароль после входа</div>
+    </div>
+    <div class="form-group">
+      <label>Email (для входа)</label>
+      <input type="email" class="form-input" id="new-user-email" value="${contactStr.includes('@') ? contactStr : ''}" placeholder="ivan@mail.ru">
+    </div>
+    <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:13px;color:var(--accent);">
+      💡 Запишите или скопируйте данные для входа — пароль показывается только сейчас
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeModal('create-user-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="confirmCreateUser(${leadId})">✓ Создать аккаунт</button>
+    </div>
+  `;
+
+  // Проверка логина в реальном времени
+  setTimeout(() => {
+    const loginEl = document.getElementById('new-user-login');
+    if (loginEl) loginEl.addEventListener('input', function() {
+      const hint = document.getElementById('login-check-hint');
+      if (!hint) return;
+      const val = this.value.trim();
+      if (!val) { hint.textContent = ''; return; }
+      if (users.find(u => u.username === val)) {
+        hint.textContent = '✗ Логин уже занят';
+        hint.style.color = '#C0392B';
+      } else {
+        hint.textContent = '✓ Логин свободен';
+        hint.style.color = 'var(--accent)';
+      }
+    });
+    loginEl && loginEl.dispatchEvent(new Event('input'));
+  }, 50);
+
+  closeModal('lead-modal');
+  openModal('create-user-modal');
+}
+
+function confirmCreateUser(leadId) {
+  const lead = leads.find(l => l.id === leadId);
+  if (!lead) return;
+  const contactStr = String(lead.contact || '');
+  const username = (document.getElementById('new-user-login').value || '').trim();
+  const password = (document.getElementById('new-user-password').value || '').trim();
+  const email    = (document.getElementById('new-user-email').value || '').trim();
+
+  if (!username) { showToast('Укажите логин'); return; }
+  if (!password) { showToast('Укажите пароль'); return; }
   if (users.find(u => u.username === username)) {
-    showToast('Логин уже существует');
+    showToast('Логин уже занят — выберите другой');
+    document.getElementById('new-user-login').focus();
     return;
   }
-  
-  const tempPassword = Math.random().toString(36).slice(2, 10);
+
   const newUser = {
-    id: users.length + 1,
-    username: username,
-    password: tempPassword,
-    role: 'user',
+    id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
+    username, password, role: 'user',
     name: lead.name,
-    email: lead.contact.includes('@') ? lead.contact : '',
-    bio: '',
-    joinedDate: new Date().toISOString().slice(0, 10),
-    avatar: '',
-    discount: 0
+    email: email || (contactStr.includes('@') ? contactStr : ''),
+    bio: '', joinedDate: new Date().toISOString().slice(0,10),
+    avatar: '', discount: 0
   };
-  
+
   users.push(newUser);
   saveState('users', users);
-  
-  showToast(`Пользователь создан! Логин: ${username}, пароль: ${tempPassword}`);
-  alert(`Данные для входа:\nЛогин: ${username}\nПароль: ${tempPassword}`);
-  
-  closeModal('lead-modal');
-  if (currentUser && currentUser.role === 'owner') {
-    loadAdminUsers(true);
+  closeModal('create-user-modal');
+  if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
+    loadAdminUsers(currentUser.role === 'owner');
   }
+  showToast(\`Аккаунт создан: \${username}\`);
 }
 
 async function deleteLead(leadId) {
@@ -2032,7 +2180,7 @@ function loadAdminGroups() {
         <div style="flex:1;min-width:200px;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
             <strong style="font-size:17px;font-family:var(--font-family);">${g.name}</strong>
-            <span class="tag ${statusColor}">${g.status}</span>
+            <span class="tag ${statusColor}" onclick="cycleGroupStatus(${g.id})" style="cursor:pointer;user-select:none;" title="Нажмите для смены статуса">${g.status} ✎</span>
           </div>
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">🗺 ${prog ? prog.name : (g.programName || '—')}</div>
           ${g.startDate ? `<div style="font-size:13px;color:var(--text-muted);">📅 ${g.startDate}${g.endDate ? ' — ' + g.endDate : ''}</div>` : ''}
@@ -2176,7 +2324,7 @@ function autoFillEndDate() {
     endEl.value = endStr;
     endEl.dataset.auto = '1';
   }
-  if (hintEl) hintEl.textContent = '↑ авто (' + prog.days + ' дн. из программы)';
+  if (hintEl) hintEl.textContent = '↑ АВТО (' + prog.days + ' ДНЕЙ)';
 }
 
 function saveGroup() {
@@ -2554,6 +2702,75 @@ function loadSettingsAdmin() {
   const hintEl = document.getElementById('hint-invite-code');
   if (hintEl) hintEl.textContent = inviteCodeSetting;
   renderPrefTagsAdmin();
+}
+
+// ============================================================
+// === СМЕНА СТАТУСА ГРУППЫ КЛИКОМ =============================
+// ============================================================
+async function cycleGroupStatus(groupId) {
+  const g = groups.find(x => x.id === groupId);
+  if (!g) return;
+
+  const order = ['набор', 'укомплектована', 'в пути', 'завершена', 'отменена'];
+  const cur = order.indexOf(g.status);
+  const next = order[(cur + 1) % order.length];
+
+  // Для финальных статусов — спросить подтверждение
+  if (next === 'завершена') {
+    const ok = await confirmDialog(
+      `Группа «${g.name}» будет отмечена как завершённая.\nПутешествие будет добавлено в историю всем участникам.`,
+      { icon: '✅', title: 'Завершить группу?', ok: 'Завершить', danger: false }
+    );
+    if (!ok) return;
+    g.status = 'завершена';
+    finalizeGroup(g);
+  } else if (next === 'отменена') {
+    const ok = await confirmDialog(
+      `Группа «${g.name}» будет отмечена как отменённая.`,
+      { icon: '❌', title: 'Отменить группу?', ok: 'Да, отменить', danger: true }
+    );
+    if (!ok) return;
+    g.status = 'отменена';
+  } else {
+    g.status = next;
+  }
+
+  saveState('groups', groups);
+  loadAdminGroups();
+  showToast(`Статус изменён: ${g.status}`);
+}
+
+// ============================================================
+// === ЗАВЕРШЕНИЕ ГРУППЫ — запись в историю поездок ============
+// ============================================================
+function finalizeGroup(g) {
+  const prog = programs.find(p => p.id === g.programId);
+  if (!prog) return;
+
+  let added = 0;
+  (g.members || []).forEach(member => {
+    if (!member.userId) return; // только зарегистрированные
+    const already = purchases.find(
+      p => p.userId === member.userId && p.programId === g.programId
+    );
+    if (already) return; // уже есть — не дублировать
+
+    purchases.push({
+      id: purchases.length > 0 ? Math.max(...purchases.map(p => p.id)) + 1 : 1,
+      userId: member.userId,
+      programId: g.programId,
+      price: parseFloat(member.amount) || prog.price,
+      date: g.endDate || new Date().toISOString().slice(0, 10),
+      status: 'завершено',
+      groupId: g.id,
+    });
+    added++;
+  });
+
+  if (added > 0) {
+    saveState('purchases', purchases);
+    showToast(`Путешествие добавлено в историю ${added} участникам ✓`);
+  }
 }
 function init() {
   updateTransportSelects();
