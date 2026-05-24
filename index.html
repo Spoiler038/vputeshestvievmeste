@@ -954,7 +954,7 @@ async function addPhoto() {
     saveState('gallery', gallery);
     
     // Синхронизация с Google Sheets
-    if (GAS_URL && GAS_URL !== 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') {
+    if (GAS_URL && GAS_URL !== 'https://script.google.com/macros/s/AKfycbzR9bjQyCsM0WSbbTokFeRMM1MDYfQSMgokaH5vyT9PFlArGv6QEPPL0q9oId7U3K1b/exec') {
       try {
         await gasPost({ action: 'upsert', sheet: 'gallery', data: item });
       } catch(e) { console.warn('Gallery sync error:', e); }
@@ -1337,7 +1337,7 @@ if (founderPhotoInput) {
 // === ИНИЦИАЛИЗАЦИЯ ===========================================
 // ============================================================
 // === GOOGLE SHEETS SYNC ===
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzR9bjQyCsM0WSbbTokFeRMM1MDYfQSMgokaH5vyT9PFlArGv6QEPPL0q9oId7U3K1b/exec';
 
 // Переменная для отслеживания инициализации
 let sheetsInitialized = false;
