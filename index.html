@@ -954,7 +954,7 @@ async function addPhoto() {
     saveState('gallery', gallery);
     
     // Синхронизация с Google Sheets
-    if (GAS_URL && GAS_URL !== 'https://script.google.com/macros/s/AKfycbzR9bjQyCsM0WSbbTokFeRMM1MDYfQSMgokaH5vyT9PFlArGv6QEPPL0q9oId7U3K1b/exec') {
+    if (GAS_URL && GAS_URL !== 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec') {
       try {
         await gasPost({ action: 'upsert', sheet: 'gallery', data: item });
       } catch(e) { console.warn('Gallery sync error:', e); }
@@ -1290,7 +1290,17 @@ function saveHowContent() {
   showToast('Описания карточек сохранены ✓');
 }
 function loadContactsAdmin() { document.getElementById('admin-contact-phone').value = contactsContent.phone; document.getElementById('admin-contact-email').value = contactsContent.email; document.getElementById('admin-contact-tg').value = contactsContent.tg; }
-function saveContacts() { contactsContent = { phone: document.getElementById('admin-contact-phone').value, email: document.getElementById('admin-contact-email').value, tg: document.getElementById('admin-contact-tg').value }; saveState('contactsContent', contactsContent); applyContactsContent(); showToast('Контактная информация обновлена ✓'); }
+async function saveContacts() {
+  contactsContent = {
+    phone: document.getElementById('admin-contact-phone').value,
+    email: document.getElementById('admin-contact-email').value,
+    tg: document.getElementById('admin-contact-tg').value
+  };
+  saveState('contactsContent', contactsContent);
+  applyContactsContent();
+  try { await saveSettingToSheets('contactsContent', contactsContent); } catch(e) {}
+  showToast('Контактная информация обновлена ✓');
+}
 
 // ============================================================
 // === МОДАЛЬНЫЕ ОКНА ==========================================
@@ -1337,7 +1347,7 @@ if (founderPhotoInput) {
 // === ИНИЦИАЛИЗАЦИЯ ===========================================
 // ============================================================
 // === GOOGLE SHEETS SYNC ===
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzR9bjQyCsM0WSbbTokFeRMM1MDYfQSMgokaH5vyT9PFlArGv6QEPPL0q9oId7U3K1b/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjr0H-9xBm4O5a999wSEQJZdyv9KiK_Yy1iiUMmY98ONxyU5kMRp_A7EtDSSIouwSx/exec';
 
 // Переменная для отслеживания инициализации
 let sheetsInitialized = false;
@@ -1664,7 +1674,7 @@ function confirmCreateUser(leadId) {
   if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
     loadAdminUsers(currentUser.role === 'owner');
   }
-  showToast(\`Аккаунт создан: \${username}\`);
+  showToast('Аккаунт создан: ' + username);
 }
 
 async function deleteLead(leadId) {
@@ -2324,7 +2334,7 @@ function autoFillEndDate() {
     endEl.value = endStr;
     endEl.dataset.auto = '1';
   }
-  if (hintEl) hintEl.textContent = '↑ АВТО (' + prog.days + ' ДНЕЙ)';
+  if (hintEl) { hintEl.textContent = 'АВТО ' + prog.days + ' ДНЕЙ'; hintEl.style.textTransform = 'uppercase'; hintEl.style.fontWeight = '600'; hintEl.style.fontSize = '10px'; }
 }
 
 function saveGroup() {
@@ -2362,6 +2372,16 @@ function saveGroup() {
     showToast('Группа создана ✓');
   }
   saveState('groups', groups);
+  // Синхронизируем с Google Sheets
+  const groupToSync = editingGroupId
+    ? groups.find(x => x.id === editingGroupId)
+    : groups[groups.length - 1];
+  if (groupToSync) {
+    gasPost({
+      action: 'upsert', sheet: 'groups',
+      data: { ...groupToSync, members: JSON.stringify(groupToSync.members || []) }
+    }).catch(e => console.warn('Group sync error:', e));
+  }
   closeModal('group-modal');
   loadAdminGroups();
 }
@@ -2370,6 +2390,7 @@ async function deleteGroup(id) {
   const _dok = await confirmDialog('Группа и все её участники будут удалены безвозвратно.', {icon:'🗑',title:'Удалить группу?',ok:'Удалить'}); if (!_dok) return;
   groups = groups.filter(g => g.id !== id);
   saveState('groups', groups);
+  gasPost({ action: 'delete', sheet: 'groups', id }).catch(e => console.warn('Group delete sync:', e));
   loadAdminGroups();
   showToast('Группа удалена');
 }
@@ -2506,6 +2527,10 @@ function addMemberToGroup() {
   if (!g.members) g.members = [];
   g.members.push(member);
   saveState('groups', groups);
+  gasPost({
+    action: 'upsert', sheet: 'groups',
+    data: { ...g, members: JSON.stringify(g.members) }
+  }).catch(e => console.warn('Member sync error:', e));
   closeModal('group-member-modal');
   loadAdminGroups();
   showToast('Участник добавлен ✓');
@@ -2517,6 +2542,10 @@ async function removeMember(groupId, memberIndex) {
   if (!g || !g.members) return;
   g.members.splice(memberIndex, 1);
   saveState('groups', groups);
+  gasPost({
+    action: 'upsert', sheet: 'groups',
+    data: { ...g, members: JSON.stringify(g.members) }
+  }).catch(e => console.warn('Remove member sync:', e));
   loadAdminGroups();
   showToast('Участник удалён');
 }
@@ -2736,8 +2765,12 @@ async function cycleGroupStatus(groupId) {
   }
 
   saveState('groups', groups);
+  gasPost({
+    action: 'upsert', sheet: 'groups',
+    data: { ...g, members: JSON.stringify(g.members || []) }
+  }).catch(e => console.warn('Status sync error:', e));
   loadAdminGroups();
-  showToast(`Статус изменён: ${g.status}`);
+  showToast('Статус изменён: ' + g.status);
 }
 
 // ============================================================
@@ -2769,7 +2802,11 @@ function finalizeGroup(g) {
 
   if (added > 0) {
     saveState('purchases', purchases);
-    showToast(`Путешествие добавлено в историю ${added} участникам ✓`);
+    // Синхронизируем новые записи purchases в Sheets
+    purchases.filter(p => p.groupId === g.id).forEach(p => {
+      gasPost({ action: 'upsert', sheet: 'purchases', data: p }).catch(() => {});
+    });
+    showToast('Путешествие добавлено в историю ' + added + ' участникам ✓');
   }
 }
 function init() {
