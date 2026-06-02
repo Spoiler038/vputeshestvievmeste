@@ -482,7 +482,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
       <input type="text" class="form-input" id="photo-caption" placeholder="Название места или момента">
     </div>
   </div>
-  <button class="btn btn-primary" onclick="addPhoto()" id="photo-upload-btn">Добавить фото</button>
+  <button class="btn btn-primary" onclick="()" id="photo-upload-btn">Добавить фото</button>
   <div id="photo-upload-status" style="display:none;margin-top:10px;font-size:13px;color:var(--text-muted);"></div>
 </div>
 <div id="user-gallery-by-program"></div></div></div></div></div></div>
@@ -954,10 +954,10 @@ async function addPhoto() {
     saveState('gallery', gallery);
     
     // Синхронизация с Google Sheets
-    if (GAS_URL && GAS_URL !== 'https://script.google.com/macros/s/AKfycbygOeAgyi4sLENpKSU4ZseLsgZOsZZE3_WB5eHATlFHmQAvFisA2Gu5SOKRJx2lVQw/exec') {
-      try {
-        await gasPost({ action: 'upsert', sheet: 'gallery', data: item });
-      } catch(e) { console.warn('Gallery sync error:', e); }
+    if (GAS_URL) {
+    try {
+      await gasPost({ action: 'upsert', sheet: 'gallery', data: item });
+    } catch(e) { console.warn('Gallery sync error:', e); }
     }
     
     renderGallery();
