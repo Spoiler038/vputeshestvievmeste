@@ -817,9 +817,34 @@ function openDetail(id) { const p = programs.find(x => x.id === id); if (!p) ret
 // === КАРУСЕЛЬ ИЗБРАННЫХ ======================================
 // ============================================================
 function renderFeaturedCarousel() { const featured = programs.filter(p => p.featured); const section = document.getElementById('featured-section'); if (featured.length === 0) { section.style.display = 'none'; return; } section.style.display = ''; const track = document.getElementById('carousel-track'); track.innerHTML = featured.map(p => `<div class="carousel-item" onclick="openDetail(${p.id})"><div class="carousel-photo">${p.photo ? `<img src="${p.photo}" alt="${p.name}">` : `<span>🏔</span>`}</div><div class="carousel-body"><div style="margin-bottom:8px;"><span class="tag ${seasonColors[p.season]||'tag-green'}">${seasonEmoji[p.season]||''} ${p.season}</span></div><div class="carousel-title">${p.name}</div><div class="carousel-meta"><span>📅 ${p.days} дн.</span><span>${p.transport==='поезд'?'🚂':p.transport==='самолёт'?'✈️':'🚗'} ${p.transport}</span></div><div class="carousel-price">${p.price.toLocaleString('ru')} ₽</div></div></div>`).join(''); carouselOffset = 0; updateCarousel(); }
-function updateCarousel() { const track = document.getElementById('carousel-track'); const items = track.querySelectorAll('.carousel-item'); const itemWidth = items.length > 0 ? items[0].offsetWidth + 24 : 0; const maxOffset = Math.max(0, items.length - 3); if (carouselOffset > maxOffset) carouselOffset = maxOffset; track.style.transform = `translateX(-${carouselOffset * itemWidth}px)`; }
-function carouselNext() { carouselOffset++; updateCarousel(); }
+function updateCarousel() { const track = document.getElementById('carousel-track'); const outer = track.parentElement; const items = track.querySelectorAll('.carousel-item'); if (items.length === 0) return; const itemWidth = items[0].offsetWidth + 24; const visibleCount = Math.max(1, Math.round((outer.offsetWidth + 24) / itemWidth)); const maxOffset = Math.max(0, items.length - visibleCount); if (carouselOffset > maxOffset) carouselOffset = maxOffset; if (carouselOffset < 0) carouselOffset = 0; track.style.transform = `translateX(-${carouselOffset * itemWidth}px)`; }
+function carouselNext() { const track = document.getElementById('carousel-track'); const outer = track.parentElement; const items = track.querySelectorAll('.carousel-item'); if (items.length === 0) return; const itemWidth = items[0].offsetWidth + 24; const visibleCount = Math.max(1, Math.round((outer.offsetWidth + 24) / itemWidth)); const maxOffset = Math.max(0, items.length - visibleCount); if (carouselOffset < maxOffset) carouselOffset++; updateCarousel(); }
 function carouselPrev() { if (carouselOffset > 0) { carouselOffset--; updateCarousel(); } }
+window.addEventListener('resize', () => { if (document.getElementById('carousel-track')) updateCarousel(); });
+
+// === Свайп по карусели «Избранные» (touch) ===
+(function initCarouselSwipe() {
+  const outer = document.querySelector('.carousel-track-outer');
+  if (!outer) return;
+  let startX = 0, startY = 0, dragging = false;
+  outer.addEventListener('touchstart', e => {
+    if (!e.touches || e.touches.length !== 1) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    dragging = true;
+  }, { passive: true });
+  outer.addEventListener('touchend', e => {
+    if (!dragging) return;
+    dragging = false;
+    const endX = (e.changedTouches && e.changedTouches[0].clientX) || startX;
+    const endY = (e.changedTouches && e.changedTouches[0].clientY) || startY;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) carouselNext(); else carouselPrev();
+    }
+  }, { passive: true });
+})();
 
 // ============================================================
 // === ФИЛЬТР ==================================================
