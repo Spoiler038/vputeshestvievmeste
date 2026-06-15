@@ -284,8 +284,8 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 .modal-overlay.open { opacity: 1; visibility: visible; }
 .modal { background: var(--surface); border-radius: var(--radius); max-width: 780px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 36px; box-shadow: var(--shadow-lg); transform: translateY(20px); transition: transform 0.3s; }
 .modal-overlay.open .modal { transform: translateY(0); }
-.modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; flex-wrap: wrap; gap: 10px; }
-.modal-title { font-family: var(--font-family); font-size: 28px; font-weight: 500; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: nowrap; gap: 10px; }
+.modal-title { font-family: var(--font-family); font-size: 28px; font-weight: 500; flex: 1; min-width: 0; }
 .modal-close { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--border); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text-muted); transition: all 0.2s; }
 .modal-close:hover { background: var(--bg); color: var(--text); }
 .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -427,6 +427,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   <div class="mob-item" data-section="leads">📩 Заявки</div>
   <div class="mob-item" data-section="groups">👥 Группы</div>
   <div class="mob-item" data-section="settings">⚙️ Настройки</div>
+  <div class="mob-item" data-section="howto">🚂 Как мы ездим</div>
   <div class="mob-item" data-section="founder">👤 Основатель</div>
   <div class="mob-item" data-section="contacts">📞 Контакты</div>
   <div class="mob-item" data-section="dashboard" id="mob-dashboard-tab" style="display:none;">📊 Дашборд</div>
@@ -488,7 +489,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 <div id="user-gallery-by-program"></div></div></div></div></div></div>
 
 <!-- ===== АДМИНИСТРАТИВНАЯ ПАНЕЛЬ ===== -->
-<div id="page-admin" class="hidden admin-panel"><div class="admin-layout"><aside class="admin-sidebar"><div class="admin-sidebar-logo">⚙ Управление</div><div class="admin-nav-item active" onclick="switchAdmin('dashboard')"><span class="admin-nav-icon">📊</span> Дашборд</div><div class="admin-nav-item" onclick="switchAdmin('programs')"><span class="admin-nav-icon">🗺</span> Программы</div><div class="admin-nav-item" onclick="switchAdmin('users')"><span class="admin-nav-icon">👥</span> Пользователи</div><div class="admin-nav-item" onclick="switchAdmin('leads')"><span class="admin-nav-icon">📩</span> Заявки</div><div class="admin-nav-item" onclick="switchAdmin('groups')"><span class="admin-nav-icon">👥</span> Группы</div><div class="admin-nav-item" onclick="switchAdmin('settings')"><span class="admin-nav-icon">⚙️</span> Настройки</div><div class="admin-nav-item" onclick="switchAdmin('founder')"><span class="admin-nav-icon">👤</span> Об основателе</div><div class="admin-nav-item" onclick="switchAdmin('howto')"><span class="admin-nav-icon">🚂</span> Как мы ездим</div><div class="admin-nav-item" onclick="switchAdmin('contacts')"><span class="admin-nav-icon">📞</span> Контакты</div><div class="admin-nav-item" onclick="showPage('home')" style="margin-top:32px;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;"><span class="admin-nav-icon">🏠</span> На сайт</div></aside><main class="admin-main"><div class="admin-section active" id="admin-dashboard"><div class="admin-page-title">Дашборд</div><div class="admin-page-sub">Сводная статистика по сайту</div><div class="stats-grid" id="stats-grid"></div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:28px;"><h3 style="font-family:var(--font-family);font-size:22px;font-weight:500;margin-bottom:22px;">Выручка по месяцам</h3><div class="revenue-grid" id="revenue-chart"></div></div></div><div class="admin-section" id="admin-programs"><div class="admin-page-title">Программы</div><div class="admin-page-sub">Управление маршрутами путешествий</div><div class="admin-bar-top"><button class="btn btn-primary" onclick="openAddProgram()">+ Добавить программу</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Фото</th><th>Название</th><th>Сезон</th><th>Транспорт</th><th>Дней</th><th>Цена</th><th>Действия</th></tr></thead><tbody id="programs-tbody"></tbody></table></div></div><div class="admin-section" id="admin-users"><div class="admin-page-title">Пользователи</div><div class="admin-page-sub">Список зарегистрированных участников</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Логин</th><th>Роль</th><th>Путешествий</th><th>Скидка (%)</th><th>Действия</th></tr></thead><tbody id="users-tbody"></tbody></table></div></div><div class="admin-section" id="admin-leads"><div class="admin-page-title">Заявки</div><div class="admin-page-sub">Входящие запросы с сайта — нажмите на строку для действий</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Контакт</th><th>Сообщение</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="leads-tbody"></tbody></table></div></div><div class="admin-section" id="admin-settings"><div class="admin-page-title">Настройки сайта</div><div class="admin-page-sub">Код приглашения и теги предпочтений</div>
+<div id="page-admin" class="hidden admin-panel"><div class="admin-layout"><aside class="admin-sidebar"><div class="admin-sidebar-logo">⚙ Управление</div><div class="admin-nav-item active" onclick="switchAdmin('dashboard')"><span class="admin-nav-icon">📊</span> Дашборд</div><div class="admin-nav-item" onclick="switchAdmin('programs')"><span class="admin-nav-icon">🗺</span> Программы</div><div class="admin-nav-item" onclick="switchAdmin('users')"><span class="admin-nav-icon">👥</span> Участники</div><div class="admin-nav-item" onclick="switchAdmin('leads')"><span class="admin-nav-icon">📩</span> Заявки</div><div class="admin-nav-item" onclick="switchAdmin('groups')"><span class="admin-nav-icon">👥</span> Группы</div><div class="admin-nav-item" onclick="switchAdmin('settings')"><span class="admin-nav-icon">⚙️</span> Настройки</div><div class="admin-nav-item" onclick="switchAdmin('founder')"><span class="admin-nav-icon">👤</span> Об основателе</div><div class="admin-nav-item" onclick="switchAdmin('howto')"><span class="admin-nav-icon">🚂</span> Как мы ездим</div><div class="admin-nav-item" onclick="switchAdmin('contacts')"><span class="admin-nav-icon">📞</span> Контакты</div><div class="admin-nav-item" onclick="showPage('home')" style="margin-top:32px;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;"><span class="admin-nav-icon">🏠</span> На сайт</div></aside><main class="admin-main"><div class="admin-section active" id="admin-dashboard"><div class="admin-page-title">Дашборд</div><div class="admin-page-sub">Сводная статистика по сайту</div><div class="stats-grid" id="stats-grid"></div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:28px;"><h3 style="font-family:var(--font-family);font-size:22px;font-weight:500;margin-bottom:22px;">Выручка по месяцам</h3><div class="revenue-grid" id="revenue-chart"></div></div></div><div class="admin-section" id="admin-programs"><div class="admin-page-title">Программы</div><div class="admin-page-sub">Управление маршрутами путешествий</div><div class="admin-bar-top"><button class="btn btn-primary" onclick="openAddProgram()">+ Добавить программу</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Фото</th><th>Название</th><th>Сезон</th><th>Транспорт</th><th>Дней</th><th>Цена</th><th>Действия</th></tr></thead><tbody id="programs-tbody"></tbody></table></div></div><div class="admin-section" id="admin-users"><div class="admin-page-title">Участники</div><div class="admin-page-sub">Список зарегистрированных участников — нажмите на строку для просмотра и редактирования</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Логин</th><th>Роль</th><th>Путешествий</th><th>Скидка (%)</th><th>Действия</th></tr></thead><tbody id="users-tbody"></tbody></table></div></div><div class="admin-section" id="admin-leads"><div class="admin-page-title">Заявки</div><div class="admin-page-sub">Входящие запросы с сайта — нажмите на строку для действий</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Имя</th><th>Контакт</th><th>Сообщение</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="leads-tbody"></tbody></table></div></div><div class="admin-section" id="admin-settings"><div class="admin-page-title">Настройки сайта</div><div class="admin-page-sub">Код приглашения и теги предпочтений</div>
 <div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-bottom:20px;">
   <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:16px;">🔑 Код приглашения</h3>
   <div class="form-group"><label>Код для регистрации</label><input type="text" class="form-input" id="invite-code" placeholder="VPUTI2026"><button class="btn btn-primary" style="margin-top:10px;" onclick="saveInviteCode()">Сохранить код</button><p class="auth-hint" style="margin-top:10px;">Текущий код: <span id="current-invite-code">VPUTI2026</span></p></div>
@@ -646,6 +647,17 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   </div>
 </div>
 
+<!-- ===== МОДАЛ УЧАСТНИКА (просмотр / редактирование) ===== -->
+<div class="modal-overlay" id="user-edit-modal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="user-edit-modal-title">Участник</h2>
+      <button class="modal-close" onclick="closeModal('user-edit-modal')">✕</button>
+    </div>
+    <div id="user-edit-content"></div>
+  </div>
+</div>
+
 <div class="auth-overlay" id="auth-overlay"><div class="auth-box"><div class="auth-logo"><p>ВПУТЕШЕСТВИЕВМЕСТЕ</p><span>Войдите, чтобы получить доступ к сообществу</span></div><div class="auth-tabs"><button class="auth-tab active" onclick="switchAuthTab('login')">Войти</button><button class="auth-tab" onclick="switchAuthTab('register')">Регистрация</button></div><div class="auth-form active" id="auth-login"><div class="auth-error" id="login-error">Неверный логин или пароль</div><div class="form-group"><label>Логин</label><input type="text" class="form-input" id="login-username" placeholder="marina"></div><div class="form-group"><label>Пароль</label><input type="password" class="form-input" id="login-password" placeholder="••••••"></div><button class="btn btn-primary auth-btn" onclick="doLogin()">Войти</button><div style="text-align:center; margin-top:10px;"><a href="#" onclick="showResetPassword()" style="font-size:12px; color:var(--accent2);">Забыли пароль?</a></div><div class="auth-hint">Тест: marina / owner — admin / admin — user / user</div></div><div class="auth-form" id="auth-register"><div class="auth-error" id="register-error"></div><div class="form-group"><label>Имя</label><input type="text" class="form-input" id="reg-name" placeholder="Иван Иванов"></div><div class="form-group"><label>Логин</label><input type="text" class="form-input" id="reg-username" placeholder="ivan_travels"></div><div class="form-group"><label>Email</label><input type="email" class="form-input" id="reg-email" placeholder="ivan@mail.ru"></div><div class="form-group"><label>Пароль</label><input type="password" class="form-input" id="reg-password" placeholder="••••••"></div><div class="form-group"><label>Код приглашения</label><input type="text" class="form-input" id="reg-invite" placeholder="Код от Марины"></div><button class="btn btn-primary auth-btn" onclick="doRegister()">Зарегистрироваться</button><div class="auth-hint">Код для теста: <span id="hint-invite-code">VPUTI2026</span></div></div><div style="text-align:center;margin-top:14px;"><button class="btn btn-outline btn-sm" onclick="closeAuth()">Закрыть</button></div></div></div>
 <div id="toast"></div>
 
@@ -781,11 +793,17 @@ async function updateUserAvatar(file, callback) {
 // ============================================================
 function openAuth() { document.getElementById('auth-overlay').classList.add('open'); }
 function closeAuth() { document.getElementById('auth-overlay').classList.remove('open'); }
-function switchAuthTab(tab) { document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (tab==='login'&&i===0)||(tab==='register'&&i===1))); document.getElementById('auth-login').classList.toggle('active', tab==='login'); document.getElementById('auth-register').classList.toggle('active', tab==='register'); document.getElementById('login-error').style.display = 'none'; }
-function doLogin() { const username = document.getElementById('login-username').value.trim(); const password = document.getElementById('login-password').value; const user = users.find(u => u.username === username && u.password === password); if (!user) { document.getElementById('login-error').style.display = 'block'; return; } loginSuccess(user); }
+
+function clearLoginFields() {
+  ['login-username','login-password'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const errEl = document.getElementById('login-error');
+  if (errEl) errEl.style.display = 'none';
+}
+
+function doLogin() { const username = document.getElementById('login-username').value.trim(); const password = document.getElementById('login-password').value; const user = users.find(u => u.username === username && u.password === password); if (!user) { document.getElementById('login-error').style.display = 'block'; return; } clearLoginFields(); loginSuccess(user); }
 function loginSuccess(user) { currentUser = user; closeAuth(); updateNavForUser(); showToast(`Добро пожаловать, ${user.name.split(' ')[0]}! 👋`); }
-function doRegister() { const name = document.getElementById('reg-name').value.trim(); const username = document.getElementById('reg-username').value.trim(); const email = document.getElementById('reg-email').value.trim(); const password = document.getElementById('reg-password').value; const invite = document.getElementById('reg-invite').value.trim(); const errEl = document.getElementById('register-error'); if (!name || !username || !email || !password) { errEl.style.display='block'; errEl.textContent='Заполните все поля'; return; } if (invite !== inviteCodeSetting) { errEl.style.display='block'; errEl.textContent='Неверный код приглашения'; return; } if (users.find(u=>u.username===username)) { errEl.style.display='block'; errEl.textContent='Логин уже занят'; return; } const newUser = { id: users.length+1, username, password, role:'user', name, email, bio:'', joinedDate: new Date().toISOString().slice(0,10), avatar:'', discount:0 }; users.push(newUser); saveState('users', users); loginSuccess(newUser); }
-function logout() { currentUser = null; updateNavForUser(); showPage('home'); showToast('Вы вышли из аккаунта'); }
+function doRegister() { const name = document.getElementById('reg-name').value.trim(); const username = document.getElementById('reg-username').value.trim(); const email = document.getElementById('reg-email').value.trim(); const password = document.getElementById('reg-password').value; const invite = document.getElementById('reg-invite').value.trim(); const errEl = document.getElementById('register-error'); if (!name || !username || !email || !password) { errEl.style.display='block'; errEl.textContent='Заполните все поля'; return; } if (invite !== inviteCodeSetting) { errEl.style.display='block'; errEl.textContent='Неверный код приглашения'; return; } if (users.find(u=>u.username===username)) { errEl.style.display='block'; errEl.textContent='Логин уже занят'; return; } const newUser = { id: users.length+1, username, password, role:'user', name, email, bio:'', joinedDate: new Date().toISOString().slice(0,10), avatar:'', discount:0 }; users.push(newUser); saveState('users', users); clearLoginFields(); loginSuccess(newUser); }
+function logout() { clearLoginFields(); currentUser = null; updateNavForUser(); showPage('home'); showToast('Вы вышли из аккаунта'); }
 function updateNavForUser() {
   const guestMenu = document.getElementById('guest-menu');
   const userMenu = document.getElementById('user-menu');
@@ -967,7 +985,6 @@ async function addPhoto() {
     const item = { 
       id: gallery.length > 0 ? Math.max(...gallery.map(g => parseInt(g.id) || 0)) + 1 : 1,
       url: photoUrl, 
-      emoji: null, 
       caption, 
       author: currentUser.name.split(' ')[0],
       userId: currentUser.id,
@@ -1151,8 +1168,122 @@ function loadAdminPrograms() { document.getElementById('programs-tbody').innerHT
 function loadAdminUsers(isOwner) {
   document.getElementById('users-tbody').innerHTML = users.map(u => {
     const count = purchases.filter(p=>p.userId===u.id).length;
-    return `<tr><td><strong>${u.name}</strong></td><td style="color:var(--text-muted);">${u.username}</td><td>${isOwner ? `<select class="filter-select" style="padding:5px 8px;font-size:12px;" onchange="changeUserRole(${u.id}, this.value)"><option value="owner" ${u.role==='owner'?'selected':''}>Владелец</option><option value="admin" ${u.role==='admin'?'selected':''}>Админ</option><option value="user" ${u.role==='user'?'selected':''}>Пользователь</option></select>` : `<span class="tag ${u.role==='owner'?'tag-orange':'tag-green'}">${u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Пользователь'}</span>`}</td><td>${count}</td><td><input type="number" class="filter-input" style="width:70px; padding:6px;" value="${u.discount || 0}" onchange="updateUserDiscount(${u.id}, this.value)"></td><td class="td-actions"><button class="btn btn-outline btn-sm" onclick="showUserStats(${u.id})">Статистика</button></td></tr>`;
+    return `<tr style="cursor:pointer;" onclick="openUserEditModal(${u.id})" title="Нажмите для просмотра и редактирования">
+      <td><strong>${u.name}</strong></td>
+      <td style="color:var(--text-muted);">${u.username}</td>
+      <td onclick="event.stopPropagation();">${isOwner ? `<select class="filter-select" style="padding:5px 8px;font-size:12px;" onchange="changeUserRole(${u.id}, this.value)"><option value="owner" ${u.role==='owner'?'selected':''}>Владелец</option><option value="admin" ${u.role==='admin'?'selected':''}>Админ</option><option value="user" ${u.role==='user'?'selected':''}>Участник</option></select>` : `<span class="tag ${u.role==='owner'?'tag-orange':'tag-green'}">${u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Участник'}</span>`}</td>
+      <td>${count}</td>
+      <td onclick="event.stopPropagation();"><input type="number" class="filter-input" style="width:70px; padding:6px;" value="${u.discount || 0}" onchange="updateUserDiscount(${u.id}, this.value)"></td>
+      <td class="td-actions" onclick="event.stopPropagation();">
+        <button class="btn btn-outline btn-sm" onclick="showUserStats(${u.id})">Статистика</button>
+        ${u.role !== 'owner' ? `<button class="btn btn-danger" onclick="deleteUser(${u.id})">Удалить</button>` : ''}
+      </td>
+    </tr>`;
   }).join('');
+}
+
+async function deleteUser(userId) {
+  const u = users.find(x=>x.id===userId);
+  if (!u) return;
+  if (u.role === 'owner') { showToast('Нельзя удалить владельца'); return; }
+  const ok = await confirmDialog(`Участник «${u.name}» будет удалён безвозвратно.`, {icon:'👤', title:'Удалить участника?', ok:'Удалить'});
+  if (!ok) return;
+  users = users.filter(x=>x.id!==userId);
+  saveState('users', users);
+  const isOwner = currentUser && currentUser.role === 'owner';
+  loadAdminUsers(isOwner);
+  if (isOwner) loadAdminStats();
+  showToast('Участник удалён');
+}
+
+function openUserEditModal(userId) {
+  const u = users.find(x=>x.id===userId);
+  if (!u) return;
+  const isOwner = currentUser && currentUser.role === 'owner';
+  const userPurchases = purchases.filter(p=>p.userId===userId);
+  const total = userPurchases.reduce((s,p)=>s+p.price,0);
+  document.getElementById('user-edit-modal-title').textContent = u.name;
+  document.getElementById('user-edit-content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div class="user-avatar" style="width:52px;height:52px;font-size:22px;flex-shrink:0;">
+        ${u.avatar ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;">` : u.name[0]}
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;">Участник с ${u.joinedDate}</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span class="tag ${u.role==='owner'?'tag-orange':u.role==='admin'?'tag-orange':'tag-green'}">${u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Участник'}</span>
+          <span style="font-size:12px;color:var(--text-muted);">@${u.username}</span>
+        </div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-direction:column;text-align:center;min-width:80px;">
+        <div style="font-size:28px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${userPurchases.length}</div>
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">путешествий</div>
+      </div>
+    </div>
+    <div class="modal-grid" style="margin-bottom:18px;">
+      <div class="form-group">
+        <label>Имя</label>
+        <input type="text" class="form-input" id="ue-name" value="${u.name}">
+      </div>
+      <div class="form-group">
+        <label>Логин</label>
+        <input type="text" class="form-input" id="ue-username" value="${u.username}" ${u.role==='owner'?'readonly':''}>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" class="form-input" id="ue-email" value="${u.email}">
+      </div>
+      <div class="form-group">
+        <label>Скидка (%)</label>
+        <input type="number" class="form-input" id="ue-discount" value="${u.discount||0}" min="0" max="100">
+      </div>
+      ${isOwner ? `
+      <div class="form-group">
+        <label>Роль</label>
+        <select class="filter-select" id="ue-role">
+          <option value="owner" ${u.role==='owner'?'selected':''}>Владелец</option>
+          <option value="admin" ${u.role==='admin'?'selected':''}>Админ</option>
+          <option value="user" ${u.role==='user'?'selected':''}>Участник</option>
+        </select>
+      </div>` : '<div></div>'}
+      <div class="form-group full">
+        <label>О себе</label>
+        <textarea class="form-textarea" id="ue-bio" style="min-height:70px;">${u.bio||''}</textarea>
+      </div>
+    </div>
+    ${userPurchases.length > 0 ? `
+    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;margin-bottom:18px;">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">История путешествий · итого ${(total/1000).toFixed(0)}к ₽</div>
+      ${userPurchases.map(pu => { const prog = programs.find(p=>p.id===pu.programId); return `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;"><div><span style="font-weight:600;">${prog?prog.name:'—'}</span><span style="color:var(--text-muted);font-size:11px;margin-left:8px;">${pu.date}</span></div><span style="font-weight:600;color:var(--accent2);">${pu.price.toLocaleString('ru')} ₽</span></div>`; }).join('')}
+    </div>` : ''}
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      ${u.role!=='owner'?`<button class="btn btn-danger" onclick="closeModal('user-edit-modal');deleteUser(${u.id})">🗑 Удалить</button>`:'<div></div>'}
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-outline" onclick="closeModal('user-edit-modal')">Отмена</button>
+        <button class="btn btn-primary" onclick="saveUserEdit(${u.id})">Сохранить</button>
+      </div>
+    </div>
+  `;
+  openModal('user-edit-modal');
+}
+
+async function saveUserEdit(userId) {
+  const u = users.find(x=>x.id===userId);
+  if (!u) return;
+  const isOwner = currentUser && currentUser.role === 'owner';
+  u.name     = (document.getElementById('ue-name').value||'').trim() || u.name;
+  if (u.role !== 'owner') u.username = (document.getElementById('ue-username').value||'').trim() || u.username;
+  u.email    = (document.getElementById('ue-email').value||'').trim();
+  u.bio      = (document.getElementById('ue-bio').value||'').trim();
+  u.discount = parseInt(document.getElementById('ue-discount').value)||0;
+  if (isOwner && document.getElementById('ue-role')) u.role = document.getElementById('ue-role').value;
+  saveState('users', users);
+  // Синхронизируем в Sheets
+  try { await gasPost({ action:'upsert', sheet:'users', data: u }); } catch(e) { console.warn('User sync error:', e); }
+  if (currentUser && currentUser.id === userId) { currentUser = u; updateNavForUser(); }
+  loadAdminUsers(isOwner);
+  closeModal('user-edit-modal');
+  showToast('Данные участника обновлены ✓');
 }
 function updateUserDiscount(userId, discount) { const u = users.find(x=>x.id===userId); if (!u) return; u.discount = parseInt(discount) || 0; saveState('users', users); showToast('Скидка обновлена'); }
 function changeUserRole(userId, newRole) { const u = users.find(x=>x.id===userId); if (!u) return; u.role = newRole; saveState('users', users); if (currentUser && currentUser.id === userId) { currentUser.role = newRole; updateNavForUser(); } showToast(`Роль пользователя изменена`); }
@@ -1695,6 +1826,8 @@ function confirmCreateUser(leadId) {
 
   users.push(newUser);
   saveState('users', users);
+  // Синхронизируем нового участника в Google Sheets
+  gasPost({ action: 'upsert', sheet: 'users', data: newUser }).catch(e => console.warn('User sync error:', e));
   closeModal('create-user-modal');
   if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
     loadAdminUsers(currentUser.role === 'owner');
@@ -2943,7 +3076,12 @@ function toggleMobileAdminPanel() {
     bar.classList.add('show');
     overlay.style.display = 'block';
     overlay.style.paddingTop = 'calc(var(--navbar-h, 62px) + 60px)';
+    const scrollY = window.scrollY;
     document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    document.body.dataset.scrollY = scrollY;
     if (toggle) toggle.textContent = '✕ ЗАКРЫТЬ';
     const def = currentUser.role === 'owner' ? 'dashboard' : 'programs';
     renderMobAdminSection(def);
@@ -2958,7 +3096,12 @@ function closeMobAdmin() {
   const overlay = document.getElementById('mob-admin-overlay');
   if (bar) bar.classList.remove('show');
   if (overlay) overlay.style.display = 'none';
+  const scrollY = parseInt(document.body.dataset.scrollY || '0');
   document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.width = '';
+  window.scrollTo(0, scrollY);
   const toggle = document.getElementById('mobile-admin-toggle');
   if (toggle) toggle.textContent = '⚙ ПАНЕЛЬ';
 }
@@ -2979,7 +3122,30 @@ function renderMobAdminSection(section) {
   } else if (section === 'programs') {
     box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Программы</h2><button class="btn btn-primary" style="width:100%;margin-bottom:14px;" onclick="openAddProgram()">+ Добавить программу</button>'+programs.map(p => '<div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;display:flex;gap:10px;align-items:center;"><div style="width:42px;height:42px;border-radius:8px;overflow:hidden;background:var(--accent-light);flex-shrink:0;display:flex;align-items:center;justify-content:center;">'+(p.photo?'<img src="'+p.photo+'" style="width:100%;height:100%;object-fit:cover;">':'<span>🏔</span>')+'</div><div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+p.name+'</div><div style="font-size:11px;color:var(--text-muted);">'+p.season+' · '+p.days+' дн · '+p.price.toLocaleString('ru')+' ₽</div></div><div style="display:flex;gap:5px;flex-shrink:0;"><button class="btn btn-edit" style="padding:5px 9px;font-size:11px;" onclick="openEditProgram('+p.id+')">✏️</button><button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram('+p.id+')">🗑</button></div></div>').join('');
   } else if (section === 'users') {
-    box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Участники</h2>'+users.map(u => '<div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;"><strong style="font-size:14px;">'+u.name+'</strong><span class="tag '+(u.role==='owner'?'tag-orange':u.role==='admin'?'tag-orange':'tag-green')+'">'+(u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Участник')+'</span></div><div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">'+u.username+' · '+u.email+'</div>'+(isOwner ? '<select class="filter-select" style="font-size:12px;padding:5px;width:100%;margin-top:4px;" onchange="changeUserRole('+u.id+',this.value)"><option value="owner"'+(u.role==='owner'?' selected':'')+'>Владелец</option><option value="admin"'+(u.role==='admin'?' selected':'')+'>Админ</option><option value="user"'+(u.role==='user'?' selected':'')+'>Участник</option></select>' : '')+'</div>').join('');
+    box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Участники</h2>' +
+      users.map(function(u) {
+        const count = purchases.filter(function(p){ return p.userId===u.id; }).length;
+        const total = purchases.filter(function(p){ return p.userId===u.id; }).reduce(function(s,p){ return s+p.price; }, 0);
+        return '<div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">'
+          + '<div style="padding:13px;cursor:pointer;" onclick="openUserEditModal('+u.id+')">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
+          + '<strong style="font-size:14px;">'+u.name+'</strong>'
+          + '<span class="tag '+(u.role==='owner'?'tag-orange':u.role==='admin'?'tag-orange':'tag-green')+'">'+(u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Участник')+'</span>'
+          + '</div>'
+          + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@'+u.username+' · '+u.email+'</div>'
+          + '<div style="display:flex;gap:14px;font-size:12px;color:var(--text-muted);">'
+          + '<span>✈️ Путешествий: <strong>'+count+'</strong></span>'
+          + '<span>🏷 Скидка: <strong>'+(u.discount||0)+'%</strong></span>'
+          + (total>0 ? '<span>💰 '+(total/1000).toFixed(0)+'к ₽</span>' : '')
+          + '</div>'
+          + '</div>'
+          + '<div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">'
+          + (isOwner ? '<select class="filter-select" style="font-size:12px;padding:5px;flex:1;" onchange="changeUserRole('+u.id+',this.value)"><option value=\"owner\"'+(u.role==='owner'?' selected':'')+'>Владелец</option><option value=\"admin\"'+(u.role==='admin'?' selected':'')+'>Админ</option><option value=\"user\"'+(u.role==='user'?' selected':'')+'>Участник</option></select>' : '')
+          + '<button class="btn btn-outline btn-sm" style="font-size:11px;padding:5px 10px;" onclick="showUserStats('+u.id+')">📊</button>'
+          + (u.role!=='owner' ? '<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="deleteUser('+u.id+')">🗑</button>' : '')
+          + '</div>'
+          + '</div>';
+      }).join('');
   } else if (section === 'leads') {
     box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Заявки ('+leads.length+')</h2>'+(leads.length===0?'<p style="color:var(--text-muted);">Пока нет заявок.</p>':leads.slice().reverse().map(l => '<div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><strong>'+l.name+'</strong><span style="font-size:11px;color:var(--text-muted);">'+l.date+'</span></div><div style="font-size:12px;color:var(--accent);margin-bottom:3px;">'+l.contact+'</div><div style="font-size:13px;color:var(--text-muted);">'+(l.message||'—')+'</div></div>').join(''));
   } else if (section === 'groups') {
@@ -2993,6 +3159,22 @@ function renderMobAdminSection(section) {
     box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Об основателе</h2><div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><div class="form-group"><label>Имя</label><input class="form-input" id="mob-f-name" value="'+f.name.split('\n').join(' ')+'"></div><div class="form-group"><label>Лет в пути</label><input class="form-input" id="mob-f-years" value="'+f.years+'"></div><div class="form-group"><label>Абзац 1</label><textarea class="form-textarea" id="mob-f-bio1" style="min-height:80px;">'+f.bio1+'</textarea></div><div class="form-group"><label>Абзац 2</label><textarea class="form-textarea" id="mob-f-bio2" style="min-height:70px;">'+f.bio2+'</textarea></div><button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="saveMobFounder()">Сохранить</button></div>';
   } else if (section === 'contacts') {
     box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Контакты</h2><div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><div class="form-group"><label>Телефон</label><input class="form-input" id="mob-c-phone" value="'+contactsContent.phone+'"></div><div class="form-group"><label>Email</label><input class="form-input" id="mob-c-email" value="'+contactsContent.email+'"></div><div class="form-group"><label>Telegram</label><input class="form-input" id="mob-c-tg" value="'+contactsContent.tg+'"></div><button class="btn btn-primary" style="width:100%;" onclick="saveMobContacts()">Сохранить</button></div>';
+  } else if (section === 'howto') {
+    const cards = ALL_TRANSPORTS.filter(function(t){ return enabledTransports.includes(t.val); });
+    box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:6px;">Как мы ездим</h2>'
+      + '<p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Активные виды транспорта</p>'
+      + (cards.length === 0 ? '<p style="color:var(--text-muted);">Нет активных видов транспорта.</p>'
+        : cards.map(function(t){
+            return '<div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);padding:12px 14px;margin-bottom:9px;display:flex;gap:12px;align-items:center;">'
+              + (t.icon ? '<img src="'+t.icon+'" style="width:40px;height:40px;object-fit:contain;border-radius:8px;background:var(--accent-light);padding:4px;" onerror="this.style.display=\'none\'">' : '')
+              + '<span style="font-size:26px;">'+t.emoji+'</span>'
+              + '<div style="flex:1;min-width:0;">'
+              + '<div style="font-weight:600;font-size:14px;">'+t.label+'</div>'
+              + (t.desc ? '<div style="font-size:12px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+t.desc+'</div>' : '')
+              + '</div>'
+              + '</div>';
+          }).join(''))
+      + '<button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%;" onclick="closeMobAdmin();showPage(\'admin\');setTimeout(function(){switchAdmin(\'howto\');},300)">⚙ Открыть полные настройки</button>';
   }
 }
 function saveMobInvite(){const v=(document.getElementById('mob-invite')||{value:''}).value.trim();if(!v)return;inviteCodeSetting=v;saveState('inviteCode',v);if(typeof saveSettingToSheets==='function')saveSettingToSheets('inviteCode',v);['current-invite-code','hint-invite-code'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=v;});showToast('Код обновлён ✓');}
