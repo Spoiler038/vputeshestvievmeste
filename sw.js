@@ -1,73 +1,83 @@
 // ============================================================
 // ВПУТЕШЕСТВИЕВМЕСТЕ — Service Worker
-// Версию обновлять при каждом деплое для инвалидации кеша
 // ============================================================
-const CACHE_NAME   = 'vputi-v2';
+const CACHE_NAME = 'vputi-v3';
 const CACHE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
 ];
 
-// ── Установка: кешируем ключевые ресурсы с обработкой ошибок ──
+// ── Установка ────────────────────────────────────────────────
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        // Кешируем каждый файл по отдельности, игнорируя ошибки
-        return Promise.allSettled(
-          CACHE_ASSETS.map(url => {
-            return fetch(url).then(response => {
-              if (response.ok) {
-                return cache.put(url, response);
-              }
-              console.warn('Failed to cache:', url, response.status);
-              return Promise.resolve();
-            }).catch(err => {
-              console.warn('Failed to cache:', url, err);
-              return Promise.resolve();
-            });
-          })
-        );
+        console.log('📦 Кеширование ресурсов...');
+        return cache.addAll(CACHE_ASSETS);
       })
       .then(() => self.skipWaiting())
   );
 });
 
-// ── Активация: удаляем старые кеши ───────────────────────────
+// ── Активация ────────────────────────────────────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      ))
+      .then(keys => {
+        return Promise.all(
+          keys.filter(key => key !== CACHE_NAME)
+            .map(key => caches.delete(key))
+        );
+      })
       .then(() => self.clients.claim())
   );
 });
 
-// ── Запросы: network-first, fallback кеш ─────────────────────
+// ── Запросы ──────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
+  // Пропускаем запросы к внешним API
   const url = event.request.url;
-  if (url.includes('supabase.co') || url.includes('cloudinary.com') ||
-      url.includes('googleapis.com') || url.includes('api.anthropic')) return;
+  if (url.includes('supabase.co') || 
+      url.includes('cloudinary.com') ||
+      url.includes('googleapis.com') ||
+      url.includes('api.anthropic')) {
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)
       .then(response => {
+        // Кешируем только успешные ответы с нашего сайта
         if (response.ok && url.startsWith(self.location.origin)) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => {
+        // Если нет сети — пытаемся отдать из кеша
+        return caches.match(event.request)
+          .then(cached => {
+            if (cached) return cached;
+            // Если нет в кеше — показываем офлайн-страницу
+            if (event.request.mode === 'navigate') {
+              return caches.match('./index.html');
+            }
+            return new Response('Офлайн', { status: 503 });
+          });
+      })
   );
 });
 
-// ── Push уведомления ──────────────────────────────────────────
+// ── Push уведомления ─────────────────────────────────────────
 self.addEventListener('push', event => {
-  let data = { title: 'ВПУТЕШЕСТВИЕВМЕСТЕ', body: 'Новое уведомление', icon: '/vputeshestvievmeste/icons/android/192.png' };
+  let data = { 
+    title: 'ВПУТЕШЕСТВИЕВМЕСТЕ', 
+    body: 'Новое уведомление', 
+    icon: './icons/android/192.png' 
+  };
+  
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch(e) {
@@ -75,12 +85,11 @@ self.addEventListener('push', event => {
   }
 
   const options = {
-    body:    data.body,
-    icon:    data.icon || '/vputeshestvievmeste/icons/android/192.png',
-    badge:   '/vputeshestvievmeste/icons/android/72.png',
-    tag:     data.tag  || 'vputi-notification',
-    data:    { url: data.url || '/' },
-    actions: data.actions || [],
+    body: data.body,
+    icon: data.icon || './icons/android/192.png',
+    badge: './icons/android/72.png',
+    tag: data.tag || 'vputi-notification',
+    data: { url: data.url || './' },
     requireInteraction: data.requireInteraction || false,
     vibrate: [200, 100, 200],
   };
@@ -93,15 +102,19 @@ self.addEventListener('push', event => {
 // ── Клик по уведомлению ──────────────────────────────────────
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/vputeshestvievmeste/';
+  const targetUrl = (event.notification.data && event.notification.data.url) || './';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(clientList => {
         for (const client of clientList) {
-          if (client.url === targetUrl && 'focus' in client) return client.focus();
+          if (client.url === targetUrl && 'focus' in client) {
+            return client.focus();
+          }
         }
-        if (clients.openWindow) return clients.openWindow(targetUrl);
+        if (clients.openWindow) {
+          return clients.openWindow(targetUrl);
+        }
       })
   );
 });
