@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
 <title>ВПУТЕШЕСТВИЕВМЕСТЕ — Авторские программы Марины Пищальниковой</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#5C8A4E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ВпутиВместе">
+<link rel="apple-touch-icon" href="icons/ios/180.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
@@ -451,13 +456,13 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 <section class="section" id="about"><div class="container"><div class="about-grid"><div class="about-photo"><div class="about-photo-wrap" id="founder-photo-wrap"><img id="founder-photo-img" style="width:100%; height:100%; object-fit:cover; display:none;"><span id="founder-emoji">🌿</span></div><div class="about-photo-badge"><div style="font-family:var(--font-family);font-size:26px;font-weight:600;color:var(--accent2);" id="founder-years">7+</div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">лет в пути</div></div></div><div class="about-text"><span class="section-label">Основатель клуба</span><h2 style="font-size:40px;margin-bottom:22px;" id="founder-heading">Марина<br><em style="color:var(--accent2);">Пищальникова</em></h2><div id="founder-bio-content"><p>Я верю, что путешествие — это не набор достопримечательностей, а погружение в другую жизнь. Уже семь лет я создаю маршруты, которые показывают настоящую Россию, Армению, Абхазию — ту, которую не найдёшь в путеводителях.</p><p>Каждая программа рождается из личного опыта: я сама прошла этот путь, нашла лучший гестхаус, узнала, когда цветут рододендроны в Сочи и где варят лучшее хинкали в Тбилиси.</p></div><div class="about-values" id="founder-values"><div class="about-value"><div class="about-value-icon">🗺</div><div><div class="about-value-title">Авторские маршруты</div><div class="about-value-text">Каждая программа создана лично мной и проверена несколько раз.</div></div></div><div class="about-value"><div class="about-value-icon">🤝</div><div><div class="about-value-title">Небольшие группы</div><div class="about-value-text">Максимум 8–12 человек, чтобы сохранить живую атмосферу.</div></div></div><div class="about-value"><div class="about-value-icon">💬</div><div><div class="about-value-title">Живое сообщество</div><div class="about-value-text">После поездки вы остаётесь частью нашего круга путешественников.</div></div></div></div></div></div></div></section>
 <section class="section section-alt" id="how"><div class="container"><div class="section-header"><div><span class="section-label">Способы и подход</span><h2 class="section-title">Как мы <em>путешествуем</em></h2></div></div><div class="how-grid" id="how-cards-grid"></div><div style="margin-top:60px;"><h3 style="font-family:var(--font-family);font-size:30px;font-weight:500;margin-bottom:36px;text-align:center;">Как присоединиться</h3><div class="steps"><div class="step"><div class="step-num">1</div><div class="step-title">Выберите программу</div><div class="step-text">Используйте фильтр, чтобы найти подходящий маршрут по сезону, бюджету и типу отдыха.</div></div><div class="step"><div class="step-num">2</div><div class="step-title">Оставьте заявку</div><div class="step-text">Заполните форму на сайте или напишите Марине напрямую. Обычно отвечаем в тот же день.</div></div><div class="step"><div class="step-num">3</div><div class="step-title">Обсудим детали</div><div class="step-text">Уточним все нюансы, ответим на вопросы и согласуем место в группе.</div></div><div class="step"><div class="step-num">4</div><div class="step-title">В путь!</div><div class="step-text">Собирайте рюкзак — мы уже всё организовали. Вам остаётся только наслаждаться.</div></div></div></div></div></section>
 <section class="section" id="programs"><div class="container"><div class="section-header"><div><span class="section-label">Авторские маршруты</span><h2 class="section-title">Программы <em>путешествий</em></h2></div></div><div class="filter-bar"><div class="filter-row"><div class="filter-group"><label>Сезон</label><select class="filter-select" id="f-season" onchange="applyFilters()"><option value="">Любой</option><option value="весна">Весна</option><option value="лето">Лето</option><option value="осень">Осень</option><option value="зима">Зима</option></select></div><div class="filter-group"><label>Транспорт</label><select class="filter-select" id="f-transport" onchange="applyFilters()"><option value="">Любой</option><option value="поезд">Поезд</option><option value="самолёт">Самолёт</option><option value="авто">Авто</option></select></div><div class="filter-group"><label>Длительность</label><select class="filter-select" id="f-duration" onchange="applyFilters()"><option value="">Любая</option><option value="3-5">3–5 дней</option><option value="6-9">6–9 дней</option><option value="10-14">10–14 дней</option></select></div><div class="filter-group"><label>Участников</label><select class="filter-select" id="f-people" onchange="applyFilters()"><option value="">Любое</option><option value="1">1 человек</option><option value="2">2 человека</option><option value="3-4">3–4 человека</option><option value="5+">5 и более</option></select></div><div class="filter-group"><label>Макс. цена (₽)</label><input type="number" class="filter-input" id="f-price" placeholder="напр. 80000" oninput="applyFilters()"></div></div><div><label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:9px;">Предпочтения</label><div class="filter-tags" id="pref-tags"><button class="filter-tag" data-tag="горы" onclick="toggleTag(this)">⛰ Горы</button><button class="filter-tag" data-tag="море" onclick="toggleTag(this)">🌊 Море</button><button class="filter-tag" data-tag="лес" onclick="toggleTag(this)">🌲 Лес</button><button class="filter-tag" data-tag="озёра" onclick="toggleTag(this)">🏞 Озёра</button><button class="filter-tag" data-tag="памятники" onclick="toggleTag(this)">🏛 Памятники</button><button class="filter-tag" data-tag="гастро" onclick="toggleTag(this)">🍷 Гастро</button><button class="filter-tag" data-tag="активный" onclick="toggleTag(this)">🥾 Активный</button></div></div><div class="filter-actions"><button class="btn btn-outline btn-sm" onclick="resetFilters()">Сбросить фильтры</button></div></div><div class="programs-grid" id="programs-grid"></div></div></section>
-<section class="section section-alt" id="gallery"><div class="container"><div class="section-header"><div><span class="section-label">Сообщество</span><h2 class="section-title">Галерея <em>путешественников</em></h2></div></div><div class="gallery-grid" id="gallery-grid"></div></div></section>
+<section class="section section-alt" id="gallery"><div class="container"><div class="section-header"><div><span class="section-label">Сообщество</span><h2 class="section-title">Галерея <em>путешественников</em></h2></div><a href="#" onclick="smoothScroll('gallery');showAllGallery();return false;" style="font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap;align-self:flex-end;">Все фото →</a></div><div class="gallery-grid" id="gallery-grid"></div><div id="gallery-more-btn" style="text-align:center;margin-top:28px;display:none;"><button class="btn btn-outline" onclick="showAllGallery()">Больше фото →</button></div></div></section>
 <section class="section" id="contact"><div class="container"><div class="contact-wrap"><div class="contact-info"><span class="section-label">Написать Марине</span><h2 class="section-title" style="font-size:40px;">Готовы<br><em>в путь?</em></h2><p style="margin-top:18px;">Оставьте заявку, и Марина свяжется с вами в течение суток. Расскажите, куда хотите отправиться — вместе найдём подходящую программу.</p><div style="margin-top:28px;display:flex;flex-direction:column;gap:10px;"><div style="display:flex;gap:10px;align-items:center;"><span style="font-size:18px;">📱</span><span style="font-size:14px;color:var(--text-muted);" id="contact-phone">+7 (xxx) xxx-xx-xx</span></div><div style="display:flex;gap:10px;align-items:center;"><span style="font-size:18px;">✉️</span><span style="font-size:14px;color:var(--text-muted);" id="contact-email">marina@vputi.ru</span></div><div style="display:flex;gap:10px;align-items:center;"><span style="font-size:18px;">💬</span><span style="font-size:14px;color:var(--text-muted);" id="contact-tg">Telegram: @vputi_together</span></div></div></div><div class="contact-form" id="contact-form-wrap"><h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-bottom:22px;">Оставить заявку</h3><div class="form-group"><label>Ваше имя</label><input type="text" class="form-input" id="lead-name" placeholder="Иван Иванов"></div><div class="form-group"><label>Телефон или email</label><input type="text" class="form-input" id="lead-contact" placeholder="+7 (900) 000-00-00"></div><div class="form-group"><label>Комментарий</label><textarea class="form-textarea" id="lead-message" placeholder="Расскажите, что вас интересует..."></textarea></div><button class="btn btn-primary" style="width:100%;" onclick="submitLead()">Отправить заявку</button></div></div></div></section>
 <footer><div class="container"><div class="footer-grid"><div class="footer-brand"><div class="logo" style="color:rgba(255,255,255,0.88)"><span style="color:var(--accent)">В</span>ПУТЕШЕСТВИЕВМЕСТЕ</div><p>Авторские программы путешествий по России, Армении и Абхазии. Основатель — Марина Пищальникова.</p></div><div class="footer-col"><h4>Разделы</h4><a href="#" onclick="smoothScroll('programs')">Программы</a><a href="#" onclick="smoothScroll('about')">Об основателе</a><a href="#" onclick="smoothScroll('gallery')">Галерея</a><a href="#" onclick="smoothScroll('contact')">Контакты</a></div><div class="footer-col"><h4>Аккаунт</h4><a href="#" onclick="openAuth()">Войти</a><a href="#" onclick="openAuth()">Зарегистрироваться</a><a href="#" onclick="showPage('dashboard')">Личный кабинет</a></div></div><div class="footer-bottom"><span>© 2026 ВПУТЕШЕСТВИЕВМЕСТЕ</span><span>Все права защищены</span></div></div></footer>
 </div>
 
 <!-- ===== ДЕТАЛЬНАЯ СТРАНИЦА ===== -->
-<div id="page-detail" class="program-detail"><div class="program-hero" id="detail-hero"><div class="program-hero-overlay"></div><span id="detail-emoji">🌄</span></div><div class="program-detail-body"><div class="container"><button class="btn btn-outline btn-sm" style="margin-bottom:28px;" onclick="showPage('home')">← Назад к программам</button><div class="program-detail-grid"><div><h1 class="program-detail-title" id="detail-title">Название</h1><div id="detail-tags" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px;"></div><p id="detail-full-desc" style="font-size:15px;line-height:1.9;color:var(--text-muted);"></p><h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-top:36px;margin-bottom:14px;">Что включено</h3><div class="includes-grid" id="detail-includes"></div><h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-top:36px;margin-bottom:14px;">Детали</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="detail-meta"></div></div><div><div class="booking-card"><div class="booking-price"><span>от </span><span id="detail-price">0</span> <span>₽</span></div><div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">за человека</div><button class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="smoothScroll('contact');showPage('home');">Оставить заявку</button><button class="btn btn-outline" style="width:100%;" onclick="showPage('home')">← Все программы</button></div></div></div></div></div></div>
+<div id="page-detail" class="program-detail"><div class="program-hero" id="detail-hero"><div class="program-hero-overlay"></div><span id="detail-emoji">🌄</span></div><div class="program-detail-body"><div class="container"><button class="btn btn-outline btn-sm" style="margin-bottom:28px;" onclick="showPage('home')">← Назад к программам</button><div class="program-detail-grid"><div><h1 class="program-detail-title" id="detail-title">Название</h1><div id="detail-tags" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px;"></div><p id="detail-full-desc" style="font-size:15px;line-height:1.9;color:var(--text-muted);"></p><h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-top:36px;margin-bottom:14px;">Что включено</h3><div class="includes-grid" id="detail-includes"></div><h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-top:36px;margin-bottom:14px;">Детали</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="detail-meta"></div></div><div><div class="booking-card"><div class="booking-price"><span>от </span><span id="detail-price">0</span> <span>₽</span></div><div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">за человека</div><button class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="smoothScroll('contact');showPage('home');">Оставить заявку</button><button class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="generateProgramPDF()">📄 Скачать PDF</button><button class="btn btn-outline" style="width:100%;" onclick="showPage('home')">← Все программы</button></div></div></div></div></div></div>
 
 <!-- ===== ЛИЧНЫЙ КАБИНЕТ ===== -->
 <div id="page-dashboard" class="hidden"><div class="dashboard"><div class="dashboard-header"><div class="container dashboard-header-inner"><h1 style="font-family:var(--font-family);font-size:34px;font-weight:500;">Личный кабинет</h1><div class="dashboard-tabs"><button class="tab-btn active" onclick="switchTab('profile')">Профиль</button><button class="tab-btn" onclick="switchTab('trips')">Мои путешествия</button><button class="tab-btn" onclick="switchTab('photos')">Фотоальбом</button></div></div></div><div class="dashboard-body"><div class="container"><div class="tab-content active" id="tab-profile"><div class="profile-grid"><div class="profile-card"><div class="profile-avatar" id="profile-avatar-big" onclick="document.getElementById('avatar-upload-big').click()"><span id="profile-avatar-text">М</span><div class="avatar-upload-overlay">📷 Сменить фото</div><input type="file" id="avatar-upload-big" accept="image/*" style="display:none"></div><div class="profile-name" id="profile-name-big">Имя</div><div class="profile-role" id="profile-role-display">участник</div><div class="profile-info-grid" id="profile-info-list"></div><button class="btn btn-outline btn-sm" style="margin-top:10px; width:100%;" onclick="showPage('home')">← На сайт</button><button class="btn btn-outline btn-sm" style="margin-top:10px; width:100%;" onclick="logout()">🚪 Выйти</button></div><div><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);"><h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-bottom:22px;">Редактировать профиль</h3><div class="form-group"><label>Имя</label><input type="text" class="form-input" id="edit-name"></div><div class="form-group"><label>Email</label><input type="email" class="form-input" id="edit-email"></div><div class="form-group"><label>О себе</label><textarea class="form-textarea" id="edit-bio" placeholder="Несколько слов о себе..."></textarea></div><button class="btn btn-primary" onclick="saveProfile()">Сохранить изменения</button><div style="margin-top:30px; border-top:1px solid var(--border); padding-top:20px;"><h4 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:15px;">Сменить пароль</h4><div class="form-group"><label>Текущий пароль</label><input type="password" class="form-input" id="current-password" placeholder="••••••"></div><div class="form-group"><label>Новый пароль</label><input type="password" class="form-input" id="new-password" placeholder="••••••"></div><div class="form-group"><label>Подтверждение</label><input type="password" class="form-input" id="confirm-password" placeholder="••••••"></div><button class="btn btn-outline" onclick="changePassword()">Сменить пароль</button></div></div></div></div></div><div class="tab-content" id="tab-trips"><h2 style="font-family:var(--font-family);font-size:34px;font-weight:500;margin-bottom:28px;">Мои путешествия</h2><div class="my-trips" id="my-trips-list"></div></div><div class="tab-content" id="tab-photos"><div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-bottom:28px;">
@@ -647,8 +652,18 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   </div>
 </div>
 
-<!-- ===== МОДАЛ УЧАСТНИКА (просмотр / редактирование) ===== -->
-<div class="modal-overlay" id="user-edit-modal">
+<!-- ===== МОДАЛ ПОЛНОЙ ГАЛЕРЕИ ===== -->
+<div class="modal-overlay" id="gallery-modal">
+  <div class="modal" style="max-width:960px;">
+    <div class="modal-header">
+      <h2 class="modal-title">Галерея путешественников</h2>
+      <button class="modal-close" onclick="closeModal('gallery-modal')">✕</button>
+    </div>
+    <div id="gallery-modal-content"></div>
+  </div>
+</div>
+
+<div class="auth-overlay" id="auth-overlay">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header">
       <h2 class="modal-title" id="user-edit-modal-title">Участник</h2>
@@ -793,6 +808,13 @@ async function updateUserAvatar(file, callback) {
 // ============================================================
 function openAuth() { document.getElementById('auth-overlay').classList.add('open'); }
 function closeAuth() { document.getElementById('auth-overlay').classList.remove('open'); }
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (tab==='login'&&i===0)||(tab==='register'&&i===1)));
+  document.getElementById('auth-login').classList.toggle('active', tab==='login');
+  document.getElementById('auth-register').classList.toggle('active', tab==='register');
+  const errEl = document.getElementById('login-error');
+  if (errEl) errEl.style.display = 'none';
+}
 
 function clearLoginFields() {
   ['login-username','login-password'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
@@ -829,7 +851,7 @@ function updateNavForUser() {
 const seasonColors = { весна:'tag-green', лето:'tag-green', осень:'tag-orange', зима:'tag-orange' };
 const seasonEmoji = { весна:'🌸', лето:'☀️', осень:'🍂', зима:'❄️' };
 function renderPrograms(list) { const grid = document.getElementById('programs-grid'); grid.innerHTML = ''; if (!list || list.length === 0) { grid.innerHTML = `<div class="no-results"><div class="no-results-icon">🔍</div><h3>Ничего не найдено</h3><p>Попробуйте изменить фильтры</p></div>`; return; } list.forEach(p => { const card = document.createElement('div'); card.className = 'program-card'; card.onclick = () => openDetail(p.id); card.innerHTML = `<div class="program-photo">${p.photo ? `<img src="${p.photo}" alt="${p.name}">` : `<span>🏔</span>`}<div class="program-season-badge"><span class="tag ${seasonColors[p.season]||'tag-green'}">${seasonEmoji[p.season]||''} ${p.season}</span></div></div><div class="program-body"><h3 class="program-title">${p.name}</h3><p class="program-desc">${p.shortDesc}</p><div class="program-meta"><span>📅 ${p.days} дней</span><span>${p.transport==='поезд'?'🚂':p.transport==='самолёт'?'✈️':'🚗'} ${p.transport}</span><span>👥 до ${p.maxPeople}</span></div><div class="program-tags">${(p.tags||[]).map(t=>`<span class="tag tag-green">${t}</span>`).join('')}</div><div class="program-footer"><div class="program-price">${p.price.toLocaleString('ru')} <span>₽</span></div><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openDetail(${p.id})">Подробнее →</button></div></div>`; grid.appendChild(card); }); }
-function openDetail(id) { const p = programs.find(x => x.id === id); if (!p) return; const heroDiv = document.getElementById('detail-hero'); heroDiv.innerHTML = p.photo ? `<img src="${p.photo}" alt="${p.name}"><div class="program-hero-overlay"></div><span style="position:relative;z-index:2;font-size:80px;">🏔</span>` : `<div class="program-hero-overlay"></div><span style="position:relative;z-index:2;font-size:80px;">🏔</span>`; document.getElementById('detail-title').textContent = p.name; document.getElementById('detail-price').textContent = p.price.toLocaleString('ru'); document.getElementById('detail-full-desc').textContent = p.fullDesc; document.getElementById('detail-tags').innerHTML = (p.tags||[]).map(t=>`<span class="tag tag-green">${t}</span>`).join('') + `<span class="tag tag-orange">${p.season}</span>`; document.getElementById('detail-includes').innerHTML = (p.includes||[]).map(i=>`<div class="include-item">${i}</div>`).join(''); document.getElementById('detail-meta').innerHTML = `<div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Длительность</div><div style="font-weight:600;">${p.days} дней</div></div><div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Транспорт</div><div style="font-weight:600;">${p.transport}</div></div><div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Участников</div><div style="font-weight:600;">до ${p.maxPeople} чел.</div></div><div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Регион</div><div style="font-weight:600;">${p.country}</div></div>`; showPage('detail'); }
+function openDetail(id) { const p = programs.find(x => x.id === id); if (!p) return; const heroDiv = document.getElementById('detail-hero'); heroDiv.innerHTML = p.photo ? `<img src="${p.photo}" alt="${p.name}"><div class="program-hero-overlay"></div>` : `<div class="program-hero-overlay"></div><span style="position:relative;z-index:2;font-size:80px;">🏔</span>`; document.getElementById('detail-title').textContent = p.name; document.getElementById('detail-price').textContent = p.price.toLocaleString('ru'); document.getElementById('detail-full-desc').textContent = p.fullDesc; document.getElementById('detail-tags').innerHTML = (p.tags||[]).map(t=>`<span class="tag tag-green">${t}</span>`).join('') + `<span class="tag tag-orange">${p.season}</span>`; document.getElementById('detail-includes').innerHTML = (p.includes||[]).map(i=>`<div class="include-item">${i}</div>`).join(''); document.getElementById('detail-meta').innerHTML = `<div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Длительность</div><div style="font-weight:600;">${p.days} дней</div></div><div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Транспорт</div><div style="font-weight:600;">${p.transport}</div></div><div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Участников</div><div style="font-weight:600;">до ${p.maxPeople} чел.</div></div><div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Регион</div><div style="font-weight:600;">${p.country}</div></div>`; showPage('detail'); }
 
 // ============================================================
 // === КАРУСЕЛЬ ИЗБРАННЫХ ======================================
@@ -874,7 +896,60 @@ function resetFilters() { ['f-season','f-transport','f-duration','f-people'].for
 // ============================================================
 // === ГАЛЕРЕЯ =================================================
 // ============================================================
-function renderGallery() { document.getElementById('gallery-grid').innerHTML = gallery.map(item => `<div class="gallery-item">${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>${item.emoji}</span>`}<div class="gallery-meta">${item.caption} — ${item.author}</div></div>`).join(''); }
+const GALLERY_PREVIEW_COUNT = 6;
+function renderGallery() {
+  const grid = document.getElementById('gallery-grid');
+  const moreBtn = document.getElementById('gallery-more-btn');
+  if (!gallery.length) {
+    grid.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px 0;">Пока нет фотографий. Будьте первыми!</p>';
+    if (moreBtn) moreBtn.style.display = 'none';
+    return;
+  }
+  const preview = gallery.slice(-GALLERY_PREVIEW_COUNT);
+  grid.innerHTML = preview.map(item =>
+    `<div class="gallery-item" onclick="showAllGallery()">
+      ${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>📷</span>`}
+      <div class="gallery-meta">${item.caption} — ${item.author}</div>
+    </div>`
+  ).join('');
+  if (moreBtn) moreBtn.style.display = gallery.length > GALLERY_PREVIEW_COUNT ? '' : 'none';
+}
+
+function showAllGallery() {
+  const content = document.getElementById('gallery-modal-content');
+  if (!gallery.length) {
+    content.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px 0;">Пока нет фотографий.</p>';
+    openModal('gallery-modal');
+    return;
+  }
+  // Группируем по программам
+  const byProgram = {};
+  gallery.forEach(item => {
+    const key = item.programId || 'general';
+    if (!byProgram[key]) byProgram[key] = [];
+    byProgram[key].push(item);
+  });
+  content.innerHTML = Object.entries(byProgram).map(([progId, photos]) => {
+    const prog = progId !== 'general' ? programs.find(p => p.id === parseInt(progId)) : null;
+    const title = prog ? prog.name : 'Общие фото';
+    return `
+      <div style="margin-bottom:32px;">
+        <h4 style="font-family:var(--font-family);font-size:17px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;color:var(--text);">
+          ${prog ? '🗺' : '📷'} ${title}
+          <span style="font-size:12px;font-weight:400;color:var(--text-muted);">${photos.length} фото</span>
+        </h4>
+        <div class="gallery-grid">
+          ${photos.map(item => `
+            <div class="gallery-item">
+              ${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>📷</span>`}
+              <div class="gallery-meta">${item.caption} — ${item.author}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+  }).join('');
+  openModal('gallery-modal');
+}
 
 // ============================================================
 // === КАК МЫ ПУТЕШЕСТВУЕМ =====================================
@@ -967,6 +1042,15 @@ function changePassword() { if (!currentUser) return; const currentPwd = documen
 // Загрузка фото в галерею (с синхронизацией)
 async function addPhoto() {
   if (!currentUser) { showToast('Войдите в аккаунт'); return; }
+
+  // Проверяем наличие поездок (кроме owner/admin — им можно всегда)
+  if (currentUser.role === 'user') {
+    const userPurchases = purchases.filter(p => p.userId === currentUser.id);
+    if (userPurchases.length === 0) {
+      showToast('Добавлять фото могут только участники путешествий');
+      return;
+    }
+  }
   
   const fileInput = document.getElementById('photo-file');
   const urlInput  = document.getElementById('photo-url');
@@ -2974,6 +3058,14 @@ function init() {
   const avatarUploadBig = document.getElementById('avatar-upload-big'); if (avatarUploadBig) avatarUploadBig.onchange = (e) => updateUserAvatar(e.target.files[0], null);
   const avatarUploadSmall = document.getElementById('avatar-upload-small'); if (avatarUploadSmall) avatarUploadSmall.onchange = (e) => updateUserAvatar(e.target.files[0], null);
   loadSettingsAdmin();
+  // Регистрируем Service Worker для PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        console.log('SW registered:', reg.scope);
+      }).catch(err => console.warn('SW registration failed:', err));
+    });
+  }
 }
 init();
 </script>
@@ -3147,7 +3239,25 @@ function renderMobAdminSection(section) {
           + '</div>';
       }).join('');
   } else if (section === 'leads') {
-    box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Заявки ('+leads.length+')</h2>'+(leads.length===0?'<p style="color:var(--text-muted);">Пока нет заявок.</p>':leads.slice().reverse().map(l => '<div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><strong>'+l.name+'</strong><span style="font-size:11px;color:var(--text-muted);">'+l.date+'</span></div><div style="font-size:12px;color:var(--accent);margin-bottom:3px;">'+l.contact+'</div><div style="font-size:13px;color:var(--text-muted);">'+(l.message||'—')+'</div></div>').join(''));
+    box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Заявки (' + leads.length + ')</h2>'
+      + (leads.length === 0
+        ? '<p style="color:var(--text-muted);">Пока нет заявок.</p>'
+        : leads.slice().reverse().map(function(l) {
+            return '<div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:9px;overflow:hidden;">'
+              + '<div style="padding:13px;cursor:pointer;" onclick="openLeadModal(' + l.id + ')">'
+              + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+              + '<strong>' + l.name + '</strong>'
+              + '<span style="font-size:11px;color:var(--text-muted);">' + l.date + '</span>'
+              + '</div>'
+              + '<div style="font-size:12px;color:var(--accent);margin-bottom:3px;">' + l.contact + '</div>'
+              + '<div style="font-size:13px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (l.message || '—') + '</div>'
+              + '</div>'
+              + '<div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">'
+              + '<button class="btn btn-primary btn-sm" style="flex:1;font-size:12px;" onclick="openLeadModal(' + l.id + ')">Открыть →</button>'
+              + '<button class="btn btn-danger" style="padding:6px 12px;font-size:12px;" onclick="deleteLead(' + l.id + ')">🗑</button>'
+              + '</div>'
+              + '</div>';
+          }).join(''));
   } else if (section === 'groups') {
     box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Группы</h2>'
       + (groups.length === 0 ? '<p style="color:var(--text-muted);">Групп пока нет.</p>' : groups.map(function(g){ return '<div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;"><div style="display:flex;justify-content:space-between;align-items:center;"><strong>' + g.name + '</strong><span class="tag tag-green">' + g.status + '</span></div><div style="font-size:12px;color:var(--text-muted);margin-top:4px;">' + ((g.members||[]).length) + '/' + g.maxPeople + ' участников</div></div>'; }).join(''))
@@ -3194,5 +3304,135 @@ function imgErr(el) {
 }
 </script>
 
+<!-- jsPDF для генерации PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+function generateProgramPDF() {
+  const titleEl = document.getElementById('detail-title');
+  const priceEl = document.getElementById('detail-price');
+  const descEl  = document.getElementById('detail-full-desc');
+
+  if (!titleEl || !titleEl.textContent.trim()) {
+    showToast('Сначала откройте программу');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) { showToast('PDF-библиотека загружается, попробуйте ещё раз'); return; }
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 20;
+  const maxW = pageW - margin * 2;
+  let y = 20;
+
+  // Функция переноса строк для кириллицы (через стандартный latin fallback)
+  function addWrappedText(text, x, startY, maxWidth, lineHeight, fontSize) {
+    doc.setFontSize(fontSize);
+    const lines = doc.splitTextToSize(text, maxWidth);
+    lines.forEach(line => {
+      if (startY > 270) { doc.addPage(); startY = 20; }
+      doc.text(line, x, startY);
+      startY += lineHeight;
+    });
+    return startY;
+  }
+
+  // Заголовок
+  doc.setFillColor(92, 138, 78);
+  doc.rect(0, 0, pageW, 40, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  y = addWrappedText(titleEl.textContent, margin, 16, maxW, 8, 22);
+  y = 46;
+
+  // Цена
+  doc.setTextColor(196, 137, 90);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ot ' + (priceEl ? priceEl.textContent : '') + ' rub. za cheloveka', margin, y);
+  y += 10;
+
+  // Линия
+  doc.setDrawColor(92, 138, 78);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageW - margin, y);
+  y += 8;
+
+  // Описание
+  doc.setTextColor(37, 32, 24);
+  doc.setFont('helvetica', 'normal');
+  if (descEl && descEl.textContent.trim()) {
+    y = addWrappedText(descEl.textContent.trim(), margin, y, maxW, 6, 11);
+    y += 6;
+  }
+
+  // Что включено
+  const includesEl = document.getElementById('detail-includes');
+  if (includesEl && includesEl.querySelectorAll('.include-item').length) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(92, 138, 78);
+    if (y > 260) { doc.addPage(); y = 20; }
+    doc.text('Chto vklyucheno:', margin, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(37, 32, 24);
+    includesEl.querySelectorAll('.include-item').forEach(item => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      y = addWrappedText('✓  ' + item.textContent.trim(), margin + 2, y, maxW - 4, 6, 11);
+      y += 2;
+    });
+    y += 4;
+  }
+
+  // Детали
+  const metaEl = document.getElementById('detail-meta');
+  if (metaEl) {
+    const cards = metaEl.querySelectorAll('div[style*="border"]');
+    if (cards.length) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(92, 138, 78);
+      if (y > 260) { doc.addPage(); y = 20; }
+      doc.text('Detali:', margin, y);
+      y += 7;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(37, 32, 24);
+      cards.forEach(card => {
+        const label = card.querySelector('div')?.textContent?.trim() || '';
+        const val   = card.querySelectorAll('div')[1]?.textContent?.trim() || '';
+        if (label && val) {
+          if (y > 270) { doc.addPage(); y = 20; }
+          doc.text(label + ': ' + val, margin + 2, y);
+          y += 7;
+        }
+      });
+    }
+  }
+
+  // Контакты в footer
+  y += 8;
+  doc.setFillColor(237, 231, 218);
+  doc.rect(0, y, pageW, 20, 'F');
+  doc.setFontSize(10);
+  doc.setTextColor(122, 112, 96);
+  doc.setFont('helvetica', 'normal');
+  const contacts = [
+    contactsContent.phone || '',
+    contactsContent.email || '',
+    'Telegram: ' + (contactsContent.tg || '')
+  ].filter(Boolean).join('   |   ');
+  doc.text('VPUTESHESTVIEVMESTE  |  ' + contacts, margin, y + 8);
+  doc.text('spoiler038.github.io', margin, y + 14);
+
+  const filename = (titleEl.textContent || 'programma').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_').slice(0, 40) + '.pdf';
+  doc.save(filename);
+  showToast('PDF сохранён ✓');
+}
+</script>
 </body>
 </html>
