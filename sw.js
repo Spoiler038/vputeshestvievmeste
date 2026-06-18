@@ -2,18 +2,34 @@
 // ВПУТЕШЕСТВИЕВМЕСТЕ — Service Worker
 // Версию обновлять при каждом деплое для инвалидации кеша
 // ============================================================
-const CACHE_NAME   = 'vputi-v1';
+const CACHE_NAME   = 'vputi-v2';
 const CACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  './',
+  './index.html',
+  './manifest.json',
 ];
 
-// ── Установка: кешируем ключевые ресурсы ──────────────────────
+// ── Установка: кешируем ключевые ресурсы с обработкой ошибок ──
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(CACHE_ASSETS))
+      .then(cache => {
+        // Кешируем каждый файл по отдельности, игнорируя ошибки
+        return Promise.allSettled(
+          CACHE_ASSETS.map(url => {
+            return fetch(url).then(response => {
+              if (response.ok) {
+                return cache.put(url, response);
+              }
+              console.warn('Failed to cache:', url, response.status);
+              return Promise.resolve();
+            }).catch(err => {
+              console.warn('Failed to cache:', url, err);
+              return Promise.resolve();
+            });
+          })
+        );
+      })
       .then(() => self.skipWaiting())
   );
 });
@@ -31,7 +47,6 @@ self.addEventListener('activate', event => {
 
 // ── Запросы: network-first, fallback кеш ─────────────────────
 self.addEventListener('fetch', event => {
-  // Пропускаем не-GET и запросы к API / Supabase / Cloudinary
   if (event.request.method !== 'GET') return;
   const url = event.request.url;
   if (url.includes('supabase.co') || url.includes('cloudinary.com') ||
@@ -40,7 +55,6 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Кешируем только успешные ответы на own-origin запросы
         if (response.ok && url.startsWith(self.location.origin)) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
@@ -53,7 +67,7 @@ self.addEventListener('fetch', event => {
 
 // ── Push уведомления ──────────────────────────────────────────
 self.addEventListener('push', event => {
-  let data = { title: 'ВПУТЕШЕСТВИЕВМЕСТЕ', body: 'Новое уведомление', icon: '/icons/android/192.png' };
+  let data = { title: 'ВПУТЕШЕСТВИЕВМЕСТЕ', body: 'Новое уведомление', icon: '/vputeshestvievmeste/icons/android/192.png' };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch(e) {
@@ -62,8 +76,8 @@ self.addEventListener('push', event => {
 
   const options = {
     body:    data.body,
-    icon:    data.icon || '/icons/android/192.png',
-    badge:   '/icons/android/72.png',
+    icon:    data.icon || '/vputeshestvievmeste/icons/android/192.png',
+    badge:   '/vputeshestvievmeste/icons/android/72.png',
     tag:     data.tag  || 'vputi-notification',
     data:    { url: data.url || '/' },
     actions: data.actions || [],
@@ -76,10 +90,10 @@ self.addEventListener('push', event => {
   );
 });
 
-// ── Клик по уведомлению — открываем/фокусируем вкладку ───────
+// ── Клик по уведомлению ──────────────────────────────────────
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/vputeshestvievmeste/';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
