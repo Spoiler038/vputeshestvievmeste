@@ -1,12 +1,11 @@
 // ============================================================
 // ВПУТЕШЕСТВИЕВМЕСТЕ — Service Worker
 // ============================================================
-const CACHE_NAME = 'vputi-v4';
+const CACHE_NAME = 'vputi-v5';
 const CACHE_ASSETS = [
   '/vputeshestvievmeste/',
   '/vputeshestvievmeste/index.html',
   '/vputeshestvievmeste/manifest.json',
-  // Иконки
   '/vputeshestvievmeste/icons/android/72.png',
   '/vputeshestvievmeste/icons/android/192.png',
   '/vputeshestvievmeste/icons/android/512.png',
@@ -15,11 +14,11 @@ const CACHE_ASSETS = [
 
 // ── Установка ────────────────────────────────────────────────
 self.addEventListener('install', event => {
-  console.log('📦 Service Worker установка...');
+  console.log('📦 SW install:', CACHE_NAME);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('📦 Кеширование ресурсов...');
+        console.log('📦 Кеширование...');
         return cache.addAll(CACHE_ASSETS);
       })
       .then(() => {
@@ -34,14 +33,14 @@ self.addEventListener('install', event => {
 
 // ── Активация ────────────────────────────────────────────────
 self.addEventListener('activate', event => {
-  console.log('🚀 Service Worker активация...');
+  console.log('🚀 SW activate:', CACHE_NAME);
   event.waitUntil(
     caches.keys()
       .then(keys => {
         return Promise.all(
           keys.filter(key => key !== CACHE_NAME)
             .map(key => {
-              console.log('🗑 Удаление старого кеша:', key);
+              console.log('🗑 Удаление:', key);
               return caches.delete(key);
             })
         );
@@ -57,7 +56,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = event.request.url;
   
-  // Пропускаем запросы к внешним API
+  // Пропускаем внешние API
   if (url.includes('supabase.co') || 
       url.includes('cloudinary.com') ||
       url.includes('googleapis.com') ||
@@ -69,7 +68,6 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Кешируем только успешные ответы с нашего сайта
         if (response.ok && url.startsWith(self.location.origin)) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => {
@@ -79,16 +77,10 @@ self.addEventListener('fetch', event => {
         return response;
       })
       .catch(() => {
-        // Если нет сети — пытаемся отдать из кеша
         return caches.match(event.request)
           .then(cached => {
-            if (cached) {
-              console.log('📦 Отдано из кеша:', url);
-              return cached;
-            }
-            // Если нет в кеше — показываем главную страницу
+            if (cached) return cached;
             if (event.request.mode === 'navigate') {
-              console.log('📄 Офлайн — показываем главную');
               return caches.match('/vputeshestvievmeste/index.html');
             }
             return new Response('Офлайн', { status: 503 });
