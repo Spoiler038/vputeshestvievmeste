@@ -2854,12 +2854,21 @@ async function removeMember(groupId, memberIndex) {
   document.getElementById('stat-dirs').textContent = heroStats.dirs;
 }
 
-async function saveHeroStats() {
-  const stats = {
-    trips: document.getElementById('stat-trips-input').value.trim() || '47',
-    people: document.getElementById('stat-people-input').value.trim() || '380+',
-    dirs: document.getElementById('stat-dirs-input').value.trim() || '12'
-  };
+async function saveHeroStats(source) {
+  // Если вызвано с мобильной версии — берём данные оттуда
+  let trips, people, dirs;
+  
+  if (source === 'mobile') {
+    trips = document.getElementById('mob-stat-trips')?.value?.trim() || '47';
+    people = document.getElementById('mob-stat-people')?.value?.trim() || '380+';
+    dirs = document.getElementById('mob-stat-dirs')?.value?.trim() || '12';
+  } else {
+    trips = document.getElementById('stat-trips-input')?.value?.trim() || '47';
+    people = document.getElementById('stat-people-input')?.value?.trim() || '380+';
+    dirs = document.getElementById('stat-dirs-input')?.value?.trim() || '12';
+  }
+  
+  const stats = { trips, people, dirs };
   heroStats = stats;
   saveState('heroStats', stats);
   
@@ -2868,33 +2877,24 @@ async function saveHeroStats() {
     await saveSettingToSheets('heroStats', stats);
   } catch(e) { console.warn('Hero stats sync error:', e); }
   
-  // Обновляем на странице
-  document.getElementById('stat-trips').textContent = stats.trips;
-  document.getElementById('stat-people').textContent = stats.people;
-  document.getElementById('stat-dirs').textContent = stats.dirs;
-  showToast('Статистика обновлена и синхронизирована ✓');
-}
-
-  async function saveMobStats() {
-  const stats = {
-    trips: (document.getElementById('mob-stat-trips')?.value || '47').trim(),
-    people: (document.getElementById('mob-stat-people')?.value || '380+').trim(),
-    dirs: (document.getElementById('mob-stat-dirs')?.value || '12').trim()
-  };
-  heroStats = stats;
-  saveState('heroStats', stats);
-  try {
-    await saveSettingToSheets('heroStats', stats);
-  } catch(e) { console.warn('Sync error:', e); }
-  // Обновляем на главной
-  document.getElementById('stat-trips').textContent = stats.trips;
-  document.getElementById('stat-people').textContent = stats.people;
-  document.getElementById('stat-dirs').textContent = stats.dirs;
-  // Обновляем поля в админке (десктопной)
-  document.getElementById('stat-trips-input').value = stats.trips;
-  document.getElementById('stat-people-input').value = stats.people;
-  document.getElementById('stat-dirs-input').value = stats.dirs;
-  showToast('Статистика сохранена ✓');
+  // Обновляем все поля ввода (и десктопные, и мобильные)
+  const desktopInputs = ['stat-trips-input', 'stat-people-input', 'stat-dirs-input'];
+  const mobileInputs = ['mob-stat-trips', 'mob-stat-people', 'mob-stat-dirs'];
+  
+  const allInputs = [...desktopInputs, ...mobileInputs];
+  const values = [trips, people, dirs];
+  
+  allInputs.forEach((id, index) => {
+    const el = document.getElementById(id);
+    if (el) el.value = values[index % 3];
+  });
+  
+  // Обновляем отображение на главной странице
+  document.getElementById('stat-trips').textContent = trips;
+  document.getElementById('stat-people').textContent = people;
+  document.getElementById('stat-dirs').textContent = dirs;
+  
+  showToast('Статистика сохранена и синхронизирована ✓');
 }
 // ============================================================
 // === КАСТОМНЫЙ CONFIRM =======================================
@@ -3380,7 +3380,7 @@ function renderMobAdminSection(section) {
         <div><label style="font-size:10px;color:var(--text-muted);">Участников</label><input class="form-input" id="mob-stat-people" value="${heroStats.people}" style="padding:8px;font-size:14px;"></div>
         <div><label style="font-size:10px;color:var(--text-muted);">Направлений</label><input class="form-input" id="mob-stat-dirs" value="${heroStats.dirs}" style="padding:8px;font-size:14px;"></div>
       </div>
-      <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%;" onclick="saveMobStats()">Сохранить статистику</button>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%;" onclick="saveHeroStats('mobile')">Сохранить статистику</button>
     </div>
   `;
 } else if (section === 'founder') {
