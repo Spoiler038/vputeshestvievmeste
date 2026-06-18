@@ -398,6 +398,36 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   #admin-btn { display: none !important; }
   .mobile-admin-toggle { display: inline-flex !important; } .admin-sidebar { display: none; } .admin-main { padding: 20px; } .admin-page-title { font-size: 28px; } .stats-grid { grid-template-columns: 1fr 1fr; gap: 12px; } .stat-value { font-size: 28px; } .admin-table { font-size: 11px; } .admin-table th, .admin-table td { padding: 8px 10px; } .td-actions { flex-direction: column; gap: 5px; } .modal { padding: 20px; } .modal-title { font-size: 22px; } .modal-grid { grid-template-columns: 1fr; } .program-detail-grid { grid-template-columns: 1fr; } .program-detail-title { font-size: 32px; } .booking-card { position: static; margin-top: 20px; } .profile-grid { grid-template-columns: 1fr; } .profile-card { max-width: 300px; margin: 0 auto; } .dashboard-tabs { width: 100%; justify-content: center; } .tab-btn { padding: 6px 12px; font-size: 12px; } .trip-item { flex-direction: column; text-align: center; } .revenue-grid { grid-template-columns: repeat(6, 1fr); } .rev-month { font-size: 9px; } .rev-amount { font-size: 9px; } .auth-box { padding: 30px 24px; margin: 0 16px; } .auth-logo p { font-size: 22px; } }
 @media (max-width: 480px) { .container { padding: 0 12px; } .hero h1 { font-size: 32px; } .section-title { font-size: 28px; } .about-value { gap: 10px; } .about-value-icon { width: 32px; height: 32px; font-size: 14px; } .stats-grid { grid-template-columns: 1fr; } .revenue-grid { grid-template-columns: repeat(4, 1fr); } .program-title { font-size: 18px; } .program-price { font-size: 20px; } .carousel-item { flex: 0 0 calc(95% - 12px); } .admin-main { padding: 16px; } }
+
+  /* Мобильная статистика — колонки друг под другом */
+@media (max-width: 768px) {
+  .hero-stats {
+    flex-direction: column !important;
+    gap: 16px !important;
+    align-items: stretch !important;
+  }
+  .hero-stats > div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 10px 16px !important;
+    background: var(--surface) !important;
+    border-radius: var(--radius-sm) !important;
+    border: 1px solid var(--border) !important;
+  }
+  .hero-stat-num {
+    font-size: 28px !important;
+    order: 2;
+  }
+  .hero-stat-label {
+    font-size: 13px !important;
+    order: 1;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-weight: 500 !important;
+    color: var(--text) !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -718,6 +748,7 @@ let leads = loadState('leads', []);
 let gallery = loadState('gallery', []);
 let inviteCodeSetting = loadState('inviteCode', 'VPUTI2026');
 let groups = loadState('groups', []);
+let heroStats = loadState('heroStats', { trips: '47', people: '380+', dirs: '12' });
 
 // ============================================================
 // === ВИДЫ ТРАНСПОРТА =========================================
@@ -2107,6 +2138,14 @@ async function loadAllFromSheets() {
             saveState('transportDescs', descs);
           } catch(e) { console.warn('Parse transportDescs error:', e); }
         }
+        if (s.key === 'heroStats') {
+          try {
+            const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+            heroStats = { ...heroStats, ...parsed };
+            saveState('heroStats', heroStats);
+            loadHeroStats(); // обновляем интерфейс
+          } catch(e) { console.warn('Parse heroStats error:', e); }
+        }
       }
     }
     
@@ -2806,26 +2845,56 @@ async function removeMember(groupId, memberIndex) {
 
 
   function loadHeroStats() {
-  const stats = loadState('heroStats', { trips: '47', people: '380+', dirs: '12' });
-  document.getElementById('stat-trips-input').value = stats.trips;
-  document.getElementById('stat-people-input').value = stats.people;
-  document.getElementById('stat-dirs-input').value = stats.dirs;
-  document.getElementById('stat-trips').textContent = stats.trips;
-  document.getElementById('stat-people').textContent = stats.people;
-  document.getElementById('stat-dirs').textContent = stats.dirs;
+  // Загружаем из глобальной переменной (уже синхронизирована с Sheets)
+  document.getElementById('stat-trips-input').value = heroStats.trips;
+  document.getElementById('stat-people-input').value = heroStats.people;
+  document.getElementById('stat-dirs-input').value = heroStats.dirs;
+  document.getElementById('stat-trips').textContent = heroStats.trips;
+  document.getElementById('stat-people').textContent = heroStats.people;
+  document.getElementById('stat-dirs').textContent = heroStats.dirs;
 }
 
-function saveHeroStats() {
+async function saveHeroStats() {
   const stats = {
     trips: document.getElementById('stat-trips-input').value.trim() || '47',
     people: document.getElementById('stat-people-input').value.trim() || '380+',
     dirs: document.getElementById('stat-dirs-input').value.trim() || '12'
   };
+  heroStats = stats;
   saveState('heroStats', stats);
+  
+  // Синхронизация с Google Sheets
+  try {
+    await saveSettingToSheets('heroStats', stats);
+  } catch(e) { console.warn('Hero stats sync error:', e); }
+  
+  // Обновляем на странице
   document.getElementById('stat-trips').textContent = stats.trips;
   document.getElementById('stat-people').textContent = stats.people;
   document.getElementById('stat-dirs').textContent = stats.dirs;
-  showToast('Статистика обновлена ✓');
+  showToast('Статистика обновлена и синхронизирована ✓');
+}
+
+  async function saveMobStats() {
+  const stats = {
+    trips: (document.getElementById('mob-stat-trips')?.value || '47').trim(),
+    people: (document.getElementById('mob-stat-people')?.value || '380+').trim(),
+    dirs: (document.getElementById('mob-stat-dirs')?.value || '12').trim()
+  };
+  heroStats = stats;
+  saveState('heroStats', stats);
+  try {
+    await saveSettingToSheets('heroStats', stats);
+  } catch(e) { console.warn('Sync error:', e); }
+  // Обновляем на главной
+  document.getElementById('stat-trips').textContent = stats.trips;
+  document.getElementById('stat-people').textContent = stats.people;
+  document.getElementById('stat-dirs').textContent = stats.dirs;
+  // Обновляем поля в админке (десктопной)
+  document.getElementById('stat-trips-input').value = stats.trips;
+  document.getElementById('stat-people-input').value = stats.people;
+  document.getElementById('stat-dirs-input').value = stats.dirs;
+  showToast('Статистика сохранена ✓');
 }
 // ============================================================
 // === КАСТОМНЫЙ CONFIRM =======================================
@@ -3087,7 +3156,7 @@ function finalizeGroup(g) {
 }
 function init() {
   updateTransportSelects();
-  renderPrefTagsFilter(); renderPrograms(programs); renderGallery(); renderHowCards(); renderFeaturedCarousel(); applyFounderContent(); applyContactsContent(); updateNavForUser(); initEnterHandlers(); initSheetsSync();
+  renderPrefTagsFilter(); renderPrograms(programs); renderGallery(); renderHowCards(); renderFeaturedCarousel(); applyFounderContent(); applyContactsContent(); updateNavForUser(); initEnterHandlers(); initSheetsSync();loadHeroStats();
   if (currentUser && currentUser.role !== 'owner') { const dashboardNavItem = document.querySelector('.admin-nav-item[onclick*="dashboard"]'); if (dashboardNavItem) dashboardNavItem.style.display = 'none'; }
   const avatarUploadBig = document.getElementById('avatar-upload-big'); if (avatarUploadBig) avatarUploadBig.onchange = (e) => updateUserAvatar(e.target.files[0], null);
   const avatarUploadSmall = document.getElementById('avatar-upload-small'); if (avatarUploadSmall) avatarUploadSmall.onchange = (e) => updateUserAvatar(e.target.files[0], null);
@@ -3297,8 +3366,24 @@ function renderMobAdminSection(section) {
       + (groups.length === 0 ? '<p style="color:var(--text-muted);">Групп пока нет.</p>' : groups.map(function(g){ return '<div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;"><div style="display:flex;justify-content:space-between;align-items:center;"><strong>' + g.name + '</strong><span class="tag tag-green">' + g.status + '</span></div><div style="font-size:12px;color:var(--text-muted);margin-top:4px;">' + ((g.members||[]).length) + '/' + g.maxPeople + ' участников</div></div>'; }).join(''))
       + '<button class="btn btn-primary" style="margin-top:12px;width:100%;" onclick="openAddGroup()">+ Создать группу</button>';
   } else if (section === 'settings') {
-    box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Настройки</h2><div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:7px;">Код приглашения</label><input type="text" class="form-input" id="mob-invite" value="'+inviteCodeSetting+'" style="margin-bottom:8px;"><button class="btn btn-primary btn-sm" onclick="saveMobInvite()">Сохранить код</button></div>';
-  } else if (section === 'founder') {
+  box.innerHTML = `
+    <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Настройки</h2>
+    <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:7px;">🔑 Код приглашения</label>
+      <input type="text" class="form-input" id="mob-invite" value="${inviteCodeSetting}" style="margin-bottom:8px;">
+      <button class="btn btn-primary btn-sm" onclick="saveMobInvite()">Сохранить код</button>
+    </div>
+    <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:7px;">📊 Статистика на главной</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div><label style="font-size:10px;color:var(--text-muted);">Путешествий</label><input class="form-input" id="mob-stat-trips" value="${heroStats.trips}" style="padding:8px;font-size:14px;"></div>
+        <div><label style="font-size:10px;color:var(--text-muted);">Участников</label><input class="form-input" id="mob-stat-people" value="${heroStats.people}" style="padding:8px;font-size:14px;"></div>
+        <div><label style="font-size:10px;color:var(--text-muted);">Направлений</label><input class="form-input" id="mob-stat-dirs" value="${heroStats.dirs}" style="padding:8px;font-size:14px;"></div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%;" onclick="saveMobStats()">Сохранить статистику</button>
+    </div>
+  `;
+} else if (section === 'founder') {
     const f = founderContent;
     box.innerHTML = '<h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Об основателе</h2><div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);"><div class="form-group"><label>Имя</label><input class="form-input" id="mob-f-name" value="'+f.name.split('\n').join(' ')+'"></div><div class="form-group"><label>Лет в пути</label><input class="form-input" id="mob-f-years" value="'+f.years+'"></div><div class="form-group"><label>Абзац 1</label><textarea class="form-textarea" id="mob-f-bio1" style="min-height:80px;">'+f.bio1+'</textarea></div><div class="form-group"><label>Абзац 2</label><textarea class="form-textarea" id="mob-f-bio2" style="min-height:70px;">'+f.bio2+'</textarea></div><button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="saveMobFounder()">Сохранить</button></div>';
   } else if (section === 'contacts') {
