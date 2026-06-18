@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
 <title>ВПУТЕШЕСТВИЕВМЕСТЕ — Авторские программы Марины Пищальниковой</title>
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="/vputeshestvievmeste/manifest.json">
 <meta name="theme-color" content="#5C8A4E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -3095,7 +3095,7 @@ function init() {
   // Регистрируем Service Worker для PWA
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').then(reg => {
+      navigator.serviceWorker.register('/vputeshestvievmeste/sw.js').then(reg => {
         console.log('SW registered:', reg.scope);
       }).catch(err => console.warn('SW registration failed:', err));
     });
