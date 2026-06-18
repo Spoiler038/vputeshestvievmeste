@@ -499,6 +499,16 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:16px;">🔑 Код приглашения</h3>
   <div class="form-group"><label>Код для регистрации</label><input type="text" class="form-input" id="invite-code" placeholder="VPUTI2026"><button class="btn btn-primary" style="margin-top:10px;" onclick="saveInviteCode()">Сохранить код</button><p class="auth-hint" style="margin-top:10px;">Текущий код: <span id="current-invite-code">VPUTI2026</span></p></div>
 </div>
+  <div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:20px;">
+  <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:6px;">📊 Статистика на главной</h3>
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Цифры, отображаемые в блоке «Путешествий», «Участников», «Направлений».</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+    <div class="form-group"><label>Путешествий</label><input type="text" class="form-input" id="stat-trips-input" placeholder="47"></div>
+    <div class="form-group"><label>Участников</label><input type="text" class="form-input" id="stat-people-input" placeholder="380+"></div>
+    <div class="form-group"><label>Направлений</label><input type="text" class="form-input" id="stat-dirs-input" placeholder="12"></div>
+  </div>
+  <button class="btn btn-primary" onclick="saveHeroStats()">Сохранить статистику</button>
+</div>
 <div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);">
   <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:6px;">🏷 Предпочтения (теги фильтра)</h3>
   <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Теги отображаются в фильтре программ на главной странице и доступны при создании программы.</p>
@@ -663,7 +673,8 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   </div>
 </div>
 
-<div class="auth-overlay" id="auth-overlay">
+<!-- ===== МОДАЛ РЕДАКТИРОВАНИЯ УЧАСТНИКА ===== -->
+<div class="modal-overlay" id="user-edit-modal">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header">
       <h2 class="modal-title" id="user-edit-modal-title">Участник</h2>
@@ -2793,6 +2804,29 @@ async function removeMember(groupId, memberIndex) {
 }
 // ============================================================
 
+
+  function loadHeroStats() {
+  const stats = loadState('heroStats', { trips: '47', people: '380+', dirs: '12' });
+  document.getElementById('stat-trips-input').value = stats.trips;
+  document.getElementById('stat-people-input').value = stats.people;
+  document.getElementById('stat-dirs-input').value = stats.dirs;
+  document.getElementById('stat-trips').textContent = stats.trips;
+  document.getElementById('stat-people').textContent = stats.people;
+  document.getElementById('stat-dirs').textContent = stats.dirs;
+}
+
+function saveHeroStats() {
+  const stats = {
+    trips: document.getElementById('stat-trips-input').value.trim() || '47',
+    people: document.getElementById('stat-people-input').value.trim() || '380+',
+    dirs: document.getElementById('stat-dirs-input').value.trim() || '12'
+  };
+  saveState('heroStats', stats);
+  document.getElementById('stat-trips').textContent = stats.trips;
+  document.getElementById('stat-people').textContent = stats.people;
+  document.getElementById('stat-dirs').textContent = stats.dirs;
+  showToast('Статистика обновлена ✓');
+}
 // ============================================================
 // === КАСТОМНЫЙ CONFIRM =======================================
 // ============================================================
