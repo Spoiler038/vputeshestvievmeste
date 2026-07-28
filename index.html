@@ -349,9 +349,22 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 </div>
   
 /* ===== ДОКУМЕНТЫ В ЛК ===== */
-#user-docs-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+#user-docs-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  padding: 4px 2px 16px 2px;
+}
 .doc-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 12px; transition: all 0.3s; }
 .doc-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+   #user-docs-container .doc-card {
+  scroll-snap-align: start;
+  min-width: 280px;
+  flex-shrink: 0;
+}
 
 /* ===== АДМИН ПАНЕЛЬ ===== */
 .admin-panel { background: var(--bg); min-height: 100vh; padding-top: 80px; }
@@ -487,19 +500,28 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   .auth-box { padding: 30px 24px; margin: 0 16px; }
   .auth-logo p { font-size: 22px; }
   .consent-checkbox-wrapper label { font-size: 12px; }
-  #user-docs-container { grid-template-columns: 1fr; }
+  #user-docs-container {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    padding: 4px 2px 16px 2px;
+  }
+   #tab-photos .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  #user-docs-container .doc-card {
+    min-width: 280px;
+    max-width: 320px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
+  #tab-photos .form-grid > div {
+    grid-column: 1 !important;
+  }
 }
 
-@media (max-width: 480px) {
-  .container { padding: 0 12px; }
-  .hero h1 { font-size: 32px; }
-  .section-title { font-size: 28px; }
-  .stats-grid { grid-template-columns: 1fr; }
-  .program-title { font-size: 18px; }
-  .program-price { font-size: 20px; }
-  .carousel-item { flex: 0 0 calc(95% - 12px); }
-  .admin-main { padding: 16px; }
-}
 
 /* ===== КНОПКА НАВЕРХ ===== */
 .back-to-top {
@@ -1099,31 +1121,31 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
         <!-- ===== ВКЛАДКА: ФОТОАЛЬБОМ ===== -->
         <div class="tab-content" id="tab-photos">
           <div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-bottom:28px;">
-            <h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-bottom:7px;">Добавить фото</h3>
-            <p style="font-size:14px;color:var(--text-muted);margin-bottom:18px;">Загрузите фото из поездки. Можно прикрепить к программе путешествия.</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-              <div>
-                <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Файл с устройства</label>
-                <input type="file" class="form-input" id="photo-file" accept="image/jpeg,image/png,image/webp,image/gif" style="cursor:pointer;">
-              </div>
-              <div>
-                <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Или ссылка на фото</label>
-                <input type="text" class="form-input" id="photo-url" placeholder="https://example.com/photo.jpg">
-              </div>
-              <div>
-                <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Программа путешествия</label>
-                <select class="filter-select" id="photo-program">
-                  <option value="">— Общее фото —</option>
-                </select>
-              </div>
-              <div>
-                <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Подпись</label>
-                <input type="text" class="form-input" id="photo-caption" placeholder="Название места или момента">
-              </div>
+          <h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-bottom:7px;">Добавить фото</h3>
+          <p style="font-size:14px;color:var(--text-muted);margin-bottom:18px;">Загрузите фото из поездки. Можно прикрепить к программе путешествия.</p>
+          <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+            <div>
+              <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Файл с устройства</label>
+              <input type="file" class="form-input" id="photo-file" accept="image/jpeg,image/png,image/webp,image/gif" style="cursor:pointer;">
             </div>
-            <button class="btn btn-primary" onclick="addPhoto()">Добавить фото</button>
-            <div id="photo-upload-status" style="display:none;margin-top:10px;font-size:13px;color:var(--text-muted);"></div>
-          </div>
+            <div>
+          <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Или ссылка на фото</label>
+          <input type="text" class="form-input" id="photo-url" placeholder="https://example.com/photo.jpg">
+        </div>
+      <div>
+      <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Программа путешествия</label>
+        <select class="filter-select" id="photo-program">
+        <option value="">— Общее фото —</option>
+        </select>
+      </div>
+    <div>
+      <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Подпись</label>
+      <input type="text" class="form-input" id="photo-caption" placeholder="Название места или момента">
+    </div>
+  </div>
+  <button class="btn btn-primary" onclick="addPhoto()">Добавить фото</button>
+  <div id="photo-upload-status" style="display:none;margin-top:10px;font-size:13px;color:var(--text-muted);"></div>
+</div>
           <div id="user-gallery-by-program"></div>
         </div>
                 <!-- ===== ВКЛАДКА: ДОКУМЕНТЫ ===== -->
@@ -1776,6 +1798,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 
 <!-- ===== БИБЛИОТЕКИ ===== -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script>
 // ============================================================
 // === ПЕРЕМЕННЫЕ И СОСТОЯНИЕ ==================================
@@ -6609,32 +6632,34 @@ function generateProgramPDF() {
   const maxW = pageW - margin * 2;
   let y = 20;
 
-  // Используем стандартный шрифт, но для кириллицы используем метод text с опцией
-  function addWrappedText(text, x, startY, maxWidth, lineHeight, fontSize) {
-    doc.setFontSize(fontSize);
-    // Разбиваем на строки с учетом ширины
-    const lines = doc.splitTextToSize(text, maxWidth);
-    lines.forEach(line => {
-      if (startY > 270) { doc.addPage(); startY = 20; }
-      // Для кириллицы используем строку как есть
-      doc.text(line, x, startY);
-      startY += lineHeight;
-    });
-    return startY;
-  }
-
   // Заголовок
   doc.setFillColor(92, 138, 78);
   doc.rect(0, 0, pageW, 40, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  y = addWrappedText(titleEl.textContent, margin, 16, maxW, 8, 22);
-  y = 46;
+  
+  // Используем autotable для кириллицы
+  doc.autoTable({
+    startY: 16,
+    body: [[titleEl.textContent]],
+    theme: 'plain',
+    styles: { 
+      fontSize: 18, 
+      fontStyle: 'bold', 
+      textColor: [255, 255, 255],
+      fillColor: [92, 138, 78],
+      halign: 'left',
+      cellPadding: { left: margin, right: margin, top: 4, bottom: 4 }
+    },
+    tableWidth: pageW - margin * 2,
+    margin: { left: margin, right: margin }
+  });
+  y = doc.lastAutoTable.finalY + 8;
 
   // Цена
   doc.setTextColor(196, 137, 90);
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('от ' + (priceEl ? priceEl.textContent : '') + ' руб. за человека', margin, y);
   y += 10;
@@ -6645,33 +6670,45 @@ function generateProgramPDF() {
   doc.line(margin, y, pageW - margin, y);
   y += 8;
 
-  // Описание
+  // Описание - используем autotable для кириллицы
   doc.setTextColor(37, 32, 24);
-  doc.setFont('helvetica', 'normal');
   if (descEl && descEl.textContent.trim()) {
-    y = addWrappedText(descEl.textContent.trim(), margin, y, maxW, 6, 11);
-    y += 6;
+    const descLines = doc.splitTextToSize(descEl.textContent.trim(), maxW);
+    doc.autoTable({
+      startY: y,
+      body: descLines.map(line => [line]),
+      theme: 'plain',
+      styles: { fontSize: 10, textColor: [37, 32, 24], cellPadding: { left: margin, right: margin, top: 2, bottom: 2 } },
+      tableWidth: pageW - margin * 2,
+      margin: { left: margin, right: margin }
+    });
+    y = doc.lastAutoTable.finalY + 4;
   }
 
   // Что включено
   const includesEl = document.getElementById('detail-includes');
   if (includesEl && includesEl.querySelectorAll('.include-item').length) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(92, 138, 78);
-    if (y > 260) { doc.addPage(); y = 20; }
-    doc.text('Что включено:', margin, y);
-    y += 7;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(37, 32, 24);
-
+    const items = [];
     includesEl.querySelectorAll('.include-item').forEach(item => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      y = addWrappedText('✓  ' + item.textContent.trim(), margin + 2, y, maxW - 4, 6, 11);
-      y += 2;
+      items.push(['✓  ' + item.textContent.trim()]);
     });
-    y += 4;
+    
+    if (y > 260) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(92, 138, 78);
+    doc.text('Что включено:', margin, y);
+    y += 6;
+
+    doc.autoTable({
+      startY: y,
+      body: items,
+      theme: 'plain',
+      styles: { fontSize: 10, textColor: [37, 32, 24], cellPadding: { left: margin + 2, right: margin, top: 1.5, bottom: 1.5 } },
+      tableWidth: pageW - margin * 2,
+      margin: { left: margin, right: margin }
+    });
+    y = doc.lastAutoTable.finalY + 4;
   }
 
   // Детали
@@ -6679,33 +6716,41 @@ function generateProgramPDF() {
   if (metaEl) {
     const cards = metaEl.querySelectorAll('div[style*="border"]');
     if (cards.length) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13);
-      doc.setTextColor(92, 138, 78);
       if (y > 260) { doc.addPage(); y = 20; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(92, 138, 78);
       doc.text('Детали:', margin, y);
-      y += 7;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.setTextColor(37, 32, 24);
+      y += 6;
 
+      const details = [];
       cards.forEach(card => {
         const label = card.querySelector('div')?.textContent?.trim() || '';
         const val = card.querySelectorAll('div')[1]?.textContent?.trim() || '';
         if (label && val) {
-          if (y > 270) { doc.addPage(); y = 20; }
-          doc.text(label + ': ' + val, margin + 2, y);
-          y += 7;
+          details.push([label + ': ' + val]);
         }
       });
+
+      if (details.length) {
+        doc.autoTable({
+          startY: y,
+          body: details,
+          theme: 'plain',
+          styles: { fontSize: 10, textColor: [37, 32, 24], cellPadding: { left: margin + 2, right: margin, top: 1.5, bottom: 1.5 } },
+          tableWidth: pageW - margin * 2,
+          margin: { left: margin, right: margin }
+        });
+        y = doc.lastAutoTable.finalY + 4;
+      }
     }
   }
 
   // Контакты в footer
-  y += 8;
+  y += 4;
   doc.setFillColor(237, 231, 218);
-  doc.rect(0, y, pageW, 20, 'F');
-  doc.setFontSize(10);
+  doc.rect(0, y, pageW, 18, 'F');
+  doc.setFontSize(9);
   doc.setTextColor(122, 112, 96);
   doc.setFont('helvetica', 'normal');
 
@@ -6715,8 +6760,8 @@ function generateProgramPDF() {
     'Telegram: ' + (contactsContent.tg || '')
   ].filter(Boolean).join('   |   ');
 
-  doc.text('ВПУТЕШЕСТВИЕВМЕСТЕ  |  ' + contacts, margin, y + 8);
-  doc.text('spoiler038.github.io', margin, y + 14);
+  doc.text('ВПУТЕШЕСТВИЕВМЕСТЕ  |  ' + contacts, margin, y + 7);
+  doc.text('spoiler038.github.io', margin, y + 12);
 
   const filename = (titleEl.textContent || 'programma').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_').slice(0, 40) + '.pdf';
   doc.save(filename);
