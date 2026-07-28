@@ -1550,20 +1550,29 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 
 <!-- ===== МОДАЛЬНОЕ ОКНО ДЛЯ ДОКУМЕНТОВ ===== -->
 <div class="modal-overlay" id="docs-modal">
-  <div class="modal">
+  <div class="modal" style="max-width:720px;">
     <div class="modal-header">
-      <h2 class="modal-title" id="docs-modal-title">Документы</h2>
+      <h2 class="modal-title" id="docs-modal-title">📄 Документы</h2>
       <button class="modal-close" onclick="closeModal('docs-modal')">✕</button>
     </div>
-    <div class="docs-tabs" id="docs-tabs-container">
-      <button class="docs-tab active" data-doc="user-agreement" onclick="switchDocsTab('user-agreement')">📄 Пользовательское соглашение</button>
-      <button class="docs-tab" data-doc="privacy-policy" onclick="switchDocsTab('privacy-policy')">🔒 Политика конфиденциальности</button>
-      <button class="docs-tab" data-doc="consent" onclick="switchDocsTab('consent')">✍️ Согласие на обработку ПД</button>
+    <!-- Список документов для выбора -->
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;" id="docs-list">
+      <button class="btn btn-outline btn-sm" onclick="switchDocsTab('user-agreement')" style="justify-content:flex-start;padding:10px 16px;border-radius:var(--radius-sm);" id="docs-btn-user-agreement">
+        📄 Пользовательское соглашение
+      </button>
+      <button class="btn btn-outline btn-sm" onclick="switchDocsTab('privacy-policy')" style="justify-content:flex-start;padding:10px 16px;border-radius:var(--radius-sm);" id="docs-btn-privacy-policy">
+        🔒 Политика конфиденциальности
+      </button>
+      <button class="btn btn-outline btn-sm active" onclick="switchDocsTab('consent')" style="justify-content:flex-start;padding:10px 16px;border-radius:var(--radius-sm);background:var(--accent-light);border-color:var(--accent);color:var(--accent);" id="docs-btn-consent">
+        ✍️ Согласие на обработку ПД
+      </button>
     </div>
-    <div id="docs-modal-body" class="modal-body">
+    <!-- Содержимое документа -->
+    <div id="docs-modal-body" class="modal-body" style="max-height:50vh;overflow-y:auto;padding:0 4px 10px;font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;background:var(--bg);border-radius:var(--radius-sm);padding:16px;border:1px solid var(--border);">
       <p style="color:var(--text-muted);text-align:center;padding:20px 0;">Загрузка документов...</p>
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);flex-wrap:wrap;">
+      <button class="btn btn-primary btn-sm" onclick="generatePersonalDocPDFFromModal()" style="flex:1;min-width:120px;">📄 Скачать PDF</button>
       <button class="btn btn-outline" onclick="closeModal('docs-modal')">Закрыть</button>
     </div>
   </div>
@@ -2888,8 +2897,8 @@ async function addPhoto() {
   }
 }
   // ============================================================
-// === ДОКУМЕНТЫ ===============================================
-// ============================================================
+  // === ДОКУМЕНТЫ ===============================================
+  // ============================================================
 
 let docsTemplates = {
   'user-agreement': '',
@@ -3090,8 +3099,23 @@ function renderUserDocs() {
           </div>
           <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
             <button class="btn btn-primary btn-sm" onclick="generatePersonalDocPDF('${doc.id}')" style="flex:1;min-width:100px;">📄 Скачать PDF</button>
-            <button class="btn btn-outline btn-sm" onclick="openDocsModal('${doc.id}')" style="flex:1;min-width:80px;">👁 Просмотр</button>
-            <button class="btn btn-outline btn-sm" onclick="window.print()" style="flex:1;min-width:80px;">🖨 Печать</button>
+            <button class="btn btn-outline btn-sm" onclick="openDocsModal('${doc.id}')" style="flex:1;min-width:80px;">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+  Просмотр
+</button>
+<button class="btn btn-outline btn-sm" onclick="window.print()" style="flex:1;min-width:80px;">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="6 9 6 2 18 2 18 9"/>
+    <path d="M18 9H6"/>
+    <path d="M18 9v9H6V9"/>
+    <rect x="6" y="13" width="12" height="4"/>
+    <rect x="9" y="6" width="6" height="2"/>
+  </svg>
+  Печать
+</button>
           </div>
         </div>
       `;
@@ -3109,34 +3133,47 @@ function renderUserDocs() {
   // ============================================================
 // === МОДАЛЬНОЕ ОКНО ДОКУМЕНТОВ ===============================
 // ============================================================
-
+let currentDocType = 'consent';
+  
 function openDocsModal(docType) {
   const modal = document.getElementById('docs-modal');
   const title = document.getElementById('docs-modal-title');
-  const body = document.getElementById('docs-modal-body');
 
-  const titles = {
-    'user-agreement': '📄 Пользовательское соглашение',
-    'privacy-policy': '🔒 Политика конфиденциальности',
-    'consent': '✍️ Согласие на обработку персональных данных'
-  };
+  title.textContent = '📄 Документы';
+  currentDocType = docType || 'consent';
 
-  title.textContent = titles[docType] || 'Документы';
-
-  body.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px 0;">⏳ Загрузка документа...</p>';
-
-  document.querySelectorAll('.docs-tab').forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.doc === docType);
+  // Обновляем активную кнопку
+  document.querySelectorAll('#docs-list .btn').forEach(btn => {
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    btn.style.color = '';
   });
+  const activeBtn = document.getElementById('docs-btn-' + currentDocType);
+  if (activeBtn) {
+    activeBtn.style.background = 'var(--accent-light)';
+    activeBtn.style.borderColor = 'var(--accent)';
+    activeBtn.style.color = 'var(--accent)';
+  }
 
   openModal('docs-modal');
-  renderDocContent(docType);
+  renderDocContent(currentDocType);
 }
 
 function switchDocsTab(docType) {
-  document.querySelectorAll('.docs-tab').forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.doc === docType);
+  currentDocType = docType;
+
+  document.querySelectorAll('#docs-list .btn').forEach(btn => {
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    btn.style.color = '';
   });
+  const activeBtn = document.getElementById('docs-btn-' + docType);
+  if (activeBtn) {
+    activeBtn.style.background = 'var(--accent-light)';
+    activeBtn.style.borderColor = 'var(--accent)';
+    activeBtn.style.color = 'var(--accent)';
+  }
+
   renderDocContent(docType);
 }
 
@@ -3154,7 +3191,72 @@ function renderDocContent(docType) {
     filledTemplate = fillTemplate(template, currentUser);
   }
 
-  body.innerHTML = `<div style="font-family:monospace;font-size:13px;line-height:1.8;white-space:pre-wrap;background:var(--bg);padding:16px;border-radius:var(--radius-sm);border:1px solid var(--border);">${filledTemplate}</div>`;
+  body.innerHTML = filledTemplate;
+}
+
+function generatePersonalDocPDFFromModal() {
+  if (!currentUser) {
+    showToast('Войдите в аккаунт для скачивания документов');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) {
+    showToast('Библиотека PDF загружается, попробуйте ещё раз');
+    return;
+  }
+
+  let template = docsTemplates[currentDocType];
+  if (!template) {
+    showToast('Документ ещё не загружен, попробуйте позже');
+    return;
+  }
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 20;
+  const maxW = pageW - margin * 2;
+  let y = 20;
+
+  const titles = {
+    'user-agreement': 'ПОЛЬЗОВАТЕЛЬСКОЕ СОГЛАШЕНИЕ',
+    'privacy-policy': 'ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ',
+    'consent': 'СОГЛАСИЕ НА ОБРАБОТКУ ПЕРСОНАЛЬНЫХ ДАННЫХ'
+  };
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(92, 138, 78);
+  doc.text(titles[currentDocType] || 'Документ', pageW / 2, y, { align: 'center' });
+  y += 10;
+
+  const filledText = fillTemplate(template, currentUser);
+  const lines = filledText.split('\n');
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(37, 32, 24);
+
+  for (const line of lines) {
+    if (y > 270) {
+      doc.addPage();
+      y = 20;
+    }
+    if (line.trim() && /^[А-ЯA-Z0-9.\s]+$/.test(line.trim()) && line.trim().length > 3) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+    }
+    const wrapped = doc.splitTextToSize(line, maxW);
+    doc.text(wrapped, margin, y);
+    y += (wrapped.length * 6) + 1;
+  }
+
+  const filename = (titles[currentDocType] || 'document') + '_' + currentUser.name.replace(/\s+/g, '_') + '.pdf';
+  doc.save(filename);
+  showToast('✅ Документ сохранён');
 }
 
 // ============================================================
@@ -4049,7 +4151,14 @@ function openLeadModal(leadId) {
       ${!isPhone && !isEmail && !tgMatch ? `<a href="#" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;" onclick="navigator.clipboard.writeText('${lead.contact}');showToast('Скопировано');return false;">📋 Скопировать контакт</a>` : ''}
       <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
       <button class="btn btn-edit" style="width:100%;justify-content:center;" onclick="addUserFromLead(${lead.id})">👤 Создать аккаунт участника</button>
-      <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="deleteLead(${lead.id})">🗑 Удалить заявку</button>
+      <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18"/>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    <line x1="10" y1="11" x2="10" y2="17"/>
+    <line x1="14" y1="11" x2="14" y2="17"/>
+  </svg>
+</button>
     </div>
   `;
 
@@ -4255,7 +4364,14 @@ function openUserEditModal(userId) {
       }).join('')}
     </div>` : ''}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-      ${u.role !== 'owner' ? `<button class="btn btn-danger" onclick="closeModal('user-edit-modal');deleteUser(${u.id})">🗑 Удалить</button>` : '<div></div>'}
+      ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18"/>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    <line x1="10" y1="11" x2="10" y2="17"/>
+    <line x1="14" y1="11" x2="14" y2="17"/>
+  </svg>
+</button>` : '<div></div>'}
       <div style="display:flex;gap:10px;">
         <button class="btn btn-outline" onclick="closeModal('user-edit-modal')">Отмена</button>
         <button class="btn btn-primary" onclick="saveUserEdit(${u.id})">Сохранить</button>
@@ -4832,7 +4948,14 @@ function loadAdminGroups() {
         <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;">
           <button class="btn btn-outline btn-sm" onclick="openAddMember(${g.id})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
           <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="openEditGroup(${g.id})">✏️ Изменить</button>
-          <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;" onclick="deleteGroup(${g.id})">🗑</button>
+          <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18"/>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    <line x1="10" y1="11" x2="10" y2="17"/>
+    <line x1="14" y1="11" x2="14" y2="17"/>
+  </svg>
+</button>
         </div>
       </div>
       ${(g.members || []).length > 0 ? `
@@ -5869,7 +5992,14 @@ function renderMobAdminSection(section) {
           </div>
           <div style="display:flex;gap:5px;flex-shrink:0;">
             <button class="btn btn-edit" style="padding:5px 9px;font-size:11px;" onclick="openEditProgram(${p.id})">✏️</button>
-            <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(${p.id})">🗑</button>
+            <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18"/>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    <line x1="10" y1="11" x2="10" y2="17"/>
+    <line x1="14" y1="11" x2="14" y2="17"/>
+  </svg>
+</button>
           </div>
         </div>
       `).join('')}
@@ -5897,7 +6027,14 @@ function renderMobAdminSection(section) {
             <div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">
               ${isOwner ? '<select class="filter-select" style="font-size:12px;padding:5px;flex:1;" onchange="changeUserRole(' + u.id + ',this.value)"><option value="owner"' + (u.role === 'owner' ? ' selected' : '') + '>Владелец</option><option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Админ</option><option value="user"' + (u.role === 'user' ? ' selected' : '') + '>Участник</option></select>' : ''}
               <button class="btn btn-outline btn-sm" style="font-size:11px;padding:5px 10px;" onclick="showUserStats(${u.id})">📊</button>
-              ${u.role !== 'owner' ? '<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="deleteUser(' + u.id + ')">🗑</button>' : ''}
+              ${u.role !== 'owner' ? '<button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18"/>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    <line x1="10" y1="11" x2="10" y2="17"/>
+    <line x1="14" y1="11" x2="14" y2="17"/>
+  </svg>
+</button>' : ''}
             </div>
           </div>
         `;
@@ -5921,7 +6058,14 @@ function renderMobAdminSection(section) {
                 </div>
                 <div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">
                   <button class="btn btn-primary btn-sm" style="flex:1;font-size:12px;" onclick="openLeadModal(${l.id})">Открыть →</button>
-                  <button class="btn btn-danger" style="padding:6px 12px;font-size:12px;" onclick="deleteLead(${l.id})">🗑</button>
+                  <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18"/>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    <line x1="10" y1="11" x2="10" y2="17"/>
+    <line x1="14" y1="11" x2="14" y2="17"/>
+  </svg>
+</button>
                 </div>
               </div>
             `;
@@ -6084,12 +6228,14 @@ function generateProgramPDF() {
   const maxW = pageW - margin * 2;
   let y = 20;
 
-  // Функция переноса строк для кириллицы
+  // Используем стандартный шрифт, но для кириллицы используем метод text с опцией
   function addWrappedText(text, x, startY, maxWidth, lineHeight, fontSize) {
     doc.setFontSize(fontSize);
+    // Разбиваем на строки с учетом ширины
     const lines = doc.splitTextToSize(text, maxWidth);
     lines.forEach(line => {
       if (startY > 270) { doc.addPage(); startY = 20; }
+      // Для кириллицы используем строку как есть
       doc.text(line, x, startY);
       startY += lineHeight;
     });
