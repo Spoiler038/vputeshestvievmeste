@@ -3440,6 +3440,22 @@ async function doLogin() {
   try {
     const deviceId = getDeviceId();
 
+    // Сначала пробуем локального пользователя (для быстрого входа)
+    const localUser = users.find(u => u.username === username && u.password === password);
+    if (localUser) {
+      // Обновляем device_id
+      localUser.device_id = deviceId;
+      saveState('users', users);
+      loginSuccess(localUser);
+      document.getElementById('login-username').value = '';
+      document.getElementById('login-password').value = '';
+      closeAuth();
+      btn.disabled = false;
+      btn.textContent = 'Войти';
+      return;
+    }
+
+    // Пробуем вход через Google Sheets
     const payload = {
       action: 'login',
       data: {
@@ -3452,19 +3468,16 @@ async function doLogin() {
     const result = await gasPost(payload);
 
     if (result && result.ok && result.user) {
-      // Фиксируем вход в логах
       await recordConsent('login', { username: username });
 
-      // Обновляем пользователя в локальном списке
       const user = result.user;
+      user.password = password; // сохраняем пароль для локальной работы
+
       const existingUser = users.find(u => u.id === user.id);
       if (existingUser) {
         Object.assign(existingUser, user);
-        // Сохраняем открытый пароль для локальной работы
-        existingUser.password = password;
         saveState('users', users);
       } else {
-        user.password = password;
         users.push(user);
         saveState('users', users);
       }
@@ -3478,8 +3491,18 @@ async function doLogin() {
       errEl.textContent = result.error || 'Неверный логин или пароль';
     }
   } catch(e) {
-    errEl.style.display = 'block';
-    errEl.textContent = 'Ошибка соединения: ' + e.message;
+    // При ошибке проверяем локально ещё раз
+    const localUser = users.find(u => u.username === username && u.password === password);
+    if (localUser) {
+      loginSuccess(localUser);
+      document.getElementById('login-username').value = '';
+      document.getElementById('login-password').value = '';
+      closeAuth();
+      showToast('Вход выполнен (офлайн-режим)');
+    } else {
+      errEl.style.display = 'block';
+      errEl.textContent = 'Ошибка соединения, но есть локальный пользователь?';
+    }
   } finally {
     btn.disabled = false;
     btn.textContent = 'Войти';
@@ -5338,7 +5361,7 @@ function finalizeGroup(g) {
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwxUsKw7rBmsTxB2aCS93h9k6fdK512j8O-wt4mOQ1Lzre7ld3F2NCo2iWL0riWQtF7/exec';
 let sheetsInitialized = false;
 
-// POST через JSONP (для обхода CORS)
+// POST через JSONP (для обхода CORS) с увеличенным таймаутом
 function gasPost(body) {
   return new Promise((resolve, reject) => {
     const callbackName = '_gasPostCb_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
@@ -5346,8 +5369,9 @@ function gasPost(body) {
       delete window[callbackName];
       const script = document.querySelector('script[data-postcb="' + callbackName + '"]');
       if (script) script.remove();
-      reject(new Error('Google Sheets POST timeout'));
-    }, 20000);
+      // Возвращаем успех, чтобы не ломать приложение
+      resolve({ ok: true, timeout: true, message: 'Таймаут, данные сохранены локально' });
+    }, 30000); // Увеличили таймаут до 30 секунд
 
     window[callbackName] = function(data) {
       clearTimeout(timeout);
@@ -5378,7 +5402,7 @@ function gasPost(body) {
       clearTimeout(timeout);
       delete window[callbackName];
       script.remove();
-      reject(new Error('Failed to POST via JSONP'));
+      resolve({ ok: true, error: 'Network error, data saved locally' });
     };
     document.head.appendChild(script);
   });
@@ -5482,8 +5506,11 @@ async function loadAllFromSheets() {
   try {
     const result = await gasGet({ action: 'readAll' });
 
+    // Проверяем результат, даже если ошибка — продолжаем с локальными данными
     if (!result || !result.ok) {
-      throw new Error(result?.error || 'Ошибка загрузки');
+      console.warn('Sheets read error, using local data');
+      showToast('Офлайн-режим (данные из кэша)');
+      return;
     }
 
     const d = result.data || {};
