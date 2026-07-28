@@ -310,6 +310,44 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 .profile-info-item:last-child { border-bottom: none; }
 .profile-info-label { font-weight: 600; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
 
+<!-- ===== ДЕТАЛЬНАЯ СТРАНИЦА ПРОГРАММЫ ===== -->
+<div id="page-detail" class="program-detail" style="display:none;">
+  <div class="program-hero" id="detail-hero">
+    <div class="program-hero-overlay"></div>
+    <span id="detail-emoji">🌄</span>
+  </div>
+  <div class="program-detail-body">
+    <div class="container">
+      <button class="btn btn-outline btn-sm" style="margin-bottom:28px;" onclick="showPage('home')">← Назад к программам</button>
+      <div class="program-detail-grid">
+        <div>
+          <h1 class="program-detail-title" id="detail-title">Название</h1>
+          <div id="detail-tags" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px;"></div>
+          <p id="detail-full-desc" style="font-size:15px;line-height:1.9;color:var(--text-muted);"></p>
+
+          <h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-top:36px;margin-bottom:14px;">Что включено</h3>
+          <div class="includes-grid" id="detail-includes"></div>
+
+          <h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-top:36px;margin-bottom:14px;">Детали</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="detail-meta"></div>
+        </div>
+
+        <div>
+          <div class="booking-card">
+            <div class="booking-price">
+              <span>от </span><span id="detail-price">0</span> <span>₽</span>
+            </div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">за человека</div>
+            <button class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="smoothScroll('contact');showPage('home');">Оставить заявку</button>
+            <button class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="generateProgramPDF()">📄 Скачать PDF</button>
+            <button class="btn btn-outline" style="width:100%;" onclick="showPage('home')">← Все программы</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+  
 /* ===== ДОКУМЕНТЫ В ЛК ===== */
 #user-docs-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
 .doc-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 12px; transition: all 0.3s; }
@@ -1817,34 +1855,98 @@ let carouselOffset = 0;
 // ============================================================
 
 function showPage(page) {
-  document.getElementById('page-home').style.display = 'none';
-  document.getElementById('page-detail').classList.remove('active');
-  document.getElementById('page-detail').style.display = 'none';
-  document.getElementById('page-dashboard').classList.add('hidden');
-  document.getElementById('page-dashboard').style.display = 'none';
-  document.getElementById('page-admin').classList.add('hidden');
-  document.getElementById('page-admin').style.display = 'none';
+  // Скрываем все страницы
+  const home = document.getElementById('page-home');
+  const detail = document.getElementById('page-detail');
+  const dashboard = document.getElementById('page-dashboard');
+  const admin = document.getElementById('page-admin');
+
+  if (home) home.style.display = 'none';
+  if (detail) {
+    detail.classList.remove('active');
+    detail.style.display = 'none';
+  }
+  if (dashboard) {
+    dashboard.classList.add('hidden');
+    dashboard.style.display = 'none';
+  }
+  if (admin) {
+    admin.classList.add('hidden');
+    admin.style.display = 'none';
+  }
 
   currentPage = page;
 
   if (page === 'home') {
-    document.getElementById('page-home').style.display = '';
+    if (home) home.style.display = '';
   } else if (page === 'detail') {
-    document.getElementById('page-detail').classList.add('active');
-    document.getElementById('page-detail').style.display = '';
+    if (detail) {
+      detail.classList.add('active');
+      detail.style.display = '';
+    } else {
+      // Если элемент page-detail не найден, создаем его динамически
+      const container = document.createElement('div');
+      container.id = 'page-detail';
+      container.className = 'program-detail';
+      container.innerHTML = `
+        <div class="program-hero" id="detail-hero">
+          <div class="program-hero-overlay"></div>
+          <span id="detail-emoji">🌄</span>
+        </div>
+        <div class="program-detail-body">
+          <div class="container">
+            <button class="btn btn-outline btn-sm" style="margin-bottom:28px;" onclick="showPage('home')">← Назад к программам</button>
+            <div class="program-detail-grid">
+              <div>
+                <h1 class="program-detail-title" id="detail-title">Название</h1>
+                <div id="detail-tags" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px;"></div>
+                <p id="detail-full-desc" style="font-size:15px;line-height:1.9;color:var(--text-muted);"></p>
+                <h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-top:36px;margin-bottom:14px;">Что включено</h3>
+                <div class="includes-grid" id="detail-includes"></div>
+                <h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-top:36px;margin-bottom:14px;">Детали</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="detail-meta"></div>
+              </div>
+              <div>
+                <div class="booking-card">
+                  <div class="booking-price"><span>от </span><span id="detail-price">0</span> <span>₽</span></div>
+                  <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">за человека</div>
+                  <button class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="smoothScroll('contact');showPage('home');">Оставить заявку</button>
+                  <button class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="generateProgramPDF()">📄 Скачать PDF</button>
+                  <button class="btn btn-outline" style="width:100%;" onclick="showPage('home')">← Все программы</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      // Вставляем после админ-панели или в конец body
+      const adminPanel = document.getElementById('page-admin');
+      if (adminPanel) {
+        adminPanel.parentNode.insertBefore(container, adminPanel.nextSibling);
+      } else {
+        document.body.appendChild(container);
+      }
+      // Показываем созданную страницу
+      container.style.display = '';
+      container.classList.add('active');
+    }
   } else if (page === 'dashboard') {
     if (!currentUser) { openAuth(); return; }
-    document.getElementById('page-dashboard').classList.remove('hidden');
-    document.getElementById('page-dashboard').style.display = '';
-    loadDashboard();
+    if (dashboard) {
+      dashboard.classList.remove('hidden');
+      dashboard.style.display = '';
+      loadDashboard();
+    }
   } else if (page === 'admin') {
     if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) {
       showToast('Доступ запрещён');
       return;
     }
-    document.getElementById('page-admin').classList.remove('hidden');
-    document.getElementById('page-admin').style.display = '';
-    loadAdmin();
+    if (admin) {
+      admin.classList.remove('hidden');
+      admin.style.display = '';
+      loadAdmin();
+    }
   }
 
   window.scrollTo(0, 0);
@@ -1856,13 +1958,15 @@ function smoothScroll(id) {
     showPage('home');
     // Ждем загрузки страницы и прокручиваем с повторной попыткой
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 15;
     const scrollInterval = setInterval(() => {
       attempts++;
       const el = document.getElementById(id);
       if (el) {
         clearInterval(scrollInterval);
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const navbarHeight = document.getElementById('navbar')?.getBoundingClientRect().height || 80;
+        const targetPosition = el.getBoundingClientRect().top + window.pageYOffset - navbarHeight - 20;
+        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
       } else if (attempts >= maxAttempts) {
         clearInterval(scrollInterval);
         console.warn('Элемент с id "' + id + '" не найден после ' + maxAttempts + ' попыток');
@@ -1873,12 +1977,20 @@ function smoothScroll(id) {
   
   const el = document.getElementById(id);
   if (el) {
-    // Добавляем небольшой отступ для фиксированной шапки
     const navbarHeight = document.getElementById('navbar')?.getBoundingClientRect().height || 80;
     const targetPosition = el.getBoundingClientRect().top + window.pageYOffset - navbarHeight - 20;
     window.scrollTo({ top: targetPosition, behavior: 'smooth' });
   } else {
     console.warn('Элемент с id "' + id + '" не найден');
+    // Пробуем найти элемент позже
+    setTimeout(() => {
+      const el2 = document.getElementById(id);
+      if (el2) {
+        const navbarHeight = document.getElementById('navbar')?.getBoundingClientRect().height || 80;
+        const targetPosition = el2.getBoundingClientRect().top + window.pageYOffset - navbarHeight - 20;
+        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+      }
+    }, 500);
   }
 }
   // ============================================================
@@ -2100,7 +2212,57 @@ function renderPrograms(list) {
 
 function openDetail(id) {
   const p = programs.find(x => x.id === id);
-  if (!p) return;
+  if (!p) {
+    showToast('Программа не найдена');
+    return;
+  }
+
+  // Убеждаемся, что страница деталей существует
+  let detailPage = document.getElementById('page-detail');
+  if (!detailPage) {
+    // Создаем страницу деталей если её нет
+    const container = document.createElement('div');
+    container.id = 'page-detail';
+    container.className = 'program-detail';
+    container.innerHTML = `
+      <div class="program-hero" id="detail-hero">
+        <div class="program-hero-overlay"></div>
+        <span id="detail-emoji">🌄</span>
+      </div>
+      <div class="program-detail-body">
+        <div class="container">
+          <button class="btn btn-outline btn-sm" style="margin-bottom:28px;" onclick="showPage('home')">← Назад к программам</button>
+          <div class="program-detail-grid">
+            <div>
+              <h1 class="program-detail-title" id="detail-title">Название</h1>
+              <div id="detail-tags" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px;"></div>
+              <p id="detail-full-desc" style="font-size:15px;line-height:1.9;color:var(--text-muted);"></p>
+              <h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-top:36px;margin-bottom:14px;">Что включено</h3>
+              <div class="includes-grid" id="detail-includes"></div>
+              <h3 style="font-family:var(--font-family);font-size:26px;font-weight:500;margin-top:36px;margin-bottom:14px;">Детали</h3>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="detail-meta"></div>
+            </div>
+            <div>
+              <div class="booking-card">
+                <div class="booking-price"><span>от </span><span id="detail-price">0</span> <span>₽</span></div>
+                <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">за человека</div>
+                <button class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="smoothScroll('contact');showPage('home');">Оставить заявку</button>
+                <button class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="generateProgramPDF()">📄 Скачать PDF</button>
+                <button class="btn btn-outline" style="width:100%;" onclick="showPage('home')">← Все программы</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    const adminPanel = document.getElementById('page-admin');
+    if (adminPanel) {
+      adminPanel.parentNode.insertBefore(container, adminPanel.nextSibling);
+    } else {
+      document.body.appendChild(container);
+    }
+    detailPage = container;
+  }
 
   const heroDiv = document.getElementById('detail-hero');
   heroDiv.innerHTML = p.photo
@@ -4692,26 +4854,36 @@ function loadContactsAdmin() {
 }
 
 async function saveContacts() {
+  const phone = document.getElementById('admin-contact-phone').value;
+  const email = document.getElementById('admin-contact-email').value;
+  const tg = document.getElementById('admin-contact-tg').value;
+
   contactsContent = {
-    phone: document.getElementById('admin-contact-phone').value,
-    email: document.getElementById('admin-contact-email').value,
-    tg: document.getElementById('admin-contact-tg').value
+    phone: phone,
+    email: email,
+    tg: tg
   };
 
   saveState('contactsContent', contactsContent);
   applyContactsContent();
 
   // Обновляем ссылки
-  const links = document.querySelectorAll('#contact .contact-info a');
-  if (links.length >= 3) {
-    const phone = contactsContent.phone || "+7 (926) 123-45-67";
-    const email = contactsContent.email || "marina@vputi.ru";
-    const tg = contactsContent.tg || "@marina_travel";
-    
-    links[0].href = 'tel:' + phone.replace(/[\s\(\)\-]/g, '');
-    links[1].href = 'mailto:' + email;
-    links[2].href = 'https://t.me/' + tg.replace('@', '');
-  }
+  const phoneLink = document.querySelector('#contact .contact-info a[href^="tel:"]');
+  const emailLink = document.querySelector('#contact .contact-info a[href^="mailto:"]');
+  const tgLink = document.querySelector('#contact .contact-info a[href^="https://t.me/"]');
+
+  if (phoneLink) phoneLink.href = 'tel:' + phone.replace(/[\s\(\)\-]/g, '');
+  if (emailLink) emailLink.href = 'mailto:' + email;
+  if (tgLink) tgLink.href = 'https://t.me/' + tg.replace('@', '');
+
+  // Обновляем текстовые элементы
+  const phoneEl = document.getElementById('contact-phone');
+  const emailEl = document.getElementById('contact-email');
+  const tgEl = document.getElementById('contact-tg');
+
+  if (phoneEl) phoneEl.textContent = phone;
+  if (emailEl) emailEl.textContent = email;
+  if (tgEl) tgEl.textContent = 'Telegram: ' + tg;
 
   try {
     await saveSettingToSheets('contactsContent', contactsContent);
