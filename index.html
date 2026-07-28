@@ -491,6 +491,62 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   .back-to-top { bottom: 20px; right: 20px; width: 42px; height: 42px; }
   .back-to-top svg { width: 20px; height: 20px; }
 }
+  /* ===== МОБИЛЬНАЯ ПАНЕЛЬ АДМИНИСТРАТОРА ===== */
+.admin-mobile-bar {
+  display: none;
+  position: fixed;
+  top: var(--navbar-h, 62px);
+  left: 0; right: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  z-index: 99;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px 16px;
+  gap: 8px;
+  white-space: nowrap;
+}
+.admin-mobile-bar.show { display: flex; }
+.admin-mobile-bar .mob-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  background: var(--bg);
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+.admin-mobile-bar .mob-item.active,
+.admin-mobile-bar .mob-item:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.mobile-admin-toggle {
+  display: none !important;
+  background: var(--accent2);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+@media (max-width: 768px) {
+  .mobile-admin-toggle { display: inline-flex !important; }
+}
 </style>
 </head>
 <body>
@@ -1925,6 +1981,7 @@ function updateNavForUser() {
   const guestMenu = document.getElementById('guest-menu');
   const userMenu = document.getElementById('user-menu');
   const adminBtn = document.getElementById('admin-btn');
+  const mobileToggle = document.getElementById('mobile-admin-toggle');
 
   if (currentUser) {
     guestMenu.classList.add('hidden');
@@ -1938,17 +1995,27 @@ function updateNavForUser() {
       avatarLetter.innerHTML = currentUser.name[0];
     }
 
-    adminBtn.classList.toggle('hidden', currentUser.role !== 'owner' && currentUser.role !== 'admin');
-    const mobileAdminToggle = document.getElementById('mobile-admin-toggle');
-    if (mobileAdminToggle) mobileAdminToggle.classList.toggle('hidden', currentUser.role !== 'owner' && currentUser.role !== 'admin');
+    // Показываем админ-кнопки только для владельца или админа
+    const isAdmin = currentUser.role === 'owner' || currentUser.role === 'admin';
+    adminBtn.classList.toggle('hidden', !isAdmin);
+    if (mobileToggle) mobileToggle.classList.toggle('hidden', !isAdmin);
 
+    // Скрываем дашборд в боковом меню для не-владельцев
     const dashboardNavItem = document.querySelector('.admin-nav-item[onclick*="dashboard"]');
     if (dashboardNavItem) {
       dashboardNavItem.style.display = currentUser.role === 'owner' ? 'flex' : 'none';
     }
+
+    // Скрываем мобильную панель если она открыта
+    if (!isAdmin && isMobPanelOpen) {
+      closeMobAdmin();
+    }
+
   } else {
     guestMenu.classList.remove('hidden');
     userMenu.classList.add('hidden');
+    // Закрываем админ-панель если она открыта
+    if (isMobPanelOpen) closeMobAdmin();
   }
 }
 
