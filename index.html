@@ -4698,7 +4698,7 @@ function renderTransportList() {
             <span style="font-size:11px;color:var(--text-muted);">(${t.val})</span>
           </label>
           ${enabled ? '<span class="tag tag-green" style="margin-left:auto;">активен</span>' : '<span class="tag tag-orange" style="margin-left:auto;background:#FDF0E4;color:#C4895A;">отключён</span>'}
-          ${!isDefault ? '<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="removeTransportType('${t.val}')">✕ Удалить</button>' : ''}
+          ${!isDefault ? `<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="removeTransportType('${t.val}')">✕ Удалить</button>` : ''}
         </div>
 
         <div id="transport-desc-block-${i}" style="padding:14px;${enabled ? '' : 'display:none;'}">
