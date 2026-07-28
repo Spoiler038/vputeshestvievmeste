@@ -547,6 +547,35 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 @media (max-width: 768px) {
   .mobile-admin-toggle { display: inline-flex !important; }
 }
+
+  /* ===== TOAST УВЕДОМЛЕНИЯ ===== */
+#toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  background: var(--text);
+  color: white;
+  padding: 14px 28px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: 90vw;
+  text-align: center;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+#toast:not(.show) {
+  transform: translateX(-50%) translateY(-20px);
+}
 </style>
 </head>
 <body>
@@ -1821,13 +1850,22 @@ function showPage(page) {
 }
 
 function smoothScroll(id) {
+  // Если мы не на главной странице, сначала переходим на нее
   if (currentPage !== 'home') {
     showPage('home');
-    setTimeout(() => smoothScroll(id), 350);
+    // Ждем загрузки страницы и прокручиваем
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 400);
     return;
   }
   const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    console.warn('Элемент с id "' + id + '" не найден');
+  }
 }
   // ============================================================
 // === ФУНКЦИИ ДЛЯ РАБОТЫ С ФОТО ===============================
@@ -4020,23 +4058,30 @@ function showRevenueDetails(monthIndex) {
 // === ПРОГРАММЫ (АДМИНКА) ===
 function loadAdminPrograms() {
   document.getElementById('programs-tbody').innerHTML = programs.map(p => `
-    <tr>
-      <td style="width:50px;">
-        <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;background:var(--accent-light);display:flex;align-items:center;justify-content:center;">
-          ${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;">` : `<span>🏔</span>`}
-        </div>
-      </td>
-      <td><strong>${p.name}</strong></td>
-      <td><span class="tag tag-green">${p.season}</span></td>
-      <td>${p.transport}</td>
-      <td>${p.days}</td>
-      <td style="font-weight:600;">${p.price.toLocaleString('ru')} ₽</td>
-      <td class="td-actions">
-        <button class="btn btn-edit" onclick="openEditProgram(${p.id})">Изменить</button>
-        <button class="btn btn-danger" onclick="deleteProgram(${p.id})">Удалить</button>
-      </td>
-    </tr>
-  `).join('');
+  <tr>
+    <td style="width:50px;">
+      <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;background:var(--accent-light);display:flex;align-items:center;justify-content:center;">
+        ${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;">` : `<span>🏔</span>`}
+      </div>
+    </td>
+    <td><strong>${p.name}</strong></td>
+    <td><span class="tag tag-green">${p.season}</span></td>
+    <td>${p.transport}</td>
+    <td>${p.days}</td>
+    <td style="font-weight:600;">${p.price.toLocaleString('ru')} ₽</td>
+    <td class="td-actions">
+      <button class="btn btn-edit" onclick="openEditProgram(${p.id})">Изменить</button>
+      <button class="btn btn-danger" onclick="deleteProgram(${p.id})">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+      </button>
+    </td>
+  </tr>
+`).join('');
 }
 
 // === УЧАСТНИКИ (АДМИНКА) ===
@@ -4059,7 +4104,7 @@ function loadAdminUsers(isOwner) {
       </td>
       <td class="td-actions" onclick="event.stopPropagation();">
         <button class="btn btn-outline btn-sm" onclick="showUserStats(${u.id})">Статистика</button>
-        ${u.role !== 'owner' ? <button class="btn btn-danger" onclick="deleteUser(${u.id})">Удалить</button> : ''}
+        ${u.role !== 'owner' ? `<button class="btn btn-danger" onclick="deleteUser(${u.id})">Удалить</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -4145,21 +4190,21 @@ function openLeadModal(leadId) {
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:9px;">
-      ${isPhone ? `<a href="tel:${lead.contact}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">📞 Позвонить</a>` : ''}
-      ${isEmail ? `<a href="mailto:${lead.contact}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">✉️ Написать письмо</a>` : ''}
-      ${tgMatch ? `<a href="https://t.me/${tgMatch[0].slice(1)}" target="_blank" class="btn btn-outline" style="width:100%;justify-content:center;text-decoration:none;">💬 Открыть в Telegram</a>` : ''}
-      ${!isPhone && !isEmail && !tgMatch ? `<a href="#" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;" onclick="navigator.clipboard.writeText('${lead.contact}');showToast('Скопировано');return false;">📋 Скопировать контакт</a>` : ''}
-      <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
-      <button class="btn btn-edit" style="width:100%;justify-content:center;" onclick="addUserFromLead(${lead.id})">👤 Создать аккаунт участника</button>
-      <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 6h18"/>
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    <line x1="10" y1="11" x2="10" y2="17"/>
-    <line x1="14" y1="11" x2="14" y2="17"/>
-  </svg>
-</button>
-    </div>
+  ${isPhone ? `<a href="tel:${lead.contact}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">📞 Позвонить</a>` : ''}
+  ${isEmail ? `<a href="mailto:${lead.contact}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">✉️ Написать письмо</a>` : ''}
+  ${tgMatch ? `<a href="https://t.me/${tgMatch[0].slice(1)}" target="_blank" class="btn btn-outline" style="width:100%;justify-content:center;text-decoration:none;">💬 Открыть в Telegram</a>` : ''}
+  ${!isPhone && !isEmail && !tgMatch ? `<a href="#" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;" onclick="navigator.clipboard.writeText('${lead.contact}');showToast('Скопировано');return false;">📋 Скопировать контакт</a>` : ''}
+  <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
+  <button class="btn btn-edit" style="width:100%;justify-content:center;" onclick="addUserFromLead(${lead.id})">👤 Создать аккаунт участника</button>
+  <button class="btn btn-danger" style="width:100%;justify-content:center;" onclick="deleteLead(${lead.id})">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </svg>
+  </button>
+</div>
   `;
 
   openModal('lead-modal');
@@ -4364,14 +4409,14 @@ function openUserEditModal(userId) {
       }).join('')}
     </div>` : ''}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-      ${u.role !== 'owner' ? <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
+      ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 6h18"/>
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
     <line x1="10" y1="11" x2="10" y2="17"/>
     <line x1="14" y1="11" x2="14" y2="17"/>
   </svg>
-</button> : '<div></div>'}
+</button>` : '<div></div>'}
       <div style="display:flex;gap:10px;">
         <button class="btn btn-outline" onclick="closeModal('user-edit-modal')">Отмена</button>
         <button class="btn btn-primary" onclick="saveUserEdit(${u.id})">Сохранить</button>
@@ -4646,7 +4691,7 @@ function renderTransportList() {
             <span style="font-size:11px;color:var(--text-muted);">(${t.val})</span>
           </label>
           ${enabled ? '<span class="tag tag-green" style="margin-left:auto;">активен</span>' : '<span class="tag tag-orange" style="margin-left:auto;background:#FDF0E4;color:#C4895A;">отключён</span>'}
-          ${!isDefault ? <button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="removeTransportType('${t.val}')">✕ Удалить</button> : ''}
+          ${!isDefault ? '<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="removeTransportType('${t.val}')">✕ Удалить</button>' : ''}
         </div>
 
         <div id="transport-desc-block-${i}" style="padding:14px;${enabled ? '' : 'display:none;'}">
@@ -4946,17 +4991,17 @@ function loadAdminGroups() {
           <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">сумма</div>
         </div>
         <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;">
-          <button class="btn btn-outline btn-sm" onclick="openAddMember(${g.id})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
-          <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="openEditGroup(${g.id})">✏️ Изменить</button>
-          <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 6h18"/>
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    <line x1="10" y1="11" x2="10" y2="17"/>
-    <line x1="14" y1="11" x2="14" y2="17"/>
-  </svg>
-</button>
-        </div>
+  <button class="btn btn-outline btn-sm" onclick="openAddMember(${g.id})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
+  <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="openEditGroup(${g.id})">✏️ Изменить</button>
+  <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;" onclick="deleteGroup(${g.id})">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </svg>
+  </button>
+</div>
       </div>
       ${(g.members || []).length > 0 ? `
       <div style="border-top:1px solid var(--border);overflow-x:auto;">
@@ -5982,27 +6027,27 @@ function renderMobAdminSection(section) {
       <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Программы</h2>
       <button class="btn btn-primary" style="width:100%;margin-bottom:14px;" onclick="openAddProgram()">+ Добавить программу</button>
       ${programs.map(p => `
-        <div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;display:flex;gap:10px;align-items:center;">
-          <div style="width:42px;height:42px;border-radius:8px;overflow:hidden;background:var(--accent-light);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-            ${p.photo ? '<img src="' + p.photo + '" style="width:100%;height:100%;object-fit:cover;">' : '<span>🏔</span>'}
-          </div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</div>
-            <div style="font-size:11px;color:var(--text-muted);">${p.season} · ${p.days} дн · ${p.price.toLocaleString('ru')} ₽</div>
-          </div>
-          <div style="display:flex;gap:5px;flex-shrink:0;">
-            <button class="btn btn-edit" style="padding:5px 9px;font-size:11px;" onclick="openEditProgram(${p.id})">✏️</button>
-            <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 6h18"/>
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    <line x1="10" y1="11" x2="10" y2="17"/>
-    <line x1="14" y1="11" x2="14" y2="17"/>
-  </svg>
-</button>
-          </div>
-        </div>
-      `).join('')}
+  <div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;display:flex;gap:10px;align-items:center;">
+    <div style="width:42px;height:42px;border-radius:8px;overflow:hidden;background:var(--accent-light);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+      ${p.photo ? '<img src="' + p.photo + '" style="width:100%;height:100%;object-fit:cover;">' : '<span>🏔</span>'}
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</div>
+      <div style="font-size:11px;color:var(--text-muted);">${p.season} · ${p.days} дн · ${p.price.toLocaleString('ru')} ₽</div>
+    </div>
+    <div style="display:flex;gap:5px;flex-shrink:0;">
+      <button class="btn btn-edit" style="padding:5px 9px;font-size:11px;" onclick="openEditProgram(${p.id})">✏️</button>
+      <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(${p.id})">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+`).join('')}
     `;
   } else if (section === 'users') {
     box.innerHTML = `
@@ -6027,14 +6072,14 @@ function renderMobAdminSection(section) {
             <div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">
               ${isOwner ? '<select class="filter-select" style="font-size:12px;padding:5px;flex:1;" onchange="changeUserRole(' + u.id + ',this.value)"><option value="owner"' + (u.role === 'owner' ? ' selected' : '') + '>Владелец</option><option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Админ</option><option value="user"' + (u.role === 'user' ? ' selected' : '') + '>Участник</option></select>' : ''}
               <button class="btn btn-outline btn-sm" style="font-size:11px;padding:5px 10px;" onclick="showUserStats(${u.id})">📊</button>
-              ${u.role !== 'owner' ? <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
+              ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(1)">
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 6h18"/>
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
     <line x1="10" y1="11" x2="10" y2="17"/>
     <line x1="14" y1="11" x2="14" y2="17"/>
   </svg>
-</button> : ''}
+</button>` : ''}
             </div>
           </div>
         `;
