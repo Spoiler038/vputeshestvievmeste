@@ -1616,6 +1616,45 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   </div>
 </div>
 
+  <!-- ===== МОДАЛЬНОЕ ОКНО ДЛЯ ВОССТАНОВЛЕНИЯ ПАРОЛЯ ===== -->
+<div class="modal-overlay" id="reset-password-modal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h2 class="modal-title">🔑 Восстановление пароля</h2>
+      <button class="modal-close" onclick="closeModal('reset-password-modal')">✕</button>
+    </div>
+    <div id="reset-password-content">
+      <p style="color:var(--text-muted);margin-bottom:18px;font-size:14px;line-height:1.6;">
+        Введите email, указанный при регистрации. Мы отправим код для восстановления пароля.
+      </p>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" class="form-input" id="reset-email" placeholder="ivan@mail.ru">
+      </div>
+      <div id="reset-step-code" style="display:none;">
+        <div class="form-group">
+          <label>Код восстановления</label>
+          <input type="text" class="form-input" id="reset-code" placeholder="Введите код из письма">
+        </div>
+        <div class="form-group">
+          <label>Новый пароль</label>
+          <input type="password" class="form-input" id="reset-new-password" placeholder="••••••">
+        </div>
+        <div class="form-group">
+          <label>Подтверждение</label>
+          <input type="password" class="form-input" id="reset-confirm-password" placeholder="••••••">
+        </div>
+      </div>
+      <div id="reset-error" style="display:none;background:#FDEAE8;color:#C0392B;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:14px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-outline" onclick="closeModal('reset-password-modal')">Отмена</button>
+        <button class="btn btn-primary" id="reset-send-btn" onclick="sendResetCode()">Отправить код</button>
+        <button class="btn btn-primary" id="reset-confirm-btn" style="display:none;" onclick="confirmResetPassword()">Сменить пароль</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== МОДАЛЬНОЕ ОКНО ДЛЯ ДОКУМЕНТОВ ===== -->
 <div class="modal-overlay" id="docs-modal">
   <div class="modal" style="max-width:720px;">
@@ -1671,7 +1710,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
       </div>
       <button class="btn btn-primary auth-btn" onclick="doLogin()">Войти</button>
       <div style="text-align:center; margin-top:10px;">
-        <a href="#" onclick="showResetPassword()" style="font-size:12px; color:var(--accent2);">Забыли пароль?</a>
+        <a href="#" onclick="event.preventDefault();openResetPasswordModal();" style="font-size:12px; color:var(--accent2);">Забыли пароль?</a>
       </div>
       <div class="auth-hint">Тест: marina / owner — владелец</div>
     </div>
@@ -3815,38 +3854,104 @@ async function doLogin() {
   }
 }
 
-// === ВОССТАНОВЛЕНИЕ ПАРОЛЯ ===
-function showResetPassword() {
-  const email = prompt('Введите email, указанный при регистрации:');
-  if (!email) return;
+// ============================================================
+// === ВОССТАНОВЛЕНИЕ ПАРОЛЯ ===================================
+// ============================================================
+
+let resetTempCode = null;
+let resetUserEmail = null;
+
+function openResetPasswordModal() {
+  document.getElementById('reset-email').value = '';
+  document.getElementById('reset-step-code').style.display = 'none';
+  document.getElementById('reset-send-btn').style.display = 'inline-flex';
+  document.getElementById('reset-confirm-btn').style.display = 'none';
+  document.getElementById('reset-error').style.display = 'none';
+  closeModal('auth-overlay');
+  openModal('reset-password-modal');
+}
+
+function sendResetCode() {
+  const email = document.getElementById('reset-email').value.trim();
+  const errEl = document.getElementById('reset-error');
+
+  if (!email) {
+    errEl.textContent = 'Введите email';
+    errEl.style.display = 'block';
+    return;
+  }
 
   const user = users.find(u => u.email === email);
   if (!user) {
-    showToast('Пользователь с таким email не найден');
+    errEl.textContent = 'Пользователь с таким email не найден';
+    errEl.style.display = 'block';
     return;
   }
 
-  const tempCode = Math.floor(100000 + Math.random() * 900000).toString();
-  alert('Код восстановления: ' + tempCode + '\n(В реальном проекте код придёт на почту ' + email + ')');
+  resetUserEmail = email;
+  resetTempCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-  const userCode = prompt('Введите полученный код:');
-  if (userCode !== tempCode) {
-    showToast('Неверный код');
+  // Показываем код в модалке (в реальном проекте отправляем на email)
+  errEl.style.display = 'none';
+  document.getElementById('reset-step-code').style.display = 'block';
+  document.getElementById('reset-send-btn').style.display = 'none';
+  document.getElementById('reset-confirm-btn').style.display = 'inline-flex';
+
+  // Показываем код пользователю (для теста)
+  const codeHint = document.createElement('div');
+  codeHint.style.cssText = 'background:var(--accent-light);color:var(--accent);padding:12px;border-radius:var(--radius-sm);margin-bottom:14px;text-align:center;font-size:18px;font-weight:600;letter-spacing:4px;';
+  codeHint.textContent = 'Код: ' + resetTempCode;
+  
+  const content = document.getElementById('reset-password-content');
+  const existingHint = content.querySelector('.reset-code-hint');
+  if (existingHint) existingHint.remove();
+  codeHint.className = 'reset-code-hint';
+  content.insertBefore(codeHint, document.getElementById('reset-step-code'));
+
+  showToast('Код отправлен на email (для теста: ' + resetTempCode + ')');
+}
+
+function confirmResetPassword() {
+  const code = document.getElementById('reset-code').value.trim();
+  const newPassword = document.getElementById('reset-new-password').value;
+  const confirmPassword = document.getElementById('reset-confirm-password').value;
+  const errEl = document.getElementById('reset-error');
+
+  if (code !== resetTempCode) {
+    errEl.textContent = 'Неверный код';
+    errEl.style.display = 'block';
     return;
   }
 
-  const newPassword = prompt('Введите новый пароль:');
   if (!newPassword || newPassword.length < 4) {
-    showToast('Пароль должен быть не менее 4 символов');
+    errEl.textContent = 'Пароль должен быть не менее 4 символов';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    errEl.textContent = 'Пароли не совпадают';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const user = users.find(u => u.email === resetUserEmail);
+  if (!user) {
+    errEl.textContent = 'Пользователь не найден';
+    errEl.style.display = 'block';
     return;
   }
 
   user.password = newPassword;
-  saveState('users', users);
   if (currentUser && currentUser.id === user.id) {
     currentUser.password = newPassword;
   }
+  saveState('users', users);
+
+  closeModal('reset-password-modal');
   showToast('Пароль успешно изменён!');
+  resetTempCode = null;
+  resetUserEmail = null;
 }
   // ============================================================
 // === CRUD ПРОГРАММ ===========================================
