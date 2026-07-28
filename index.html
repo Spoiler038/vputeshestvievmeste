@@ -887,24 +887,25 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   <div class="container">
     <div class="contact-wrap">
       <div class="contact-info">
-        <span class="section-label">Написать Марине</span>
-        <h2 class="section-title" style="font-size:40px;">Готовы<br><em>в путь?</em></h2>
-        <p style="margin-top:18px;">Оставьте заявку, и Марина свяжется с вами в течение суток. Расскажите, куда хотите отправиться — вместе найдём подходящую программу.</p>
-        <div style="margin-top:28px;display:flex;flex-direction:column;gap:10px;">
-          <div style="display:flex;gap:10px;align-items:center;">
-            <span style="font-size:18px;">📱</span>
-            <span style="font-size:14px;color:var(--text-muted);" id="contact-phone">+7 (xxx) xxx-xx-xx</span>
-          </div>
-          <div style="display:flex;gap:10px;align-items:center;">
-            <span style="font-size:18px;">✉️</span>
-            <span style="font-size:14px;color:var(--text-muted);" id="contact-email">marina@vputi.ru</span>
-          </div>
-          <div style="display:flex;gap:10px;align-items:center;">
-            <span style="font-size:18px;">💬</span>
-            <span style="font-size:14px;color:var(--text-muted);" id="contact-tg">Telegram: @vputi_together</span>
-          </div>
-        </div>
-      </div>
+  <span class="section-label">Написать Марине</span>
+  <h2 class="section-title" style="font-size:40px;">Готовы<br><em>в путь?</em></h2>
+  <p style="margin-top:18px;">Оставьте заявку, и Марина свяжется с вами в течение суток. Расскажите, куда хотите отправиться — вместе найдём подходящую программу.</p>
+  
+  <div style="margin-top:28px;display:flex;flex-direction:column;gap:10px;">
+    <a href="tel:+79261234567" style="display:flex;gap:10px;align-items:center;text-decoration:none;color:inherit;">
+      <span style="font-size:18px;">📱</span>
+      <span style="font-size:14px;color:var(--text-muted);" id="contact-phone">+7 (926) 123-45-67</span>
+    </a>
+    <a href="mailto:marina@vputi.ru" style="display:flex;gap:10px;align-items:center;text-decoration:none;color:inherit;">
+      <span style="font-size:18px;">✉️</span>
+      <span style="font-size:14px;color:var(--text-muted);" id="contact-email">marina@vputi.ru</span>
+    </a>
+    <a href="https://t.me/marina_travel" target="_blank" style="display:flex;gap:10px;align-items:center;text-decoration:none;color:inherit;">
+      <span style="font-size:18px;">💬</span>
+      <span style="font-size:14px;color:var(--text-muted);" id="contact-tg">Telegram: @marina_travel</span>
+    </a>
+  </div>
+</div>
 
       <!-- ФОРМА ОБРАТНОЙ СВЯЗИ -->
       <div class="contact-form" id="contact-form-wrap">
@@ -1853,16 +1854,29 @@ function smoothScroll(id) {
   // Если мы не на главной странице, сначала переходим на нее
   if (currentPage !== 'home') {
     showPage('home');
-    // Ждем загрузки страницы и прокручиваем
-    setTimeout(() => {
+    // Ждем загрузки страницы и прокручиваем с повторной попыткой
+    let attempts = 0;
+    const maxAttempts = 10;
+    const scrollInterval = setInterval(() => {
+      attempts++;
       const el = document.getElementById(id);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 400);
+      if (el) {
+        clearInterval(scrollInterval);
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (attempts >= maxAttempts) {
+        clearInterval(scrollInterval);
+        console.warn('Элемент с id "' + id + '" не найден после ' + maxAttempts + ' попыток');
+      }
+    }, 300);
     return;
   }
+  
   const el = document.getElementById(id);
   if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Добавляем небольшой отступ для фиксированной шапки
+    const navbarHeight = document.getElementById('navbar')?.getBoundingClientRect().height || 80;
+    const targetPosition = el.getBoundingClientRect().top + window.pageYOffset - navbarHeight - 20;
+    window.scrollTo({ top: targetPosition, behavior: 'smooth' });
   } else {
     console.warn('Элемент с id "' + id + '" не найден');
   }
@@ -2484,9 +2498,35 @@ const defaultContacts = { phone: "+7 (926) 123-45-67", email: "marina@vputi.ru",
 let contactsContent = loadState('contactsContent', defaultContacts);
 
 function applyContactsContent() {
-  document.getElementById('contact-phone').textContent = contactsContent.phone;
-  document.getElementById('contact-email').textContent = contactsContent.email;
-  document.getElementById('contact-tg').textContent = 'Telegram: ' + contactsContent.tg;
+  const phone = contactsContent.phone || "+7 (926) 123-45-67";
+  const email = contactsContent.email || "marina@vputi.ru";
+  const tg = contactsContent.tg || "@marina_travel";
+  
+  // Для текстовых полей
+  const phoneEl = document.getElementById('contact-phone');
+  if (phoneEl) phoneEl.textContent = phone;
+  
+  const emailEl = document.getElementById('contact-email');
+  if (emailEl) emailEl.textContent = email;
+  
+  const tgEl = document.getElementById('contact-tg');
+  if (tgEl) tgEl.textContent = 'Telegram: ' + tg;
+  
+  // Для ссылок
+  const links = document.querySelectorAll('#contact .contact-info a');
+  if (links.length >= 3) {
+    // Телефон
+    const telLink = links[0];
+    if (telLink) telLink.href = 'tel:' + phone.replace(/[\s\(\)\-]/g, '');
+    
+    // Email
+    const emailLink = links[1];
+    if (emailLink) emailLink.href = 'mailto:' + email;
+    
+    // Telegram
+    const tgLink = links[2];
+    if (tgLink) tgLink.href = 'https://t.me/' + tg.replace('@', '');
+  }
 }
   // ============================================================
 // === ФОРМА СВЯЗИ =============================================
@@ -4660,6 +4700,18 @@ async function saveContacts() {
 
   saveState('contactsContent', contactsContent);
   applyContactsContent();
+
+  // Обновляем ссылки
+  const links = document.querySelectorAll('#contact .contact-info a');
+  if (links.length >= 3) {
+    const phone = contactsContent.phone || "+7 (926) 123-45-67";
+    const email = contactsContent.email || "marina@vputi.ru";
+    const tg = contactsContent.tg || "@marina_travel";
+    
+    links[0].href = 'tel:' + phone.replace(/[\s\(\)\-]/g, '');
+    links[1].href = 'mailto:' + email;
+    links[2].href = 'https://t.me/' + tg.replace('@', '');
+  }
 
   try {
     await saveSettingToSheets('contactsContent', contactsContent);
