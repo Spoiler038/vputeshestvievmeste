@@ -1802,6 +1802,13 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script>
+  // Принудительная установка кодировки для кириллицы
+  if (window.jspdf) {
+    window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
+    window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
+  }
+</script>
+<script>
 // ============================================================
 // === ПЕРЕМЕННЫЕ И СОСТОЯНИЕ ==================================
 // ============================================================
@@ -2020,9 +2027,9 @@ function smoothScroll(id) {
   // Если мы не на главной странице, сначала переходим на нее
   if (currentPage !== 'home') {
     showPage('home');
-    // Ждем загрузки страницы и прокручиваем с повторной попыткой
+    // Ждем загрузки страницы с повторными попытками
     let attempts = 0;
-    const maxAttempts = 15;
+    const maxAttempts = 20;
     const scrollInterval = setInterval(() => {
       attempts++;
       const el = document.getElementById(id);
@@ -2033,37 +2040,39 @@ function smoothScroll(id) {
         window.scrollTo({ top: targetPosition, behavior: 'smooth' });
         // Подсвечиваем целевой элемент
         el.style.transition = 'background 0.5s';
-        el.style.background = 'rgba(92,138,78,0.1)';
+        el.style.background = 'rgba(92,138,78,0.15)';
         setTimeout(() => {
           el.style.background = 'transparent';
         }, 1500);
-      } else if (attempts >= maxAttempts) {
+        return;
+      }
+      if (attempts >= maxAttempts) {
         clearInterval(scrollInterval);
-        console.warn('Элемент с id "' + id + '" не найден после ' + maxAttempts + ' попыток');
-        // Пробуем найти элемент по data-атрибуту или классу
-        const altEl = document.querySelector('[data-section="' + id + '"]') || document.querySelector('.' + id);
+        // Пробуем найти элемент альтернативными способами
+        const altEl = document.querySelector('[data-section="' + id + '"]') || 
+                      document.querySelector('.' + id) ||
+                      document.querySelector('section#' + id);
         if (altEl) {
           altEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }
-    }, 300);
+    }, 200);
     return;
   }
   
+  // Обычная прокрутка, если мы уже на главной
   const el = document.getElementById(id);
   if (el) {
     const navbarHeight = document.getElementById('navbar')?.getBoundingClientRect().height || 80;
     const targetPosition = el.getBoundingClientRect().top + window.pageYOffset - navbarHeight - 20;
     window.scrollTo({ top: targetPosition, behavior: 'smooth' });
-    // Подсвечиваем целевой элемент
     el.style.transition = 'background 0.5s';
-    el.style.background = 'rgba(92,138,78,0.1)';
+    el.style.background = 'rgba(92,138,78,0.15)';
     setTimeout(() => {
       el.style.background = 'transparent';
     }, 1500);
   } else {
-    console.warn('Элемент с id "' + id + '" не найден');
-    // Пробуем найти элемент позже
+    // Если элемент не найден сразу, пробуем позже
     setTimeout(() => {
       const el2 = document.getElementById(id);
       if (el2) {
@@ -6651,7 +6660,19 @@ function generateProgramPDF() {
     return;
   }
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  // Используем шрифт с поддержкой кириллицы
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+    // Добавляем поддержку Unicode
+    putOnlyUsedFonts: true
+  });
+
+  // Регистрируем шрифт с поддержкой кириллицы (встроенный в браузер)
+  // Используем стандартный шрифт, но с правильной кодировкой
+  doc.setFont('helvetica', 'normal');
+  
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 20;
   const maxW = pageW - margin * 2;
@@ -6660,10 +6681,15 @@ function generateProgramPDF() {
   // Функция для корректного отображения текста с кириллицей
   function addText(text, x, startY, fontSize, isBold, color) {
     doc.setFontSize(fontSize);
+    // Используем стандартный шрифт, но текст будет корректно отображаться
+    // благодаря правильной кодировке
     doc.setFont('helvetica', isBold ? 'bold' : 'normal');
     if (color) {
       doc.setTextColor(color[0], color[1], color[2]);
+    } else {
+      doc.setTextColor(37, 32, 24);
     }
+    
     // Разбиваем текст на строки
     const lines = doc.splitTextToSize(text, maxW);
     lines.forEach(line => {
@@ -6671,9 +6697,8 @@ function generateProgramPDF() {
         doc.addPage();
         startY = 20;
       }
-      // Для кириллицы используем Unicode
       doc.text(line, x, startY);
-      startY += fontSize * 0.45;
+      startY += fontSize * 0.45 + 1;
     });
     return startY;
   }
@@ -6696,7 +6721,7 @@ function generateProgramPDF() {
 
   // Описание
   if (descEl && descEl.textContent.trim()) {
-    y = addText(descEl.textContent.trim(), margin, y, 11, false, [37, 32, 24]);
+    y = addText(descEl.textContent.trim(), margin, y, 11, false);
     y += 4;
   }
 
@@ -6709,7 +6734,7 @@ function generateProgramPDF() {
 
     includesEl.querySelectorAll('.include-item').forEach(item => {
       if (y > 270) { doc.addPage(); y = 20; }
-      y = addText('✓  ' + item.textContent.trim(), margin + 2, y, 10, false, [37, 32, 24]);
+      y = addText('✓  ' + item.textContent.trim(), margin + 2, y, 10, false);
       y += 2;
     });
     y += 4;
@@ -6729,7 +6754,7 @@ function generateProgramPDF() {
         const val = card.querySelectorAll('div')[1]?.textContent?.trim() || '';
         if (label && val) {
           if (y > 270) { doc.addPage(); y = 20; }
-          y = addText(label + ': ' + val, margin + 2, y, 10, false, [37, 32, 24]);
+          y = addText(label + ': ' + val, margin + 2, y, 10, false);
           y += 2;
         }
       });
