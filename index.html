@@ -1808,6 +1808,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
     window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
   }
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 // ============================================================
 // === ПЕРЕМЕННЫЕ И СОСТОЯНИЕ ==================================
@@ -6641,147 +6642,56 @@ window.addEventListener('resize', function() {
 
 function generateProgramPDF() {
   const titleEl = document.getElementById('detail-title');
-  const priceEl = document.getElementById('detail-price');
-  const descEl = document.getElementById('detail-full-desc');
-
   if (!titleEl || !titleEl.textContent.trim()) {
     showToast('Сначала откройте программу');
     return;
   }
 
-  if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
-    showToast('PDF-библиотека загружается, попробуйте ещё раз');
-    return;
-  }
+  showToast('Создание PDF...');
   
-  const { jsPDF } = window.jspdf;
-  
-  // Создаем PDF
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
+  // Создаем временный контейнер с содержимым
+  const container = document.createElement('div');
+  container.style.cssText = 'padding:40px;font-family:Arial, sans-serif;background:white;max-width:800px;margin:0 auto;';
+  container.innerHTML = `
+    <h1 style="color:#5C8A4E;font-size:28px;margin-bottom:10px;">${document.getElementById('detail-title').textContent}</h1>
+    <h2 style="color:#C4895A;font-size:22px;margin-bottom:20px;">от ${document.getElementById('detail-price').textContent} руб. за человека</h2>
+    <hr style="border:1px solid #5C8A4E;margin-bottom:20px;">
+    <p style="font-size:14px;line-height:1.8;color:#333;">${document.getElementById('detail-full-desc').textContent}</p>
+    <h3 style="color:#5C8A4E;font-size:20px;margin-top:30px;margin-bottom:10px;">Что включено</h3>
+    ${Array.from(document.querySelectorAll('#detail-includes .include-item')).map(el => 
+      `<div style="padding:4px 0;font-size:14px;">✓ ${el.textContent}</div>`
+    ).join('')}
+    <h3 style="color:#5C8A4E;font-size:20px;margin-top:30px;margin-bottom:10px;">Детали</h3>
+    ${Array.from(document.querySelectorAll('#detail-meta > div')).map(el => 
+      `<div style="padding:6px 0;font-size:14px;border-bottom:1px solid #eee;">${el.textContent.trim()}</div>`
+    ).join('')}
+    <div style="margin-top:40px;padding-top:20px;border-top:2px solid #EDE7DA;font-size:12px;color:#7A7060;">
+      ВПУТЕШЕСТВИЕВМЕСТЕ | ${contactsContent.phone || ''} | ${contactsContent.email || ''}
+    </div>
+  `;
+
+  document.body.appendChild(container);
+
+  html2canvas(container, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: 'white'
+  }).then(canvas => {
+    document.body.removeChild(container);
+    
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const imgWidth = 210;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    
+    doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+    doc.save((titleEl.textContent || 'programma').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_').slice(0, 40) + '.pdf');
+    showToast('PDF сохранён ✓');
+  }).catch(err => {
+    document.body.removeChild(container);
+    showToast('Ошибка создания PDF: ' + err.message);
   });
-
-  const pageW = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  const maxW = pageW - margin * 2;
-  let y = 20;
-
-  // Функция для добавления текста с кириллицей
-  function addText(text, x, startY, fontSize, isBold, color) {
-    if (!text) return startY;
-    
-    doc.setFontSize(fontSize);
-    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
-    
-    if (color) {
-      doc.setTextColor(color[0], color[1], color[2]);
-    } else {
-      doc.setTextColor(37, 32, 24);
-    }
-    
-    // Разбиваем текст на строки
-    const lines = doc.splitTextToSize(text, maxW);
-    lines.forEach(line => {
-      if (startY > 270) {
-        doc.addPage();
-        startY = 20;
-      }
-      // Важно: передаем строку как есть, jsPDF сам обработает Unicode
-      doc.text(line, x, startY);
-      startY += fontSize * 0.45 + 1.5;
-    });
-    return startY;
-  }
-
-  // === ЗАГОЛОВОК ===
-  doc.setFillColor(92, 138, 78);
-  doc.rect(0, 0, pageW, 35, 'F');
-  y = addText(titleEl.textContent, margin, 12, 20, true, [255, 255, 255]);
-  y += 8;
-
-  // === ЦЕНА ===
-  y = addText('от ' + (priceEl ? priceEl.textContent : '0') + ' руб. за человека', margin, y, 14, true, [196, 137, 90]);
-  y += 6;
-
-  // === ЛИНИЯ ===
-  doc.setDrawColor(92, 138, 78);
-  doc.setLineWidth(0.5);
-  doc.line(margin, y, pageW - margin, y);
-  y += 8;
-
-  // === ОПИСАНИЕ ===
-  if (descEl && descEl.textContent.trim()) {
-    y = addText(descEl.textContent.trim(), margin, y, 11, false);
-    y += 4;
-  }
-
-  // === ЧТО ВКЛЮЧЕНО ===
-  const includesEl = document.getElementById('detail-includes');
-  if (includesEl) {
-    const items = includesEl.querySelectorAll('.include-item');
-    if (items.length) {
-      if (y > 260) { doc.addPage(); y = 20; }
-      y = addText('Что включено:', margin, y, 13, true, [92, 138, 78]);
-      y += 4;
-
-      items.forEach(item => {
-        if (y > 270) { doc.addPage(); y = 20; }
-        y = addText('✓  ' + item.textContent.trim(), margin + 2, y, 10, false);
-        y += 2;
-      });
-      y += 4;
-    }
-  }
-
-  // === ДЕТАЛИ ===
-  const metaEl = document.getElementById('detail-meta');
-  if (metaEl) {
-    const cards = metaEl.querySelectorAll('div[style*="border"]');
-    if (cards.length) {
-      if (y > 260) { doc.addPage(); y = 20; }
-      y = addText('Детали:', margin, y, 13, true, [92, 138, 78]);
-      y += 4;
-
-      cards.forEach(card => {
-        const divs = card.querySelectorAll('div');
-        const label = divs[0]?.textContent?.trim() || '';
-        const val = divs[1]?.textContent?.trim() || '';
-        if (label && val) {
-          if (y > 270) { doc.addPage(); y = 20; }
-          y = addText(label + ': ' + val, margin + 2, y, 10, false);
-          y += 2;
-        }
-      });
-    }
-  }
-
-  // === ФУТЕР ===
-  y += 6;
-  if (y > 270) { doc.addPage(); y = 20; }
-  doc.setFillColor(237, 231, 218);
-  doc.rect(0, y, pageW, 18, 'F');
-  doc.setFontSize(9);
-  doc.setTextColor(122, 112, 96);
-  doc.setFont('helvetica', 'normal');
-
-  const contacts = [
-    contactsContent.phone || '',
-    contactsContent.email || '',
-    'Telegram: ' + (contactsContent.tg || '')
-  ].filter(Boolean).join('   |   ');
-
-  doc.text('ВПУТЕШЕСТВИЕВМЕСТЕ  |  ' + contacts, margin, y + 7);
-  doc.text('spoiler038.github.io', margin, y + 12);
-
-  // === СОХРАНЕНИЕ ===
-  const filename = (titleEl.textContent || 'programma')
-    .replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')
-    .slice(0, 40) + '.pdf';
-  
-  doc.save(filename);
-  showToast('PDF сохранён ✓');
 }
 // ============================================================
 // === ИНИЦИАЛИЗАЦИЯ ===========================================
