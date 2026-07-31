@@ -647,11 +647,11 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   <div class="navbar-inner">
     <a class="logo" href="#" onclick="showPage('home')"><span>В</span>ПУТЕШЕСТВИЕВМЕСТЕ</a>
     <div class="nav-links">
-      <a href="#" onclick="smoothScroll('programs')">ПРОГРАММЫ</a>
-      <a href="#" onclick="smoothScroll('about')">ОБ ОСНОВАТЕЛЕ</a>
-      <a href="#" onclick="smoothScroll('how')">КАК МЫ ЕЗДИМ</a>
-      <a href="#" onclick="smoothScroll('gallery')">ГАЛЕРЕЯ</a>
-      <a href="#" onclick="smoothScroll('contact')">КОНТАКТЫ</a>
+    <a href="javascript:void(0)" onclick="smoothScroll('programs')">ПРОГРАММЫ</a>
+    <a href="javascript:void(0)" onclick="smoothScroll('about')">ОБ ОСНОВАТЕЛЕ</a>
+    <a href="javascript:void(0)" onclick="smoothScroll('how')">КАК МЫ ЕЗДИМ</a>
+    <a href="javascript:void(0)" onclick="smoothScroll('gallery')">ГАЛЕРЕЯ</a>
+    <a href="javascript:void(0)" onclick="smoothScroll('contact')">КОНТАКТЫ</a>
     </div>
     <div class="nav-auth">
       <div id="guest-menu"><button class="btn btn-outline btn-sm" onclick="openAuth()">ВОЙТИ</button></div>
@@ -6649,41 +6649,32 @@ function generateProgramPDF() {
     return;
   }
 
-  if (typeof window.jspdf === 'undefined') {
-    showToast('PDF-библиотека загружается, попробуйте ещё раз через секунду');
+  if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
+    showToast('PDF-библиотека загружается, попробуйте ещё раз');
     return;
   }
   
   const { jsPDF } = window.jspdf;
-  if (!jsPDF) {
-    showToast('PDF-библиотека загружается, попробуйте ещё раз');
-    return;
-  }
-
-  // Используем шрифт с поддержкой кириллицы
+  
+  // Создаем PDF
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'a4',
-    // Добавляем поддержку Unicode
-    putOnlyUsedFonts: true
+    format: 'a4'
   });
 
-  // Регистрируем шрифт с поддержкой кириллицы (встроенный в браузер)
-  // Используем стандартный шрифт, но с правильной кодировкой
-  doc.setFont('helvetica', 'normal');
-  
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 20;
   const maxW = pageW - margin * 2;
   let y = 20;
 
-  // Функция для корректного отображения текста с кириллицей
+  // Функция для добавления текста с кириллицей
   function addText(text, x, startY, fontSize, isBold, color) {
+    if (!text) return startY;
+    
     doc.setFontSize(fontSize);
-    // Используем стандартный шрифт, но текст будет корректно отображаться
-    // благодаря правильной кодировке
     doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+    
     if (color) {
       doc.setTextColor(color[0], color[1], color[2]);
     } else {
@@ -6697,50 +6688,54 @@ function generateProgramPDF() {
         doc.addPage();
         startY = 20;
       }
+      // Важно: передаем строку как есть, jsPDF сам обработает Unicode
       doc.text(line, x, startY);
-      startY += fontSize * 0.45 + 1;
+      startY += fontSize * 0.45 + 1.5;
     });
     return startY;
   }
 
-  // Заголовок
+  // === ЗАГОЛОВОК ===
   doc.setFillColor(92, 138, 78);
   doc.rect(0, 0, pageW, 35, 'F');
   y = addText(titleEl.textContent, margin, 12, 20, true, [255, 255, 255]);
   y += 8;
 
-  // Цена
+  // === ЦЕНА ===
   y = addText('от ' + (priceEl ? priceEl.textContent : '0') + ' руб. за человека', margin, y, 14, true, [196, 137, 90]);
   y += 6;
 
-  // Линия
+  // === ЛИНИЯ ===
   doc.setDrawColor(92, 138, 78);
   doc.setLineWidth(0.5);
   doc.line(margin, y, pageW - margin, y);
   y += 8;
 
-  // Описание
+  // === ОПИСАНИЕ ===
   if (descEl && descEl.textContent.trim()) {
     y = addText(descEl.textContent.trim(), margin, y, 11, false);
     y += 4;
   }
 
-  // Что включено
+  // === ЧТО ВКЛЮЧЕНО ===
   const includesEl = document.getElementById('detail-includes');
-  if (includesEl && includesEl.querySelectorAll('.include-item').length) {
-    if (y > 260) { doc.addPage(); y = 20; }
-    y = addText('Что включено:', margin, y, 13, true, [92, 138, 78]);
-    y += 4;
+  if (includesEl) {
+    const items = includesEl.querySelectorAll('.include-item');
+    if (items.length) {
+      if (y > 260) { doc.addPage(); y = 20; }
+      y = addText('Что включено:', margin, y, 13, true, [92, 138, 78]);
+      y += 4;
 
-    includesEl.querySelectorAll('.include-item').forEach(item => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      y = addText('✓  ' + item.textContent.trim(), margin + 2, y, 10, false);
-      y += 2;
-    });
-    y += 4;
+      items.forEach(item => {
+        if (y > 270) { doc.addPage(); y = 20; }
+        y = addText('✓  ' + item.textContent.trim(), margin + 2, y, 10, false);
+        y += 2;
+      });
+      y += 4;
+    }
   }
 
-  // Детали
+  // === ДЕТАЛИ ===
   const metaEl = document.getElementById('detail-meta');
   if (metaEl) {
     const cards = metaEl.querySelectorAll('div[style*="border"]');
@@ -6750,8 +6745,9 @@ function generateProgramPDF() {
       y += 4;
 
       cards.forEach(card => {
-        const label = card.querySelector('div')?.textContent?.trim() || '';
-        const val = card.querySelectorAll('div')[1]?.textContent?.trim() || '';
+        const divs = card.querySelectorAll('div');
+        const label = divs[0]?.textContent?.trim() || '';
+        const val = divs[1]?.textContent?.trim() || '';
         if (label && val) {
           if (y > 270) { doc.addPage(); y = 20; }
           y = addText(label + ': ' + val, margin + 2, y, 10, false);
@@ -6761,7 +6757,7 @@ function generateProgramPDF() {
     }
   }
 
-  // Контакты в footer
+  // === ФУТЕР ===
   y += 6;
   if (y > 270) { doc.addPage(); y = 20; }
   doc.setFillColor(237, 231, 218);
@@ -6779,7 +6775,11 @@ function generateProgramPDF() {
   doc.text('ВПУТЕШЕСТВИЕВМЕСТЕ  |  ' + contacts, margin, y + 7);
   doc.text('spoiler038.github.io', margin, y + 12);
 
-  const filename = (titleEl.textContent || 'programma').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_').slice(0, 40) + '.pdf';
+  // === СОХРАНЕНИЕ ===
+  const filename = (titleEl.textContent || 'programma')
+    .replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')
+    .slice(0, 40) + '.pdf';
+  
   doc.save(filename);
   showToast('PDF сохранён ✓');
 }
