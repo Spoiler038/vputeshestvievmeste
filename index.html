@@ -311,16 +311,18 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 .profile-info-label { font-weight: 600; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
 
 <!-- ===== ДЕТАЛЬНАЯ СТРАНИЦА ПРОГРАММЫ ===== -->
-<div id="page-detail" class="program-detail" style="display:none;">
+<div id="page-detail" class="program-detail">
   <div class="program-hero" id="detail-hero">
     <div class="program-hero-overlay"></div>
-    <span id="detail-emoji">🌄</span>
+    <span id="detail-emoji" style="font-size:72px;">🌄</span>
   </div>
   <div class="program-detail-body">
     <div class="container">
-      <!-- Кнопка Назад - сдвинута ниже фото на 20px, отступ после кнопки 20px -->
+      <!-- Кнопка Назад -->
       <button class="btn btn-outline btn-sm" style="margin-top:20px;margin-bottom:20px;" onclick="showPage('home')">← Назад</button>
+      
       <div class="program-detail-grid">
+        <!-- Левая колонка: информация о туре -->
         <div>
           <h1 class="program-detail-title" id="detail-title">Название</h1>
           <div id="detail-tags" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px;"></div>
@@ -333,15 +335,15 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="detail-meta"></div>
         </div>
 
+        <!-- Правая колонка: бронирование (как в старом файле) -->
         <div>
-          <div class="booking-card">
+          <div class="booking-card" style="position:sticky;top:96px;">
             <div class="booking-price">
               <span>от </span><span id="detail-price">0</span> <span>₽</span>
             </div>
             <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">за человека</div>
             <button class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="smoothScroll('contact');showPage('home');">Оставить заявку</button>
             <button class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="generateProgramPDF()">📄 Скачать PDF</button>
-            <!-- Кнопка "Все программы" - возвращает на главную в раздел программ -->
             <button class="btn btn-outline" style="width:100%;" onclick="smoothScroll('programs');showPage('home');">← Все программы</button>
           </div>
         </div>
