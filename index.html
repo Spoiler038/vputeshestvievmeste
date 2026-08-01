@@ -1360,13 +1360,33 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; hei
 
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
           <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;" id="group-status-filters">
-            <button class="filter-tag active" data-status="" onclick="setGroupFilter(this,'')">Все</button>
-            <button class="filter-tag" data-status="набор" onclick="setGroupFilter(this,'набор')">🟢 Набор</button>
-            <button class="filter-tag" data-status="укомплектована" onclick="setGroupFilter(this,'укомплектована')">🟡 Укомплектована</button>
-            <button class="filter-tag" data-status="в пути" onclick="setGroupFilter(this,'в пути')">🔵 В пути</button>
-            <button class="filter-tag" data-status="завершена" onclick="setGroupFilter(this,'завершена')">✅ Завершена</button>
-            <button class="filter-tag" data-status="отменена" onclick="setGroupFilter(this,'отменена')">❌ Отменена</button>
-          </div>
+  <button class="filter-tag active" data-status="" onclick="setGroupFilter(this,'')">Все</button>
+  <button class="filter-tag" data-status="набор" onclick="setGroupFilter(this,'набор')">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+      <circle cx="12" cy="12" r="10" fill="#4CAF50" stroke="none"/>
+    </svg> Набор
+  </button>
+  <button class="filter-tag" data-status="укомплектована" onclick="setGroupFilter(this,'укомплектована')">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+      <circle cx="12" cy="12" r="10" fill="#FFC107" stroke="none"/>
+    </svg> Укомплектована
+  </button>
+  <button class="filter-tag" data-status="в пути" onclick="setGroupFilter(this,'в пути')">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+      <circle cx="12" cy="12" r="10" fill="#2196F3" stroke="none"/>
+    </svg> В пути
+  </button>
+  <button class="filter-tag" data-status="завершена" onclick="setGroupFilter(this,'завершена')">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+      <circle cx="12" cy="12" r="10" fill="#4CAF50" stroke="none"/>
+    </svg> Завершена
+  </button>
+  <button class="filter-tag" data-status="отменена" onclick="setGroupFilter(this,'отменена')">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+      <circle cx="12" cy="12" r="10" fill="#F44336" stroke="none"/>
+    </svg> Отменена
+  </button>
+</div>
           <button class="btn btn-primary" style="flex-shrink:0;" onclick="openAddGroup()">+ Создать группу</button>
         </div>
 
