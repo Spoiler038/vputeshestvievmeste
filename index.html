@@ -118,7 +118,7 @@ img { max-width: 100%; display: block; }
 .carousel-btn:hover { border-color: var(--accent); background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(92,138,78,0.3); }
 
 /* ===== СЕКЦИИ ===== */
-.section { padding: 100px 0; }
+.section { padding: 20px 0; }
 .section-alt { background: var(--bg2); }
 .section-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 60px; gap: 24px; flex-wrap: wrap; }
 .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; display: block; }
@@ -1653,24 +1653,24 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; hei
       <button class="auth-tab" onclick="switchAuthTab('register')">Регистрация</button>
     </div>
 
-    <!-- ===== ВХОД ===== -->
-    <div class="auth-form active" id="auth-login">
-      <div class="auth-error" id="login-error">Неверный логин или пароль</div>
-      <div class="form-group">
-        <label>Логин</label>
-        <input type="text" class="form-input" id="login-username" placeholder="marina">
-      </div>
-      <div class="form-group">
-        <label>Пароль</label>
-        <input type="password" class="form-input" id="login-password" placeholder="••••••">
-      </div>
-      <button class="btn btn-primary auth-btn" onclick="doLogin()">Войти</button>
-      <div style="text-align:center; margin-top:10px;">
-        <a href="#" onclick="event.preventDefault();openResetPasswordModal();" style="font-size:12px; color:var(--accent2);">Забыли пароль?</a>
-      </div>
-      <div class="auth-hint">Тест: marina / owner — владелец</div>
-    </div>
-
+   <!-- ===== ВХОД ===== -->
+<div class="auth-form active" id="auth-login">
+  <div class="auth-error" id="login-error">Неверный логин/email или пароль</div>
+  <div class="form-group">
+    <label>Логин или Email</label>
+    <input type="text" class="form-input" id="login-username" placeholder="Логин или email">
+  </div>
+  <div class="form-group">
+    <label>Пароль</label>
+    <input type="password" class="form-input" id="login-password" placeholder="••••••">
+  </div>
+  <button class="btn btn-primary auth-btn" onclick="doLogin()">Войти</button>
+  <div style="text-align:center; margin-top:10px;">
+    <a href="#" onclick="event.preventDefault();openResetPasswordModal();" style="font-size:12px; color:var(--accent2);">Забыли пароль?</a>
+  </div>
+  <div class="auth-hint">Тест: marina / owner — владелец</div>
+</div>
+    
     <!-- ===== РЕГИСТРАЦИЯ ===== -->
     <div class="auth-form" id="auth-register">
       <div class="auth-error" id="register-error"></div>
@@ -3652,6 +3652,19 @@ async function doRegister() {
     return;
   }
 
+  // Проверка уникальности username и email
+  if (users.find(u => u.username === username)) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Логин уже занят';
+    return;
+  }
+  
+  if (users.find(u => u.email === email)) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Email уже используется';
+    return;
+  }
+
   // Отключаем кнопку на время отправки
   const btn = document.getElementById('register-submit-btn');
   btn.disabled = true;
@@ -3736,13 +3749,13 @@ async function doRegister() {
 
 // === ВХОД ===
 async function doLogin() {
-  const username = document.getElementById('login-username').value.trim();
+  const loginOrEmail = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
   const errEl = document.getElementById('login-error');
 
-  if (!username || !password) {
+  if (!loginOrEmail || !password) {
     errEl.style.display = 'block';
-    errEl.textContent = 'Введите логин и пароль';
+    errEl.textContent = 'Введите логин/email и пароль';
     return;
   }
 
@@ -3756,7 +3769,12 @@ async function doLogin() {
     const deviceId = getDeviceId();
 
     // Сначала пробуем локального пользователя (для быстрого входа)
-    const localUser = users.find(u => u.username === username && u.password === password);
+    // Проверяем как по username, так и по email
+    const localUser = users.find(u => 
+      (u.username === loginOrEmail || u.email === loginOrEmail) && 
+      u.password === password
+    );
+    
     if (localUser) {
       // Обновляем device_id
       localUser.device_id = deviceId;
@@ -3774,7 +3792,8 @@ async function doLogin() {
     const payload = {
       action: 'login',
       data: {
-        username: username,
+        username: loginOrEmail,
+        email: loginOrEmail,  // Добавляем email для проверки на сервере
         password: password,
         device_id: deviceId
       }
@@ -3783,7 +3802,7 @@ async function doLogin() {
     const result = await gasPost(payload);
 
     if (result && result.ok && result.user) {
-      await recordConsent('login', { username: username });
+      await recordConsent('login', { username: result.user.username, email: result.user.email });
 
       const user = result.user;
       user.password = password; // сохраняем пароль для локальной работы
@@ -3803,11 +3822,14 @@ async function doLogin() {
       closeAuth();
     } else {
       errEl.style.display = 'block';
-      errEl.textContent = result.error || 'Неверный логин или пароль';
+      errEl.textContent = result.error || 'Неверный логин/email или пароль';
     }
   } catch(e) {
-    // При ошибке проверяем локально ещё раз
-    const localUser = users.find(u => u.username === username && u.password === password);
+    // При ошибке проверяем локально ещё раз (как по username, так и по email)
+    const localUser = users.find(u => 
+      (u.username === loginOrEmail || u.email === loginOrEmail) && 
+      u.password === password
+    );
     if (localUser) {
       loginSuccess(localUser);
       document.getElementById('login-username').value = '';
@@ -3816,14 +3838,13 @@ async function doLogin() {
       showToast('Вход выполнен (офлайн-режим)');
     } else {
       errEl.style.display = 'block';
-      errEl.textContent = 'Ошибка соединения, но есть локальный пользователь?';
+      errEl.textContent = 'Ошибка соединения. Попробуйте позже.';
     }
   } finally {
     btn.disabled = false;
     btn.textContent = 'Войти';
   }
 }
-
 // ============================================================
 // === ВОССТАНОВЛЕНИЕ ПАРОЛЯ ===================================
 // ============================================================
