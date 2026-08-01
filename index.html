@@ -223,6 +223,95 @@ img { max-width: 100%; display: block; }
 .no-results { grid-column: 1 / -1; text-align: center; padding: 80px 20px; color: var(--text-muted); }
 .no-results-icon { font-size: 48px; margin-bottom: 14px; }
 
+/* ===== ДЕТАЛЬНАЯ СТРАНИЦА ПРОГРАММЫ ===== */
+.program-detail {
+  display: none;
+  padding-top: 80px;
+}
+.program-detail.active {
+  display: block;
+}
+.program-hero {
+  height: 280px;
+  background: linear-gradient(135deg, var(--accent-light), var(--bg2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 96px;
+  position: relative;
+  overflow: hidden;
+}
+.program-hero img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.program-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent 40%, rgba(37,32,24,0.38));
+  z-index: 1;
+}
+.program-hero span {
+  position: relative;
+  z-index: 2;
+  font-size: 80px;
+}
+.program-detail-body {
+  padding: 20px 0 56px;
+}
+.program-detail-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 44px;
+}
+.program-detail-title {
+  font-family: var(--font-family);
+  font-size: 40px;
+  font-weight: 500;
+  margin-bottom: 18px;
+}
+.includes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 14px;
+}
+.include-item {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.include-item::before {
+  content: '✓';
+  color: var(--accent);
+  font-weight: 700;
+}
+.booking-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 28px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 96px;
+}
+.booking-price {
+  font-family: var(--font-family);
+  font-size: 38px;
+  font-weight: 600;
+  color: var(--accent2);
+  margin-bottom: 4px;
+}
+.booking-price span {
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+  
 /* ===== ФОРМА СВЯЗИ ===== */
 .contact-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
 .contact-info p { font-size: 15px; color: var(--text-muted); line-height: 1.85; }
@@ -444,6 +533,48 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 .auth-hint { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px; }
 .auth-btn { width: 100%; justify-content: center; margin-top: 8px; }
 
+/* ===== МОДАЛЬНОЕ ОКНО РЕГИСТРАЦИИ ===== */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(37,32,24,0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+  overflow: hidden;
+}
+.auth-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+.auth-box {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  transform: scale(0.95);
+  transition: transform 0.3s;
+  /* Скрываем скроллбар */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.auth-box::-webkit-scrollbar {
+  display: none;
+}
+.auth-overlay.open .auth-box {
+  transform: scale(1);
+}
+  
 /* ===== АДАПТИВ ===== */
 @media (max-width: 1024px) {
   .container { padding: 0 20px; }
@@ -3373,7 +3504,8 @@ _________________________
 function fillTemplate(template, userData) {
   let result = template;
   const data = {
-    full_name: userData.name || '_________________________',
+    name: userData.name || 'Пользователь',
+    full_name: userData.name || userData.full_name || 'Пользователь',
     email: userData.email || '_________________________',
     phone: userData.phone || '_________________________',
     device_id: userData.device_id || '_________________________',
@@ -3522,75 +3654,30 @@ function renderDocContent(docType) {
 
   let filledTemplate = template;
   if (currentUser) {
+    // Авторизованный пользователь — подставляем его данные
     filledTemplate = fillTemplate(template, currentUser);
+  } else {
+    // Неавторизованный — обезличенная версия
+    const guestData = {
+      name: 'Пользователь',
+      full_name: 'Пользователь',
+      email: '_________________________',
+      phone: '_________________________',
+      device_id: '_________________________',
+      date: new Date().toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    };
+    filledTemplate = fillTemplate(template, guestData);
   }
 
   body.innerHTML = filledTemplate;
 }
 
 function generatePersonalDocPDFFromModal() {
-  if (!currentUser) {
-    showToast('Войдите в аккаунт для скачивания документов');
-    return;
-  }
-
-  const { jsPDF } = window.jspdf;
-  if (!jsPDF) {
-    showToast('Библиотека PDF загружается, попробуйте ещё раз');
-    return;
-  }
-
-  let template = docsTemplates[currentDocType];
-  if (!template) {
-    showToast('Документ ещё не загружен, попробуйте позже');
-    return;
-  }
-
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageW = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  const maxW = pageW - margin * 2;
-  let y = 20;
-
-  const titles = {
-    'user-agreement': 'ПОЛЬЗОВАТЕЛЬСКОЕ СОГЛАШЕНИЕ',
-    'privacy-policy': 'ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ',
-    'consent': 'СОГЛАСИЕ НА ОБРАБОТКУ ПЕРСОНАЛЬНЫХ ДАННЫХ'
-  };
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(92, 138, 78);
-  doc.text(titles[currentDocType] || 'Документ', pageW / 2, y, { align: 'center' });
-  y += 10;
-
-  const filledText = fillTemplate(template, currentUser);
-  const lines = filledText.split('\n');
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.setTextColor(37, 32, 24);
-
-  for (const line of lines) {
-    if (y > 270) {
-      doc.addPage();
-      y = 20;
-    }
-    if (line.trim() && /^[А-ЯA-Z0-9.\s]+$/.test(line.trim()) && line.trim().length > 3) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-    } else {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-    }
-    const wrapped = doc.splitTextToSize(line, maxW);
-    doc.text(wrapped, margin, y);
-    y += (wrapped.length * 6) + 1;
-  }
-
-  const filename = (titles[currentDocType] || 'document') + '_' + currentUser.name.replace(/\s+/g, '_') + '.pdf';
-  doc.save(filename);
-  showToast('✅ Документ сохранён');
+  generatePersonalDocPDF(currentDocType);
 }
 
 // ============================================================
@@ -3598,20 +3685,18 @@ function generatePersonalDocPDFFromModal() {
 // ============================================================
 
 function generatePersonalDocPDF(docType) {
-  if (!currentUser) {
-    showToast('Войдите в аккаунт для скачивания документов');
+  // Проверяем, авторизован ли пользователь
+  const isLoggedIn = !!currentUser;
+  
+  let template = docsTemplates[docType];
+  if (!template) {
+    showToast('Документ ещё не загружен, попробуйте позже');
     return;
   }
 
   const { jsPDF } = window.jspdf;
   if (!jsPDF) {
     showToast('Библиотека PDF загружается, попробуйте ещё раз');
-    return;
-  }
-
-  let template = docsTemplates[docType];
-  if (!template) {
-    showToast('Документ ещё не загружен, попробуйте позже');
     return;
   }
 
@@ -3633,9 +3718,29 @@ function generatePersonalDocPDF(docType) {
   doc.text(titles[docType] || 'Документ', pageW / 2, y, { align: 'center' });
   y += 10;
 
-  const filledText = fillTemplate(template, currentUser);
-  const lines = filledText.split('\n');
+  // Подставляем данные в зависимости от того, авторизован пользователь или нет
+  let filledText;
+  if (isLoggedIn) {
+    // Авторизованный пользователь — подставляем его данные
+    filledText = fillTemplate(template, currentUser);
+  } else {
+    // Неавторизованный — обезличенная версия
+    const guestData = {
+      name: 'Пользователь',
+      full_name: 'Пользователь',
+      email: '_________________________',
+      phone: '_________________________',
+      device_id: '_________________________',
+      date: new Date().toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    };
+    filledText = fillTemplate(template, guestData);
+  }
 
+  const lines = filledText.split('\n');
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(37, 32, 24);
@@ -3654,10 +3759,12 @@ function generatePersonalDocPDF(docType) {
     }
     const wrapped = doc.splitTextToSize(line, maxW);
     doc.text(wrapped, margin, y);
-    y += (wrapped.length * 6) + 1;
+    y += (wrapped.length * 6) + 1.5;
   }
 
-  const filename = (titles[docType] || 'document') + '_' + currentUser.name.replace(/\s+/g, '_') + '.pdf';
+  const filename = (titles[docType] || 'document') + 
+    (isLoggedIn ? '_' + currentUser.name.replace(/\s+/g, '_') : '') + 
+    '.pdf';
   doc.save(filename);
   showToast('✅ Документ сохранён');
 }
