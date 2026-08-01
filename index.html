@@ -4430,32 +4430,62 @@ function loadAdminUsers(isOwner) {
   // Принудительно перезагружаем пользователей из localStorage
   users = loadState('users', users);
   
-  // Также пробуем загрузить из Sheets
+  // Если есть подключение к Sheets — загружаем свежие данные
   if (GAS_URL && !GAS_URL.includes('ВСТАВЬТЕ')) {
-    gasGet({ action: 'read', sheet: 'users' })
-      .then(result => {
-        if (result && result.ok && result.data && result.data.length > 0) {
-          // Обновляем локальные данные
-          const remoteUsers = result.data.map(normalizeUser);
-          // Объединяем с локальными, чтобы не потерять владельца
-          const localUsers = users.filter(u => u.role === 'owner');
-          const allUsers = [...localUsers, ...remoteUsers.filter(u => u.role !== 'owner')];
-          // Убираем дубликаты по id
-          const uniqueUsers = [];
-          const seenIds = new Set();
-          allUsers.forEach(u => {
-            if (!seenIds.has(u.id)) {
-              seenIds.add(u.id);
-              uniqueUsers.push(u);
-            }
-          });
-          users = uniqueUsers;
-          saveState('users', users);
+    // Сначала проверяем версию
+    const localVersion = localStorage.getItem('vputi_data_version') || '0';
+    
+    gasGet({ action: 'checkVersion', version: localVersion })
+      .then(versionResult => {
+        if (versionResult && versionResult.ok && versionResult.needsUpdate) {
+          // Нужно обновить данные
+          return gasGet({ action: 'getFullData' });
         }
+        return null;
       })
-      .catch(() => {});
+      .then(fullResult => {
+        if (fullResult && fullResult.ok && fullResult.data) {
+          // Обновляем версию
+          if (fullResult.version) {
+            localStorage.setItem('vputi_data_version', fullResult.version);
+          }
+          
+          // Обновляем пользователей
+          if (fullResult.data.users && fullResult.data.users.length > 0) {
+            const remoteUsers = fullResult.data.users.map(normalizeUser);
+            // Сохраняем владельца
+            const localOwner = users.find(u => u.role === 'owner');
+            // Объединяем
+            let mergedUsers = [];
+            if (localOwner) {
+              mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
+            } else {
+              mergedUsers = remoteUsers;
+            }
+            // Убираем дубликаты по id
+            const uniqueUsers = [];
+            const seenIds = new Set();
+            mergedUsers.forEach(u => {
+              if (!seenIds.has(u.id)) {
+                seenIds.add(u.id);
+                uniqueUsers.push(u);
+              }
+            });
+            users = uniqueUsers;
+            saveState('users', users);
+          }
+        }
+        renderUsersTable(isOwner);
+      })
+      .catch(() => {
+        renderUsersTable(isOwner);
+      });
+  } else {
+    renderUsersTable(isOwner);
   }
+}
 
+function renderUsersTable(isOwner) {
   document.getElementById('users-tbody').innerHTML = users.map(u => {
     const count = purchases.filter(p => p.userId === u.id).length;
     return `<tr style="cursor:pointer;" onclick="openUserEditModal(${u.id})" title="Нажмите для просмотра и редактирования">
@@ -4709,41 +4739,187 @@ function confirmCreateUser(leadId) {
   const newUser = {
     id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
     username: username,
-    password: password, // Сохраняем plain пароль для локального входа
+    password: password,
     role: 'user',
     name: lead.name,
-    email: email || (lead.contact.includes('@') ? lead.contact : ''),
+    email: email || (lead.contact && lead.contact.includes('@') ? lead.contact : ''),
     phone: '',
     bio: '',
     joinedDate: new Date().toISOString().slice(0, 10),
     avatar: '',
     discount: 0,
-    _plainPassword: password // Для локальной проверки
+    _plainPassword: password
   };
 
   // Сохраняем локально
   users.push(newUser);
   saveState('users', users);
 
-  // Синхронизируем в Google Sheets (с хешированным паролем)
+  // Отправляем в Google Sheets
   const userForSheets = {
-    ...newUser,
-    password: hashPasswordLocally(password) // Хешируем для Sheets
+    id: newUser.id,
+    username: newUser.username,
+    password: newUser.password,
+    role: newUser.role,
+    name: newUser.name,
+    email: newUser.email,
+    phone: newUser.phone,
+    bio: newUser.bio,
+    joinedDate: newUser.joinedDate,
+    avatar: newUser.avatar,
+    discount: newUser.discount,
+    device_id: getDeviceId(),
+    active: true
   };
-  delete userForSheets._plainPassword;
-  
+
   gasPost({ 
     action: 'upsert', 
     sheet: 'users', 
     data: userForSheets 
+  }).then(() => {
+    // После успешной синхронизации обновляем версию
+    checkAndUpdateDataVersion();
   }).catch(e => console.warn('User sync error:', e));
 
   closeModal('create-user-modal');
+  
+  // Обновляем список пользователей в админке
   if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
     loadAdminUsers(currentUser.role === 'owner');
   }
+  
   showToast('Аккаунт создан: ' + username);
 }
+
+function checkAndUpdateDataVersion() {
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
+  
+  const localVersion = localStorage.getItem('vputi_data_version') || '0';
+  
+  gasGet({ action: 'checkVersion', version: localVersion })
+    .then(result => {
+      if (result && result.ok && result.needsUpdate) {
+        // Нужно обновить данные
+        syncAllDataFromSheets();
+      }
+    })
+    .catch(() => {});
+}
+
+function syncAllDataFromSheets() {
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
+  
+  showToast('Синхронизация данных...');
+  
+  gasGet({ action: 'getFullData' })
+    .then(result => {
+      if (result && result.ok && result.data) {
+        if (result.version) {
+          localStorage.setItem('vputi_data_version', result.version);
+        }
+        
+        // Обновляем программы
+        if (result.data.programs && result.data.programs.length > 0) {
+          programs = result.data.programs.map(normalizeProgram);
+          saveState('programs', programs);
+        }
+        
+        // Обновляем пользователей (сохраняем владельца)
+        if (result.data.users && result.data.users.length > 0) {
+          const remoteUsers = result.data.users.map(normalizeUser);
+          const localOwner = users.find(u => u.role === 'owner');
+          let mergedUsers = [];
+          if (localOwner) {
+            mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
+          } else {
+            mergedUsers = remoteUsers;
+          }
+          const uniqueUsers = [];
+          const seenIds = new Set();
+          mergedUsers.forEach(u => {
+            if (!seenIds.has(u.id)) {
+              seenIds.add(u.id);
+              uniqueUsers.push(u);
+            }
+          });
+          users = uniqueUsers;
+          saveState('users', users);
+        }
+        
+        // Обновляем галерею
+        if (result.data.gallery && result.data.gallery.length > 0) {
+          gallery = result.data.gallery;
+          saveState('gallery', gallery);
+        }
+        
+        // Обновляем заявки
+        if (result.data.leads && result.data.leads.length > 0) {
+          leads = result.data.leads;
+          saveState('leads', leads);
+        }
+        
+        // Обновляем группы
+        if (result.data.groups && result.data.groups.length > 0) {
+          groups = result.data.groups.map(normalizeGroup);
+          saveState('groups', groups);
+        }
+        
+        // Обновляем настройки
+        if (result.data.settings && result.data.settings.length > 0) {
+          for (const s of result.data.settings) {
+            if (s.key === 'inviteCode') {
+              inviteCodeSetting = s.value;
+              saveState('inviteCode', s.value);
+              const hintEl = document.getElementById('hint-invite-code');
+              if (hintEl) hintEl.textContent = s.value;
+              const currentEl = document.getElementById('current-invite-code');
+              if (currentEl) currentEl.textContent = s.value;
+            }
+            if (s.key === 'founderContent') {
+              try {
+                const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+                founderContent = { ...founderContent, ...parsed };
+                saveState('founderContent', founderContent);
+                applyFounderContent();
+              } catch(e) {}
+            }
+            if (s.key === 'contactsContent') {
+              try {
+                const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+                contactsContent = { ...contactsContent, ...parsed };
+                saveState('contactsContent', contactsContent);
+                applyContactsContent();
+              } catch(e) {}
+            }
+            if (s.key === 'heroStats') {
+              try {
+                const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+                heroStats = { ...heroStats, ...parsed };
+                saveState('heroStats', heroStats);
+                loadHeroStats();
+              } catch(e) {}
+            }
+          }
+        }
+        
+        // Обновляем интерфейс
+        renderPrograms(programs);
+        renderGallery();
+        renderHowCards();
+        renderFeaturedCarousel();
+        updateTransportSelects();
+        
+        // Если админка открыта — обновляем
+        if (currentPage === 'admin' && currentUser) {
+          loadAdmin();
+        }
+        
+        showToast('Данные синхронизированы ✓');
+      }
+    })
+    .catch(() => {});
+}
+  
   // === РЕДАКТИРОВАНИЕ ПОЛЬЗОВАТЕЛЯ ===
 function openUserEditModal(userId) {
   const u = users.find(x => x.id === userId);
