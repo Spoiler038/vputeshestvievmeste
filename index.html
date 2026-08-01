@@ -156,6 +156,9 @@ img { max-width: 100%; display: block; }
 .about-value-title { font-weight: 600; font-size: 15px; margin-bottom: 2px; color: var(--text); }
 .about-value-text { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
 
+/* ===== БЛОКИРОВКА СКРОЛЛА ПРИ ОТКРЫТОЙ МОДАЛКЕ ===== */
+
+  
 /* ===== КАК МЫ ПУТЕШЕСТВУЕМ ===== */
 .how-grid { display: grid; gap: 20px; margin-bottom: 60px; justify-items: center; }
 .how-grid.count-1 { grid-template-columns: minmax(260px, 380px); justify-content: center; }
@@ -517,10 +520,6 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 .docs-tab:hover:not(.active) { color: var(--accent); }
 
 /* ===== АВТОРИЗАЦИЯ ===== */
-.auth-overlay { position: fixed; inset: 0; z-index: 150; background: rgba(37,32,24,0.6); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; visibility: hidden; transition: all 0.3s; }
-.auth-overlay.open { opacity: 1; visibility: visible; }
-.auth-box { background: var(--surface); border-radius: var(--radius); padding: 44px 36px; max-width: 400px; width: 100%; box-shadow: var(--shadow-lg); transform: scale(0.95); transition: transform 0.3s; }
-.auth-overlay.open .auth-box { transform: scale(1); }
 .auth-logo { text-align: center; margin-bottom: 28px; }
 .auth-logo p { font-family: var(--font-family); font-size: 26px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.02em; }
 .auth-logo span { font-size: 12px; color: var(--text-muted); }
@@ -532,48 +531,6 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 .auth-error { background: #FDEAE8; color: #C0392B; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 14px; display: none; }
 .auth-hint { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px; }
 .auth-btn { width: 100%; justify-content: center; margin-top: 8px; }
-
-/* ===== МОДАЛЬНОЕ ОКНО РЕГИСТРАЦИИ ===== */
-.auth-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 150;
-  background: rgba(37,32,24,0.6);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.3s;
-  overflow: hidden;
-}
-.auth-overlay.open {
-  opacity: 1;
-  visibility: visible;
-}
-.auth-box {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 32px 28px;
-  max-width: 420px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-lg);
-  transform: scale(0.95);
-  transition: transform 0.3s;
-  /* Скрываем скроллбар */
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.auth-box::-webkit-scrollbar {
-  display: none;
-}
-.auth-overlay.open .auth-box {
-  transform: scale(1);
-}
   
 /* ===== АДАПТИВ ===== */
 @media (max-width: 1024px) {
@@ -632,7 +589,6 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   .profile-card { max-width: 300px; margin: 0 auto; }
   .dashboard-tabs { width: 100%; justify-content: center; }
   .tab-btn { padding: 6px 12px; font-size: 12px; }
-  .auth-box { padding: 30px 24px; margin: 0 16px; }
   .auth-logo p { font-size: 22px; }
   .consent-checkbox-wrapper label { font-size: 12px; }
   #user-docs-container {
@@ -770,6 +726,58 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 }
 #toast:not(.show) {
   transform: translateX(-50%) translateY(-20px);
+}
+
+/* ===== БЛОКИРОВКА СКРОЛЛА ПРИ ОТКРЫТОЙ МОДАЛКЕ ===== */
+body.modal-open {
+  overflow: hidden !important;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+/* ===== МОДАЛЬНОЕ ОКНО РЕГИСТРАЦИИ ===== */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(37,32,24,0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+  overflow: hidden;
+}
+.auth-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+.auth-box {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  transform: scale(0.95);
+  transition: transform 0.3s;
+  /* Скрываем скроллбар */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.auth-box::-webkit-scrollbar {
+  display: none;
+}
+.auth-overlay.open .auth-box {
+  transform: scale(1);
 }
 </style>
 </head>
@@ -2309,8 +2317,15 @@ async function uploadImage(file, folder) {
 // === АВТОРИЗАЦИЯ =============================================
 // ============================================================
 
-function openAuth() { document.getElementById('auth-overlay').classList.add('open'); }
-function closeAuth() { document.getElementById('auth-overlay').classList.remove('open'); }
+function openAuth() { 
+  document.getElementById('auth-overlay').classList.add('open'); 
+  document.body.classList.add('modal-open');
+}
+
+function closeAuth() { 
+  document.getElementById('auth-overlay').classList.remove('open');
+  document.body.classList.remove('modal-open');
+}
 
 function switchAuthTab(tab) {
   document.querySelectorAll('.auth-tab').forEach((t, i) => {
@@ -6292,23 +6307,38 @@ function normalizeGroup(g) {
 // === МОДАЛЬНЫЕ ОКНА ==========================================
 // ============================================================
 
-function openModal(id) {
-  document.getElementById(id).classList.add('open');
+function openModal(id) { 
+  document.getElementById(id).classList.add('open'); 
+  document.body.classList.add('modal-open');
 }
 
-function closeModal(id) {
+function closeModal(id) { 
   document.getElementById(id).classList.remove('open');
+  // Проверяем, открыты ли ещё какие-то модалки
+  const anyOpen = document.querySelector('.modal-overlay.open');
+  if (!anyOpen) {
+    document.body.classList.remove('modal-open');
+  }
 }
 
 // Закрытие модалок по клику на фон
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('open');
+    if (e.target === overlay) {
+      overlay.classList.remove('open');
+      // Проверяем, остались ли открытые модалки
+      const anyOpen = document.querySelector('.modal-overlay.open');
+      if (!anyOpen) {
+        document.body.classList.remove('modal-open');
+      }
+    }
   });
 });
 
 document.getElementById('auth-overlay').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeAuth();
+  if (e.target === e.currentTarget) {
+    closeAuth();
+  }
 });
 
 // ============================================================
