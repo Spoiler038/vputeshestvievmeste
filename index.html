@@ -3526,37 +3526,6 @@ function generatePersonalDocPDF(docType) {
     return;
   }
 
-  const { jsPDF } = window.jspdf;
-  if (!jsPDF) {
-    showToast('Библиотека PDF загружается, попробуйте ещё раз');
-    return;
-  }
-
-  // Создаем PDF с поддержкой Unicode
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
-
-  const pageW = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  const maxW = pageW - margin * 2;
-  let y = 20;
-
-  const titles = {
-    'user-agreement': 'ПОЛЬЗОВАТЕЛЬСКОЕ СОГЛАШЕНИЕ',
-    'privacy-policy': 'ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ',
-    'consent': 'СОГЛАСИЕ НА ОБРАБОТКУ ПЕРСОНАЛЬНЫХ ДАННЫХ'
-  };
-
-  // Для кириллицы используем стандартный шрифт с правильной кодировкой
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(92, 138, 78);
-  doc.text(titles[docType] || 'Документ', pageW / 2, y, { align: 'center' });
-  y += 10;
-
   // Подставляем данные
   let filledText;
   if (isLoggedIn) {
@@ -3577,33 +3546,59 @@ function generatePersonalDocPDF(docType) {
     filledText = fillTemplate(template, guestData);
   }
 
-  const lines = filledText.split('\n');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.setTextColor(37, 32, 24);
+  const titles = {
+    'user-agreement': 'Пользовательское соглашение',
+    'privacy-policy': 'Политика конфиденциальности',
+    'consent': 'Согласие на обработку персональных данных'
+  };
 
-  for (const line of lines) {
-    if (y > 270) {
-      doc.addPage();
-      y = 20;
-    }
-    if (line.trim() && /^[А-ЯA-Z0-9.\s]+$/.test(line.trim()) && line.trim().length > 3) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-    } else {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-    }
-    const wrapped = doc.splitTextToSize(line, maxW);
-    doc.text(wrapped, margin, y);
-    y += (wrapped.length * 6) + 1.5;
-  }
+  showToast('Создание PDF...');
 
-  const filename = (titles[docType] || 'document') + 
-    (isLoggedIn ? '_' + currentUser.name.replace(/\s+/g, '_') : '') + 
-    '.pdf';
-  doc.save(filename);
-  showToast('✅ Документ сохранён');
+  // Создаем временный контейнер с содержимым для html2canvas
+  const container = document.createElement('div');
+  container.style.cssText = 'padding:40px;font-family:Arial, sans-serif;background:white;max-width:800px;margin:0 auto;';
+  container.innerHTML = `
+    <h1 style="color:#5C8A4E;font-size:24px;margin-bottom:8px;text-align:center;">${titles[docType] || 'Документ'}</h1>
+    <div style="text-align:center;font-size:12px;color:#7A7060;margin-bottom:20px;border-bottom:2px solid #EDE7DA;padding-bottom:12px;">
+      ${new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+    </div>
+    <div style="font-size:13px;line-height:1.8;color:#333;white-space:pre-wrap;font-family:inherit;">
+      ${filledText}
+    </div>
+    <div style="margin-top:40px;padding-top:20px;border-top:2px solid #EDE7DA;font-size:11px;color:#7A7060;text-align:center;">
+      ВПУТЕШЕСТВИЕВМЕСТЕ | ${contactsContent.phone || ''} | ${contactsContent.email || ''}
+    </div>
+  `;
+
+  document.body.appendChild(container);
+
+  html2canvas(container, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: 'white'
+  }).then(canvas => {
+    document.body.removeChild(container);
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const imgWidth = 210;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+
+    const filename = (titles[docType] || 'document')
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Zа-яА-Я0-9_]/g, '') +
+      (isLoggedIn ? '_' + currentUser.name.replace(/\s+/g, '_') : '') +
+      '.pdf';
+
+    doc.save(filename);
+    showToast('✅ Документ сохранён');
+  }).catch(err => {
+    document.body.removeChild(container);
+    showToast('Ошибка создания PDF: ' + err.message);
+  });
 }
 
 // ============================================================
