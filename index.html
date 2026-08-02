@@ -6630,7 +6630,6 @@ function closeModal(id) {
   const overlay = document.getElementById(id);
   if (overlay) overlay.classList.remove('open');
   
-  // Проверяем, открыты ли ещё какие-то модалки
   const anyOpen = document.querySelector('.modal-overlay.open');
   if (!anyOpen) {
     document.body.classList.remove('modal-open');
@@ -6640,15 +6639,19 @@ function closeModal(id) {
     document.body.style.width = '';
   }
 }
+
 // Закрытие модалок по клику на фон
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => {
     if (e.target === overlay) {
       overlay.classList.remove('open');
-      // Проверяем, остались ли открытые модалки
       const anyOpen = document.querySelector('.modal-overlay.open');
       if (!anyOpen) {
         document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
       }
     }
   });
@@ -6659,6 +6662,18 @@ document.getElementById('auth-overlay').addEventListener('click', e => {
     closeAuth();
   }
 });
+
+function closeAuth() { 
+  document.getElementById('auth-overlay').classList.remove('open');
+  const anyOpen = document.querySelector('.modal-overlay.open');
+  if (!anyOpen) {
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+  }
+}
 
 // ============================================================
 // === TOAST УВЕДОМЛЕНИЯ =======================================
@@ -6964,23 +6979,35 @@ function renderMobAdminSection(section) {
           }).join('')}
     `;
   } else if (section === 'groups') {
-    box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Группы</h2>
-      ${groups.length === 0 ? '<p style="color:var(--text-muted);">Групп пока нет.</p>' :
-        groups.map(function(g) {
-          return `
-            <div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <strong>${g.name}</strong>
-                <span class="tag tag-green">${g.status}</span>
+  box.innerHTML = `
+    <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Группы</h2>
+    ${groups.length === 0 ? '<p style="color:var(--text-muted);">Групп пока нет.</p>' :
+      groups.map(function(g) {
+        const prog = programs.find(p => p.id === g.programId);
+        const filled = (g.members || []).length;
+        const max = g.maxPeople || (prog ? prog.maxPeople : 10);
+        const statusColor = { набор: 'tag-green', укомплектована: 'tag-orange', завершена: 'tag-green', 'в пути': 'tag-orange', отменена: 'tag-orange' }[g.status] || 'tag-green';
+        return `
+          <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:9px;overflow:hidden;">
+            <div style="padding:13px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
+                <strong style="font-size:15px;">${g.name}</strong>
+                <span class="tag ${statusColor}" onclick="cycleGroupStatus(${g.id})" style="cursor:pointer;user-select:none;font-size:10px;">${g.status} ✎</span>
               </div>
-              <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${(g.members || []).length}/${g.maxPeople} участников</div>
+              ${prog ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">🗺 ${prog.name}</div>` : ''}
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${filled}/${max} участников</div>
             </div>
-          `;
-        }).join('')}
-      <button class="btn btn-primary" style="margin-top:12px;width:100%;" onclick="openAddGroup()">+ Создать группу</button>
-    `;
-  } else if (section === 'settings') {
+            <div style="display:flex;gap:6px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);flex-wrap:wrap;">
+              <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;flex:1;min-width:60px;" onclick="openAddMember(${g.id})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
+              <button class="btn btn-edit" style="padding:4px 10px;font-size:11px;flex:1;min-width:60px;" onclick="openEditGroup(${g.id})">✏️</button>
+              <button class="btn btn-danger" style="padding:4px 10px;font-size:11px;" onclick="deleteGroup(${g.id})">🗑</button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    <button class="btn btn-primary" style="margin-top:12px;width:100%;" onclick="openAddGroup()">+ Создать группу</button>
+  `;
+} else if (section === 'settings') {
     box.innerHTML = `
       <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Настройки</h2>
       <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
