@@ -6998,9 +6998,9 @@ function renderMobAdminSection(section) {
               <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${filled}/${max} участников</div>
             </div>
             <div style="display:flex;gap:6px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);flex-wrap:wrap;">
-              <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;flex:1;min-width:60px;" onclick="openAddMember(${g.id})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
-              <button class="btn btn-edit" style="padding:4px 10px;font-size:11px;flex:1;min-width:60px;" onclick="openEditGroup(${g.id})">✏️</button>
-              <button class="btn btn-danger" style="padding:4px 10px;font-size:11px;" onclick="deleteGroup(${g.id})">🗑</button>
+              <button class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;flex:1;min-width:60px;" onclick="openAddMember(${g.id})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
+              <button class="btn btn-edit" style="padding:4px 10px;font-size:12px;flex:1;min-width:60px;" onclick="openEditGroup(${g.id})">✏️ Изменить</button>
+              <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="deleteGroup(${g.id})">🗑</button>
             </div>
           </div>
         `;
