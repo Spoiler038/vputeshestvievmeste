@@ -321,7 +321,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 .stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 10px; }
 .stat-value { font-family: var(--font-family); font-size: 40px; font-weight: 600; color: var(--accent2); }
 .stat-change { font-size: 12px; color: var(--accent); margin-top: 3px; }
-.admin-table-wrap { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); overflow-x: auto; }
+.admin-table-wrap { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); overflow-x: auto; -webkit-overflow-scrolling: touch;}
 .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 700px; }
 .admin-table th { padding: 12px 18px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); background: var(--bg); border-bottom: 1px solid var(--border); font-family: var(--font-family); }
 .admin-table td { padding: 12px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
@@ -1316,8 +1316,9 @@ input, textarea {
               <tr>
                 <th>Имя</th>
                 <th>Логин</th>
+                <th>Email</th>  
                 <th>Роль</th>
-                <th>Путешествий</th>
+                <th>Туров</th>
                 <th>Скидка (%)</th>
                 <th>Действия</th>
               </tr>
@@ -4598,6 +4599,14 @@ function loadAdminUsers(isOwner) {
   
   // Показываем локальных пользователей сразу (для скорости)
   renderUsersTable(isOwner);
+
+  const GAS_URL_VALID = GAS_URL && GAS_URL.startsWith('https://script.google.com/macros/s/') && GAS_URL.includes('/exec');
+  
+  if (!GAS_URL_VALID) {
+    console.log('GAS URL не настроен, работаем с локальными данными');
+    showToast('📌 Офлайн-режим');
+    return;
+  }
   
   // Если есть подключение к Sheets — загружаем свежие данные в фоне
   if (GAS_URL && !GAS_URL.includes('ВСТАВЬТЕ')) {
@@ -4648,12 +4657,12 @@ function loadAdminUsers(isOwner) {
             saveState('users', users);
             showToast('✅ Загружено ' + users.length + ' участников');
           } else {
-            showToast('📌 Используются локальные данные');
+            showToast('✅ Данные актуальны');
           }
         } else if (fullResult && fullResult.timeout) {
           showToast('⏱️ Таймаут, данные из кэша');
         } else {
-          showToast('📌 Используются локальные данные');
+          showToast('✅ Данные актуальны');
         }
         renderUsersTable(isOwner);
       })
@@ -4670,7 +4679,7 @@ function renderUsersTable(isOwner) {
   if (!tbody) return;
   
   if (users.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">👥 Нет участников. Добавьте первого!</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">👥 Нет участников. Добавьте первого!</td></tr>`;
     return;
   }
   
@@ -4679,6 +4688,7 @@ function renderUsersTable(isOwner) {
     return `<tr style="cursor:pointer;" onclick="openUserEditModal(${u.id})" title="Нажмите для просмотра и редактирования">
       <td><strong>${u.name}</strong></td>
       <td style="color:var(--text-muted);">${u.username}</td>
+      <td style="color:var(--accent);font-size:12px;">${u.email || '—'}</td>  <!-- НОВЫЙ СТОЛБЕЦ -->
       <td onclick="event.stopPropagation();">
         ${isOwner ? `<select class="filter-select" style="padding:5px 8px;font-size:12px;" onchange="changeUserRole(${u.id}, this.value)">
           <option value="owner" ${u.role === 'owner' ? 'selected' : ''}>Владелец</option>
@@ -4686,13 +4696,13 @@ function renderUsersTable(isOwner) {
           <option value="user" ${u.role === 'user' ? 'selected' : ''}>Участник</option>
         </select>` : `<span class="tag ${u.role === 'owner' ? 'tag-orange' : 'tag-green'}">${u.role === 'owner' ? 'Владелец' : u.role === 'admin' ? 'Админ' : 'Участник'}</span>`}
       </td>
-      <td>${count}</td>
+      <td>${count}</td>  <!-- Заголовок "Туров" -->
       <td onclick="event.stopPropagation();">
         <input type="number" class="filter-input" style="width:70px; padding:6px;" value="${u.discount || 0}" onchange="updateUserDiscount(${u.id}, this.value)">
       </td>
-      <td class="td-actions" onclick="event.stopPropagation();">
+      <td class="td-actions" onclick="event.stopPropagation();" style="padding-right:8px;">  <!-- Уменьшен отступ -->
         <button class="btn btn-outline btn-sm" onclick="showUserStats(${u.id})">Статистика</button>
-        ${u.role !== 'owner' ? `<button class="btn btn-danger" onclick="deleteUser(${u.id})">
+        ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteUser(${u.id})">
   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 6h18"/>
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -4704,7 +4714,7 @@ function renderUsersTable(isOwner) {
     </tr>`;
   }).join('');
 }
-
+  
 // Функция нормализации пользователя
 function normalizeUser(u) {
   return {
@@ -6618,6 +6628,19 @@ function openModal(id) {
 }
 
 function closeModal(id) { 
+  const overlay = document.getElementById(id);
+  if (overlay) overlay.classList.remove('open');
+  
+  // Проверяем, открыты ли ещё какие-то модалки
+  const anyOpen = document.querySelector('.modal-overlay.open');
+  if (!anyOpen) {
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+  }
+} 
   document.getElementById(id).classList.remove('open');
   // Проверяем, открыты ли ещё какие-то модалки
   const anyOpen = document.querySelector('.modal-overlay.open');
