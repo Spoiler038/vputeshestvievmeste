@@ -4596,10 +4596,13 @@ function loadAdminUsers(isOwner) {
   // Принудительно перезагружаем пользователей из localStorage
   users = loadState('users', users);
   
-  // Если есть подключение к Sheets — загружаем свежие данные
+  // Показываем локальных пользователей сразу (для скорости)
+  renderUsersTable(isOwner);
+  
+  // Если есть подключение к Sheets — загружаем свежие данные в фоне
   if (GAS_URL && !GAS_URL.includes('ВСТАВЬТЕ')) {
     // Показываем тост синхронизации
-    showToast('🔄 Синхронизация участников...');
+    showToast('🔄 Обновление данных...');
     
     // Сначала проверяем версию
     const localVersion = localStorage.getItem('vputi_data_version') || '0';
@@ -4608,6 +4611,7 @@ function loadAdminUsers(isOwner) {
       .then(versionResult => {
         if (versionResult && versionResult.ok && versionResult.needsUpdate) {
           // Нужно обновить данные
+          showToast('🔄 Загрузка участников...');
           return gasGet({ action: 'getFullData' });
         }
         return null;
@@ -4644,8 +4648,10 @@ function loadAdminUsers(isOwner) {
             saveState('users', users);
             showToast('✅ Загружено ' + users.length + ' участников');
           } else {
-            showToast('⚠️ Участники не найдены в таблице');
+            showToast('📌 Используются локальные данные');
           }
+        } else if (fullResult && fullResult.timeout) {
+          showToast('⏱️ Таймаут, данные из кэша');
         } else {
           showToast('📌 Используются локальные данные');
         }
@@ -4653,19 +4659,22 @@ function loadAdminUsers(isOwner) {
       })
       .catch(err => {
         console.warn('Load users error:', err);
-        showToast('⚠️ Офлайн-режим (локальные данные)');
+        showToast('📌 Офлайн-режим (локальные данные)');
         renderUsersTable(isOwner);
       });
-  } else {
-    renderUsersTable(isOwner);
-    if (users.length > 1) {
-      showToast('📌 Загружено ' + users.length + ' участников (локально)');
-    }
   }
 }
 
 function renderUsersTable(isOwner) {
-  document.getElementById('users-tbody').innerHTML = users.map(u => {
+  const tbody = document.getElementById('users-tbody');
+  if (!tbody) return;
+  
+  if (users.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">👥 Нет участников. Добавьте первого!</td></tr>`;
+    return;
+  }
+  
+  tbody.innerHTML = users.map(u => {
     const count = purchases.filter(p => p.userId === u.id).length;
     return `<tr style="cursor:pointer;" onclick="openUserEditModal(${u.id})" title="Нажмите для просмотра и редактирования">
       <td><strong>${u.name}</strong></td>
@@ -4982,20 +4991,21 @@ function checkAndUpdateDataVersion() {
   
   const localVersion = localStorage.getItem('vputi_data_version') || '0';
   
+  // Не показываем тост при фоновой проверке
   gasGet({ action: 'checkVersion', version: localVersion })
     .then(result => {
       if (result && result.ok && result.needsUpdate) {
-        // Нужно обновить данные
-        syncAllDataFromSheets();
+        // Нужно обновить данные — делаем это в фоне
+        syncAllDataFromSheets(true); // silent = true
       }
     })
     .catch(() => {});
 }
 
-function syncAllDataFromSheets() {
+function syncAllDataFromSheets(silent = false) {
   if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
   
-  showToast('Синхронизация данных...');
+  if (!silent) showToast('🔄 Синхронизация данных...');
   
   gasGet({ action: 'getFullData' })
     .then(result => {
@@ -5100,10 +5110,14 @@ function syncAllDataFromSheets() {
           loadAdmin();
         }
         
-        showToast('Данные синхронизированы ✓');
+        if (!silent) showToast('✅ Данные синхронизированы');
+      } else if (result && result.timeout) {
+        if (!silent) showToast('⏱️ Таймаут, данные из кэша');
       }
     })
-    .catch(() => {});
+    .catch(() => {
+      if (!silent) showToast('📌 Офлайн-режим');
+    });
 }
   
   // === РЕДАКТИРОВАНИЕ ПОЛЬЗОВАТЕЛЯ ===
@@ -6333,11 +6347,27 @@ function gasPost(body) {
   });
 }
 
-// GET через JSONP (для чтения данных)
+// GET через JSONP (для чтения данных) с улучшенной обработкой таймаута
 function gasGet(params) {
   return new Promise((resolve, reject) => {
     const cbId = '_gc' + Date.now() + Math.random().toString(36).slice(2, 8);
+    let isResolved = false;
+    
+    // Таймаут увеличен до 45 секунд
+    const timer = setTimeout(() => {
+      if (!isResolved) {
+        isResolved = true;
+        try { delete window[cbId]; } catch(e) {}
+        const s = document.getElementById('_gs_' + cbId);
+        if (s && s.parentNode) s.parentNode.removeChild(s);
+        // Не reject, а resolve с пометкой timeout
+        resolve({ ok: false, timeout: true, error: 'Таймаут загрузки данных' });
+      }
+    }, 45000);
+
     window[cbId] = function(data) {
+      if (isResolved) return;
+      isResolved = true;
       clearTimeout(timer);
       try { delete window[cbId]; } catch(e) {}
       const s = document.getElementById('_gs_' + cbId);
@@ -6345,22 +6375,17 @@ function gasGet(params) {
       resolve(data);
     };
 
-    const timer = setTimeout(() => {
-      try { delete window[cbId]; } catch(e) {}
-      const s = document.getElementById('_gs_' + cbId);
-      if (s && s.parentNode) s.parentNode.removeChild(s);
-      reject(new Error('Google Sheets timeout'));
-    }, 30000);
-
     const qs = new URLSearchParams({ ...params, callback: cbId, _t: Date.now() });
     const script = document.createElement('script');
     script.id = '_gs_' + cbId;
     script.src = GAS_URL + '?' + qs.toString();
     script.onerror = () => {
+      if (isResolved) return;
+      isResolved = true;
       clearTimeout(timer);
       try { delete window[cbId]; } catch(e) {}
       if (script.parentNode) script.parentNode.removeChild(script);
-      reject(new Error('Script load error'));
+      resolve({ ok: false, error: 'Ошибка загрузки скрипта' });
     };
     document.head.appendChild(script);
   });
