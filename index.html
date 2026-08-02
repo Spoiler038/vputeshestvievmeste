@@ -6623,8 +6623,11 @@ function normalizeGroup(g) {
 // ============================================================
 
 function openModal(id) { 
-  document.getElementById(id).classList.add('open'); 
-  document.body.classList.add('modal-open');
+  const overlay = document.getElementById(id);
+  if (overlay) {
+    overlay.classList.add('open'); 
+    document.body.classList.add('modal-open');
+  }
 }
 
 function closeModal(id) { 
@@ -6640,15 +6643,7 @@ function closeModal(id) {
     document.body.style.top = '';
     document.body.style.width = '';
   }
-} 
-  document.getElementById(id).classList.remove('open');
-  // Проверяем, открыты ли ещё какие-то модалки
-  const anyOpen = document.querySelector('.modal-overlay.open');
-  if (!anyOpen) {
-    document.body.classList.remove('modal-open');
-  }
 }
-
 // Закрытие модалок по клику на фон
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => {
