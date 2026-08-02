@@ -473,7 +473,7 @@ html.modal-open {overflow: hidden !important;}
     padding: 4px 10px;
   }
   .hero {
-    padding-top: 130px;
+    padding-top: 110px;
     padding-bottom: 40px;
     min-height: auto;
   }
@@ -2120,6 +2120,39 @@ function showPage(page) {
 }
 
 function smoothScroll(id) {
+  // Функция для выполнения скролла
+  function performScroll() {
+    const el = document.getElementById(id);
+    if (!el) {
+      // Пробуем найти альтернативными способами
+      const altEl = document.querySelector('[data-section="' + id + '"]') || 
+                    document.querySelector('.' + id) ||
+                    document.querySelector('section#' + id);
+      if (altEl) {
+        const navbarHeight = document.getElementById('navbar')?.getBoundingClientRect().height || 70;
+        const targetPosition = altEl.getBoundingClientRect().top + window.pageYOffset - navbarHeight;
+        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+        highlightElement(altEl);
+      }
+      return;
+    }
+    
+    const navbarHeight = document.getElementById('navbar')?.getBoundingClientRect().height || 70;
+    // Дополнительный отступ для мобильных устройств (убираем лишнее расстояние)
+    const extraOffset = window.innerWidth <= 768 ? -10 : 0;
+    const targetPosition = el.getBoundingClientRect().top + window.pageYOffset - navbarHeight + extraOffset;
+    window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+    highlightElement(el);
+  }
+
+  function highlightElement(el) {
+    el.style.transition = 'background 0.5s';
+    el.style.background = 'rgba(92,138,78,0.15)';
+    setTimeout(() => {
+      el.style.background = 'transparent';
+    }, 1500);
+  }
+
   // Если мы не на главной странице, сначала переходим на нее
   if (currentPage !== 'home') {
     showPage('home');
@@ -2131,53 +2164,19 @@ function smoothScroll(id) {
       const el = document.getElementById(id);
       if (el) {
         clearInterval(scrollInterval);
-        const navbarHeight = document.getElementById('navbar')?.getBoundingClientRect().height || 80;
-        const targetPosition = el.getBoundingClientRect().top + window.pageYOffset - navbarHeight - 20;
-        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
-        // Подсвечиваем целевой элемент
-        el.style.transition = 'background 0.5s';
-        el.style.background = 'rgba(92,138,78,0.15)';
-        setTimeout(() => {
-          el.style.background = 'transparent';
-        }, 1500);
+        performScroll();
         return;
       }
       if (attempts >= maxAttempts) {
         clearInterval(scrollInterval);
-        // Пробуем найти элемент альтернативными способами
-        const altEl = document.querySelector('[data-section="' + id + '"]') || 
-                      document.querySelector('.' + id) ||
-                      document.querySelector('section#' + id);
-        if (altEl) {
-          altEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        performScroll();
       }
     }, 200);
     return;
   }
   
   // Обычная прокрутка, если мы уже на главной
-  const el = document.getElementById(id);
-  if (el) {
-    const navbarHeight = document.getElementById('navbar')?.getBoundingClientRect().height || 80;
-    const targetPosition = el.getBoundingClientRect().top + window.pageYOffset - navbarHeight - 20;
-    window.scrollTo({ top: targetPosition, behavior: 'smooth' });
-    el.style.transition = 'background 0.5s';
-    el.style.background = 'rgba(92,138,78,0.15)';
-    setTimeout(() => {
-      el.style.background = 'transparent';
-    }, 1500);
-  } else {
-    // Если элемент не найден сразу, пробуем позже
-    setTimeout(() => {
-      const el2 = document.getElementById(id);
-      if (el2) {
-        const navbarHeight = document.getElementById('navbar')?.getBoundingClientRect().height || 80;
-        const targetPosition = el2.getBoundingClientRect().top + window.pageYOffset - navbarHeight - 20;
-        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
-      }
-    }, 500);
-  }
+  performScroll();
 }
   // ============================================================
 // === ФУНКЦИИ ДЛЯ РАБОТЫ С ФОТО ===============================
@@ -3926,14 +3925,12 @@ async function doLogin() {
   try {
     const deviceId = getDeviceId();
 
-    // === 1. СНАЧАЛА ПРОВЕРЯЕМ ЛОКАЛЬНО (быстрый вход) ===
-    // Ищем пользователя по username или email
+    // === 1. СНАЧАЛА ПРОВЕРЯЕМ ЛОКАЛЬНО ===
     const localUser = users.find(u => 
       (u.username === loginOrEmail || u.email === loginOrEmail)
     );
 
     if (localUser) {
-      // Проверяем пароль: сравниваем plain пароль ИЛИ хеш
       const hashedInput = hashPasswordLocally(password);
       const isPasswordMatch = 
         localUser.password === password || 
@@ -3944,18 +3941,28 @@ async function doLogin() {
         localUser.device_id = deviceId;
         localUser._plainPassword = password;
         saveState('users', users);
-        loginSuccess(localUser);
+        
+        // Устанавливаем currentUser
+        currentUser = localUser;
+        
+        // Закрываем авторизацию
+        closeAuth();
+        
+        // Обновляем навигацию
+        updateNavForUser();
+        
+        // Показываем приветствие
+        showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋`);
+        
         document.getElementById('login-username').value = '';
         document.getElementById('login-password').value = '';
-        closeAuth();
         btn.disabled = false;
         btn.textContent = 'Войти';
         return;
       }
     }
 
-    // === 2. ЕСЛИ ЛОКАЛЬНО НЕ НАШЛИ — ПРОВЕРЯЕМ В GOOGLE SHEETS ===
-    // Показываем тост о синхронизации
+    // === 2. ПРОВЕРЯЕМ В GOOGLE SHEETS ===
     showToast('Синхронизация...');
     
     const payload = {
@@ -3978,28 +3985,31 @@ async function doLogin() {
 
       const user = result.user;
       
-      // Проверяем, есть ли уже такой пользователь локально
-      const existingUser = users.find(u => u.id === user.id);
+      let existingUser = users.find(u => u.id === user.id);
       if (existingUser) {
-        // Обновляем существующего
         Object.assign(existingUser, user);
         existingUser._plainPassword = password;
         existingUser.device_id = deviceId;
         saveState('users', users);
-        loginSuccess(existingUser);
+        currentUser = existingUser;
       } else {
-        // Добавляем нового
         user._plainPassword = password;
         user.device_id = deviceId;
         users.push(user);
         saveState('users', users);
-        loginSuccess(user);
+        currentUser = user;
       }
       
       document.getElementById('login-username').value = '';
       document.getElementById('login-password').value = '';
+      
+      // Закрываем авторизацию
       closeAuth();
-      showToast('Вход выполнен ✓');
+      
+      // Обновляем навигацию
+      updateNavForUser();
+      
+      showToast(`Добро пожаловать, ${currentUser.name.split(' ')[0]}! 👋`);
     } else {
       errEl.style.display = 'block';
       errEl.textContent = result?.error || 'Неверный логин/email или пароль';
@@ -4007,7 +4017,7 @@ async function doLogin() {
     }
   } catch(e) {
     console.error('Login error:', e);
-    // Последняя попытка — проверить локально ещё раз
+    // Последняя попытка — проверить локально
     const localUser = users.find(u => 
       (u.username === loginOrEmail || u.email === loginOrEmail)
     );
@@ -4021,11 +4031,12 @@ async function doLogin() {
       
       if (isPasswordMatch) {
         localUser._plainPassword = password;
-        loginSuccess(localUser);
+        currentUser = localUser;
+        closeAuth();
+        updateNavForUser();
+        showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋`);
         document.getElementById('login-username').value = '';
         document.getElementById('login-password').value = '';
-        closeAuth();
-        showToast('Вход выполнен (офлайн-режим)');
         btn.disabled = false;
         btn.textContent = 'Войти';
         return;
@@ -4040,7 +4051,7 @@ async function doLogin() {
     btn.textContent = 'Войти';
   }
 }
-
+  
 // === ЛОКАЛЬНОЕ ХЕШИРОВАНИЕ ПАРОЛЯ ===
 function hashPasswordLocally(password) {
   if (!password) return '';
