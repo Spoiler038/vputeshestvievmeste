@@ -409,11 +409,17 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; hei
   .container { padding: 0 16px; }
   .navbar-inner {
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 6px 10px;
     padding: 8px 12px;
     position: relative;
+    display: flex;
+    align-items: center;
   }
-  .logo { font-size: 16px; }
+  .logo {
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-right: auto; /* Прижимает кнопку Войти вправо */
+  }
   .nav-links {
     display: flex !important;
     gap: 6px;
@@ -421,14 +427,13 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; hei
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE */
-    padding: 4px 0 6px;
-    margin-top: 2px;
-    flex-wrap: nowrap;
-    /* Скрываем индикатор скролла */
     scrollbar-width: none;
     -ms-overflow-style: none;
+    padding: 4px 0 2px;
+    margin-top: 2px;
+    flex-wrap: nowrap;
+    overscroll-behavior-x: none;
+    order: 3; /* Перемещаем на третью позицию (после лого и auth) */
   }
   .nav-links::-webkit-scrollbar {
     display: none;
@@ -445,6 +450,7 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; hei
     border: 1px solid var(--border);
     color: var(--text-muted);
     transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
   }
   .nav-links a:hover,
   .nav-links a:active {
@@ -459,13 +465,17 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; hei
   .nav-auth {
     flex-shrink: 0;
     gap: 6px;
+    margin-left: auto; /* Прижимает к правому краю */
+    display: flex;
+    align-items: center;
   }
+  
   .nav-auth .btn-sm {
     font-size: 10px;
     padding: 4px 10px;
   }
   .hero {
-    padding-top: 120px;
+    padding-top: 130px;
     padding-bottom: 40px;
     min-height: auto;
   }
@@ -522,6 +532,16 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; hei
   #user-docs-container .doc-card { min-width: 280px; max-width: 320px; flex-shrink: 0; scroll-snap-align: start; }
   #tab-photos .form-grid { grid-template-columns: 1fr !important; }
   #tab-photos .form-grid > div { grid-column: 1 !important; }
+  #user-menu {
+    gap: 6px;
+  }
+  #user-menu .username {
+    font-size: 11px;
+  }
+  #user-menu .btn-sm {
+    font-size: 9px;
+    padding: 3px 8px;
+  }
   
   /* ===== МОБИЛЬНАЯ ВЕРСИЯ ДЕТАЛЬНОЙ СТРАНИЦЫ ===== */
   .program-detail-grid { grid-template-columns: 1fr; gap: 30px; }
