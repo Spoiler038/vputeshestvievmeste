@@ -339,7 +339,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 /* ===== МОДАЛЬНЫЕ ОКНА ===== */
 .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(37,32,24,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; visibility: hidden; transition: all 0.3s; }
 .modal-overlay.open { opacity: 1; visibility: visible; }
-.modal { background: var(--surface); border-radius: var(--radius); max-width: 780px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 36px; box-shadow: var(--shadow-lg); transform: translateY(20px); transition: transform 0.3s; }
+.modal { background: var(--surface); border-radius: var(--radius); max-width: 780px; width: 100%; max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 36px; box-shadow: var(--shadow-lg); transform: translateY(20px); transition: transform 0.3s; }
 .modal-overlay.open .modal { transform: translateY(0); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: nowrap; gap: 10px; }
 .modal-title { font-family: var(--font-family); font-size: 28px; font-weight: 500; flex: 1; min-width: 0; }
@@ -362,7 +362,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 /* ===== АВТОРИЗАЦИЯ ===== */
 .auth-overlay { position: fixed; inset: 0; z-index: 150; background: rgba(37,32,24,0.6); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; visibility: hidden; transition: all 0.3s; overflow: hidden; }
 .auth-overlay.open { opacity: 1; visibility: visible; }
-.auth-box { background: var(--surface); border-radius: var(--radius); padding: 32px 28px; max-width: 420px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); transform: scale(0.95); transition: transform 0.3s; scrollbar-width: none; -ms-overflow-style: none; }
+.auth-box { background: var(--surface); border-radius: var(--radius); padding: 32px 28px; max-width: 420px; width: 100%; max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch; box-shadow: var(--shadow-lg); transform: scale(0.95); transition: transform 0.3s; scrollbar-width: none; -ms-overflow-style: none; }
 .auth-box::-webkit-scrollbar { display: none; }
 .auth-overlay.open .auth-box { transform: scale(1); }
 .auth-logo { text-align: center; margin-bottom: 28px; }
@@ -380,10 +380,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 /* ===== БЛОКИРОВКА СКРОЛЛА ===== */
 /*body.modal-open { overflow: hidden !important; position: fixed; width: 100%; height: 100%; top: 0; left: 0; }*/
   
-html.modal-open,
-body.modal-open {
-     overflow: hidden !important;
-}
+html.modal-open {overflow: hidden !important;}
 
 /* ===== КНОПКА НАВЕРХ ===== */
 .back-to-top { position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; border-radius: 50%; background: var(--accent); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all 0.3s ease; z-index: 1000; opacity: 0; visibility: hidden; }
@@ -6619,29 +6616,69 @@ function normalizeGroup(g) {
     createdAt: g.createdAt || ''
   };
 }
+
   // ============================================================
+// === УПРАВЛЕНИЕ СКРОЛЛОМ =====================================
+// ============================================================
+
+function disableScroll() {
+  const scrollY = window.scrollY;
+  document.body.dataset.scrollY = scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = '-' + scrollY + 'px';
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.body.style.overflow = 'hidden';
+  document.body.classList.add('modal-open');
+}
+
+function enableScroll() {
+  const scrollY = parseInt(document.body.dataset.scrollY || '0');
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  document.body.style.overflow = '';
+  document.body.classList.remove('modal-open');
+  window.scrollTo(0, scrollY);
+}
+  
+// ============================================================
 // === МОДАЛЬНЫЕ ОКНА ==========================================
 // ============================================================
 
 function openModal(id) { 
   const overlay = document.getElementById(id);
   if (overlay) {
-    overlay.classList.add('open'); 
-    document.body.classList.add('modal-open');
+    overlay.classList.add('open');
+    disableScroll();
+    // Даем время на открытие, чтобы модалка стала видимой
+    setTimeout(() => {
+      const modal = overlay.querySelector('.modal');
+      if (modal) {
+        modal.style.overflowY = 'auto';
+        modal.style.webkitOverflowScrolling = 'touch';
+      }
+    }, 50);
   }
 }
 
 function closeModal(id) { 
   const overlay = document.getElementById(id);
-  if (overlay) overlay.classList.remove('open');
+  if (overlay) {
+    overlay.classList.remove('open');
+    const modal = overlay.querySelector('.modal');
+    if (modal) {
+      modal.style.overflowY = '';
+      modal.style.webkitOverflowScrolling = '';
+    }
+  }
   
   const anyOpen = document.querySelector('.modal-overlay.open');
   if (!anyOpen) {
-    document.body.classList.remove('modal-open');
-    document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.top = '';
-    document.body.style.width = '';
+    enableScroll();
   }
 }
 
@@ -6650,17 +6687,49 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => {
     if (e.target === overlay) {
       overlay.classList.remove('open');
+      const modal = overlay.querySelector('.modal');
+      if (modal) {
+        modal.style.overflowY = '';
+        modal.style.webkitOverflowScrolling = '';
+      }
       const anyOpen = document.querySelector('.modal-overlay.open');
       if (!anyOpen) {
-        document.body.classList.remove('modal-open');
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
+        enableScroll();
       }
     }
   });
 });
+
+// ============================================================
+// === АВТОРИЗАЦИЯ =============================================
+// ============================================================
+
+function openAuth() { 
+  const overlay = document.getElementById('auth-overlay');
+  overlay.classList.add('open');
+  disableScroll();
+  setTimeout(() => {
+    const box = overlay.querySelector('.auth-box');
+    if (box) {
+      box.style.overflowY = 'auto';
+      box.style.webkitOverflowScrolling = 'touch';
+    }
+  }, 50);
+}
+
+function closeAuth() { 
+  const overlay = document.getElementById('auth-overlay');
+  overlay.classList.remove('open');
+  const box = overlay.querySelector('.auth-box');
+  if (box) {
+    box.style.overflowY = '';
+    box.style.webkitOverflowScrolling = '';
+  }
+  const anyOpen = document.querySelector('.modal-overlay.open');
+  if (!anyOpen) {
+    enableScroll();
+  }
+}
 
 document.getElementById('auth-overlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) {
@@ -6668,17 +6737,6 @@ document.getElementById('auth-overlay').addEventListener('click', e => {
   }
 });
 
-function closeAuth() { 
-  document.getElementById('auth-overlay').classList.remove('open');
-  const anyOpen = document.querySelector('.modal-overlay.open');
-  if (!anyOpen) {
-    document.body.classList.remove('modal-open');
-    document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.top = '';
-    document.body.style.width = '';
-  }
-}
 
 // ============================================================
 // === TOAST УВЕДОМЛЕНИЯ =======================================
@@ -6824,17 +6882,23 @@ function toggleMobileAdminPanel() {
     overlay.style.paddingTop = 'calc(var(--navbar-h, 62px) + 60px)';
 
     const scrollY = window.scrollY;
-    document.body.style.overflow = 'hidden';
+    document.body.dataset.scrollY = scrollY;
     document.body.style.position = 'fixed';
     document.body.style.top = '-' + scrollY + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
     document.body.style.width = '100%';
-    document.body.dataset.scrollY = scrollY;
+    document.body.style.overflow = 'hidden';
 
     if (toggle) toggle.textContent = '✕ ЗАКРЫТЬ';
 
     const def = currentUser.role === 'owner' ? 'dashboard' : 'programs';
     renderMobAdminSection(def);
     document.querySelectorAll('.mob-item').forEach(el => el.classList.toggle('active', el.dataset.section === def));
+    
+    // Включаем скролл внутри оверлея
+    overlay.style.overflowY = 'auto';
+    overlay.style.webkitOverflowScrolling = 'touch';
   } else {
     closeMobAdmin();
   }
@@ -6846,13 +6910,19 @@ function closeMobAdmin() {
   const overlay = document.getElementById('mob-admin-overlay');
 
   if (bar) bar.classList.remove('show');
-  if (overlay) overlay.style.display = 'none';
+  if (overlay) {
+    overlay.style.display = 'none';
+    overlay.style.overflowY = '';
+    overlay.style.webkitOverflowScrolling = '';
+  }
 
   const scrollY = parseInt(document.body.dataset.scrollY || '0');
-  document.body.style.overflow = '';
   document.body.style.position = '';
   document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
   document.body.style.width = '';
+  document.body.style.overflow = '';
   window.scrollTo(0, scrollY);
 
   const toggle = document.getElementById('mobile-admin-toggle');
