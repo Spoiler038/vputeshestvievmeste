@@ -3907,6 +3907,7 @@ async function doRegister() {
 }
 
 // === ВХОД ===
+// === ВХОД ===
 async function doLogin() {
   const loginOrEmail = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
@@ -3927,7 +3928,38 @@ async function doLogin() {
   try {
     const deviceId = getDeviceId();
 
-    // Сначала пробуем вход через Google Sheets (основной способ)
+    // === 1. СНАЧАЛА ПРОВЕРЯЕМ ЛОКАЛЬНО (быстрый вход) ===
+    // Ищем пользователя по username или email
+    const localUser = users.find(u => 
+      (u.username === loginOrEmail || u.email === loginOrEmail)
+    );
+
+    if (localUser) {
+      // Проверяем пароль: сравниваем plain пароль ИЛИ хеш
+      const hashedInput = hashPasswordLocally(password);
+      const isPasswordMatch = 
+        localUser.password === password || 
+        localUser.password === hashedInput ||
+        localUser._plainPassword === password;
+      
+      if (isPasswordMatch) {
+        localUser.device_id = deviceId;
+        localUser._plainPassword = password;
+        saveState('users', users);
+        loginSuccess(localUser);
+        document.getElementById('login-username').value = '';
+        document.getElementById('login-password').value = '';
+        closeAuth();
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+        return;
+      }
+    }
+
+    // === 2. ЕСЛИ ЛОКАЛЬНО НЕ НАШЛИ — ПРОВЕРЯЕМ В GOOGLE SHEETS ===
+    // Показываем тост о синхронизации
+    showToast('Синхронизация...');
+    
     const payload = {
       action: 'login',
       data: {
@@ -3941,72 +3973,56 @@ async function doLogin() {
     const result = await gasPost(payload);
 
     if (result && result.ok && result.user) {
-      await recordConsent('login', { username: result.user.username, email: result.user.email });
+      await recordConsent('login', { 
+        username: result.user.username, 
+        email: result.user.email 
+      });
 
       const user = result.user;
-      // Не перезаписываем пароль хешем, а сохраняем введенный для локального входа
-      // Но для безопасности храним хеш
+      
+      // Проверяем, есть ли уже такой пользователь локально
       const existingUser = users.find(u => u.id === user.id);
       if (existingUser) {
+        // Обновляем существующего
         Object.assign(existingUser, user);
-        // Сохраняем введенный пароль для локального входа
         existingUser._plainPassword = password;
+        existingUser.device_id = deviceId;
         saveState('users', users);
+        loginSuccess(existingUser);
       } else {
+        // Добавляем нового
         user._plainPassword = password;
+        user.device_id = deviceId;
         users.push(user);
         saveState('users', users);
+        loginSuccess(user);
       }
-
-      // Загружаем пользователя с паролем для локальной работы
-      const loginUser = { ...user, password: password };
-      loginSuccess(loginUser);
+      
       document.getElementById('login-username').value = '';
       document.getElementById('login-password').value = '';
       closeAuth();
+      showToast('Вход выполнен ✓');
     } else {
-      // Если через Sheets не получилось, пробуем локально
-      const localUser = users.find(u => 
-        (u.username === loginOrEmail || u.email === loginOrEmail)
-      );
-      
-      if (localUser) {
-        // Проверяем пароль (поддерживаем как хеш, так и plain)
-        const hashedInput = hashPasswordLocally(password);
-        const isPasswordMatch = localUser.password === password || 
-                               localUser.password === hashedInput ||
-                               localUser._plainPassword === password;
-        
-        if (isPasswordMatch) {
-          localUser.device_id = deviceId;
-          saveState('users', users);
-          loginSuccess(localUser);
-          document.getElementById('login-username').value = '';
-          document.getElementById('login-password').value = '';
-          closeAuth();
-          btn.disabled = false;
-          btn.textContent = 'Войти';
-          return;
-        }
-      }
-      
       errEl.style.display = 'block';
       errEl.textContent = result?.error || 'Неверный логин/email или пароль';
+      showToast('Ошибка входа: ' + (result?.error || 'проверьте данные'));
     }
   } catch(e) {
     console.error('Login error:', e);
-    // При ошибке проверяем локально
+    // Последняя попытка — проверить локально ещё раз
     const localUser = users.find(u => 
       (u.username === loginOrEmail || u.email === loginOrEmail)
     );
     
     if (localUser) {
       const hashedInput = hashPasswordLocally(password);
-      const isPasswordMatch = localUser.password === password || 
-                             localUser.password === hashedInput ||
-                             localUser._plainPassword === password;
+      const isPasswordMatch = 
+        localUser.password === password || 
+        localUser.password === hashedInput ||
+        localUser._plainPassword === password;
       
       if (isPasswordMatch) {
+        localUser._plainPassword = password;
         loginSuccess(localUser);
         document.getElementById('login-username').value = '';
         document.getElementById('login-password').value = '';
@@ -4020,6 +4036,7 @@ async function doLogin() {
     
     errEl.style.display = 'block';
     errEl.textContent = 'Ошибка соединения. Попробуйте позже.';
+    showToast('Ошибка соединения с сервером');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Войти';
@@ -4028,7 +4045,7 @@ async function doLogin() {
 
 // === ЛОКАЛЬНОЕ ХЕШИРОВАНИЕ ПАРОЛЯ ===
 function hashPasswordLocally(password) {
-  // Простая имитация хеширования (в реальном проекте используйте crypto)
+  if (!password) return '';
   let hash = 0;
   for (let i = 0; i < password.length; i++) {
     const char = password.charCodeAt(i);
@@ -4582,6 +4599,9 @@ function loadAdminUsers(isOwner) {
   
   // Если есть подключение к Sheets — загружаем свежие данные
   if (GAS_URL && !GAS_URL.includes('ВСТАВЬТЕ')) {
+    // Показываем тост синхронизации
+    showToast('🔄 Синхронизация участников...');
+    
     // Сначала проверяем версию
     const localVersion = localStorage.getItem('vputi_data_version') || '0';
     
@@ -4623,15 +4643,25 @@ function loadAdminUsers(isOwner) {
             });
             users = uniqueUsers;
             saveState('users', users);
+            showToast('✅ Загружено ' + users.length + ' участников');
+          } else {
+            showToast('⚠️ Участники не найдены в таблице');
           }
+        } else {
+          showToast('📌 Используются локальные данные');
         }
         renderUsersTable(isOwner);
       })
-      .catch(() => {
+      .catch(err => {
+        console.warn('Load users error:', err);
+        showToast('⚠️ Офлайн-режим (локальные данные)');
         renderUsersTable(isOwner);
       });
   } else {
     renderUsersTable(isOwner);
+    if (users.length > 1) {
+      showToast('📌 Загружено ' + users.length + ' участников (локально)');
+    }
   }
 }
 
@@ -4909,7 +4939,7 @@ function confirmCreateUser(leadId) {
   const userForSheets = {
     id: newUser.id,
     username: newUser.username,
-    password: newUser.password,
+    password: password, // Отправляем plain, хеширование будет на сервере
     role: newUser.role,
     name: newUser.name,
     email: newUser.email,
@@ -4922,6 +4952,8 @@ function confirmCreateUser(leadId) {
     active: true
   };
 
+  showToast('🔄 Синхронизация...');
+  
   gasPost({ 
     action: 'upsert', 
     sheet: 'users', 
@@ -4929,16 +4961,21 @@ function confirmCreateUser(leadId) {
   }).then(() => {
     // После успешной синхронизации обновляем версию
     checkAndUpdateDataVersion();
-  }).catch(e => console.warn('User sync error:', e));
+    showToast('✅ Аккаунт создан: ' + username);
+  }).catch(e => {
+    console.warn('User sync error:', e);
+    showToast('⚠️ Аккаунт создан локально, синхронизация позже');
+  });
 
   closeModal('create-user-modal');
   
   // Обновляем список пользователей в админке
   if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
-    loadAdminUsers(currentUser.role === 'owner');
+    // Небольшая задержка для синхронизации
+    setTimeout(() => {
+      loadAdminUsers(currentUser.role === 'owner');
+    }, 500);
   }
-  
-  showToast('Аккаунт создан: ' + username);
 }
 
 function checkAndUpdateDataVersion() {
