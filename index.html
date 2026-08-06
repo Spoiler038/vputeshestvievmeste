@@ -2939,6 +2939,54 @@ async function submitLead() {
   showToast('Заявка успешно отправлена!');
 }
 
+  // ============================================================
+// === НОРМАЛИЗАЦИЯ ТЕЛЕФОНА ===================================
+// ============================================================
+
+function normalizePhone(phone) {
+  if (!phone) return '';
+  
+  // Приводим к строке
+  let cleaned = String(phone);
+  
+  // Удаляем все нецифровые символы, кроме +
+  cleaned = cleaned.replace(/[^\d+]/g, '');
+  
+  // Если есть +, оставляем его только в начале
+  if (cleaned.includes('+')) {
+    const parts = cleaned.split('+');
+    cleaned = '+' + parts.filter(p => p).join('');
+  }
+  
+  // Если номер начинается с 8 и имеет 11 цифр, заменяем на +7
+  if (cleaned.length === 11 && cleaned.startsWith('8')) {
+    cleaned = '+7' + cleaned.slice(1);
+  }
+  
+  // Если номер начинается с 7 и имеет 11 цифр, добавляем +
+  if (cleaned.length === 11 && cleaned.startsWith('7') && !cleaned.startsWith('+')) {
+    cleaned = '+' + cleaned;
+  }
+  
+  // Если номер начинается с 9 (мобильный без кода страны) и имеет 10 цифр
+  if (cleaned.length === 10 && cleaned.startsWith('9')) {
+    cleaned = '+7' + cleaned;
+  }
+  
+  // Удаляем все нецифровые символы, кроме + в начале
+  let result = '';
+  for (let i = 0; i < cleaned.length; i++) {
+    const char = cleaned[i];
+    if (char === '+' && i === 0) {
+      result += char;
+    } else if (char >= '0' && char <= '9') {
+      result += char;
+    }
+  }
+  
+  return result;
+}
+
 // ============================================================
 // === ФУНКЦИИ ДЛЯ ЧЕКБОКСОВ СОГЛАСИЯ =========================
 // ============================================================
@@ -3149,7 +3197,7 @@ async function saveProfile() {
 
   const name = document.getElementById('edit-name').value.trim();
   const email = document.getElementById('edit-email').value.trim();
-  const phone = document.getElementById('edit-phone').value.trim();
+  const phone = normalizePhone(document.getElementById('edit-phone').value.trim());
   const bio = document.getElementById('edit-bio').value.trim();
 
   if (!name || !email) {
@@ -3776,6 +3824,7 @@ async function doRegister() {
   const username = document.getElementById('reg-username').value.trim();
   const email = document.getElementById('reg-email').value.trim();
   const phone = document.getElementById('reg-phone').value.trim();
+  const normalizedPhone = normalizePhone(phone);
   const password = document.getElementById('reg-password').value;
   const invite = document.getElementById('reg-invite').value.trim();
   const errEl = document.getElementById('register-error');
@@ -3839,7 +3888,7 @@ async function doRegister() {
         password: password,
         full_name: name,
         email: email,
-        phone: phone,
+        phone: normalizedPhone,
         device_id: deviceId
       }
     };
@@ -4870,6 +4919,12 @@ function addUserFromLead(leadId) {
   if (!lead) return;
 
   const contactStr = String(lead.contact || '');
+  const isEmail = contactStr.includes('@');
+  const isPhone = !isEmail && /[\d]/.test(contactStr);
+  
+  // Нормализуем телефон, если это номер
+  const normalizedContact = isPhone ? normalizePhone(contactStr) : contactStr;
+  
   const suggestedLogin = lead.name.toLowerCase()
     .replace(/\s+/g, '_')
     .replace(/[^a-zа-яё0-9_]/gi, '')
@@ -4883,7 +4938,7 @@ function addUserFromLead(leadId) {
         <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;padding-top:2px;">Имя</span>
         <strong>${lead.name}</strong>
         <span style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;padding-top:2px;">Контакт</span>
-        <span style="color:var(--accent);">${contactStr}</span>
+        <span style="color:var(--accent);">${normalizedContact}</span>
       </div>
     </div>
     <div class="form-group">
@@ -4901,9 +4956,13 @@ function addUserFromLead(leadId) {
     </div>
     <div class="form-group">
       <label>Email (для входа)</label>
-      <input type="email" class="form-input" id="new-user-email" value="${contactStr.includes('@') ? contactStr : ''}" placeholder="ivan@mail.ru">
+      <input type="email" class="form-input" id="new-user-email" value="${isEmail ? normalizedContact : ''}" placeholder="ivan@mail.ru">
     </div>
+    ${isPhone ? `
     <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:13px;color:var(--accent);">
+      📱 Телефон нормализован: <strong>${normalizedContact}</strong>
+    </div>` : ''}
+    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
       💡 Запишите или скопируйте данные для входа — пароль показывается только сейчас
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -4912,7 +4971,6 @@ function addUserFromLead(leadId) {
     </div>
   `;
 
-  // Проверка логина в реальном времени
   setTimeout(() => {
     const loginEl = document.getElementById('new-user-login');
     if (loginEl) loginEl.addEventListener('input', function() {
@@ -4952,33 +5010,54 @@ function confirmCreateUser(leadId) {
     return;
   }
 
+  // Приводим contact к строке
+  const contactStr = String(lead.contact || '');
+  
+  // Определяем email и телефон
+  let userEmail = email;
+  let userPhone = '';
+  
+  // Если email не указан вручную, пробуем взять из контакта
+  if (!userEmail && contactStr.includes('@')) {
+    userEmail = contactStr;
+  }
+  
+  // Если contact не содержит @ и не пустой, это телефон
+  if (!contactStr.includes('@') && contactStr.trim()) {
+    userPhone = normalizePhone(contactStr);
+  }
+  
+  // Если email указан вручную, проверяем его
+  if (userEmail && !userEmail.includes('@')) {
+    showToast('Введите корректный email');
+    return;
+  }
+
   const newUser = {
     id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
     username: username,
-    password: password, // Будет захешировано на сервере
+    password: password,
     role: 'user',
     name: lead.name,
-    email: email || (lead.contact && lead.contact.includes('@') ? lead.contact : ''),
+    email: userEmail,
     bio: '',
     joinedDate: new Date().toISOString().slice(0, 10),
     avatar: '',
     discount: 0,
     consentDate: new Date().toISOString(),
     device_id: getDeviceId(),
-    phone: lead.contact && !lead.contact.includes('@') ? lead.contact : '',
+    phone: userPhone,
     active: true,
     _plainPassword: password
   };
 
-  // Сохраняем локально
   users.push(newUser);
   saveState('users', users);
 
-  // Отправляем в Google Sheets (без _plainPassword)
   const userForSheets = {
     id: newUser.id,
     username: newUser.username,
-    password: password, // Отправляем plain, хеширование будет на сервере
+    password: password,
     role: newUser.role,
     name: newUser.name,
     email: newUser.email,
