@@ -327,7 +327,31 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 .admin-table td { padding: 12px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: var(--bg); }
-.td-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.admin-table .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 5px 12px;
+  font-size: 11px;
+  line-height: 1.4;
+  border-radius: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.admin-table .btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.td-actions { 
+  display: flex; 
+  gap: 6px; 
+  flex-wrap: wrap; 
+  align-items: center; 
+  justify-content: flex-start;
+}
 .admin-bar-top { display: flex; justify-content: flex-end; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
 .revenue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; align-items: flex-end; }
 .rev-bar-wrap { text-align: center; cursor: pointer; }
@@ -515,7 +539,22 @@ html.modal-open {overflow: hidden !important;}
   .stat-value { font-size: 28px; }
   .admin-table { font-size: 11px; }
   .admin-table th, .admin-table td { padding: 8px 10px; }
-  .td-actions { flex-direction: column; gap: 5px; }
+  .td-actions { 
+  flex-direction: row; 
+  gap: 4px; 
+  flex-wrap: wrap; 
+  align-items: center;
+}
+  .td-actions .btn {
+    padding: 4px 8px;
+    font-size: 10px;
+    height: 28px;
+  }
+  .td-actions .btn svg {
+    width: 12px;
+    height: 12px;
+  }
+}
   .modal { padding: 20px; }
   .modal-title { font-size: 22px; }
   .modal-grid { grid-template-columns: 1fr; }
@@ -4644,9 +4683,9 @@ function loadAdminPrograms() {
     <td>${p.transport}</td>
     <td>${p.days}</td>
     <td style="font-weight:600;">${p.price.toLocaleString('ru')} ₽</td>
-    <td class="td-actions">
-      <button class="btn btn-edit" onclick="openEditProgram(${p.id})">Изменить</button>
-      <button class="btn btn-danger" onclick="deleteProgram(${p.id})">
+    <td class="td-actions" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-start;white-space:nowrap;">
+      <button class="btn btn-edit" style="padding:5px 10px;font-size:11px;line-height:1.4;height:32px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;" onclick="event.stopPropagation();openEditProgram(${p.id})">Изменить</button>
+      <button class="btn btn-danger" style="padding:5px 10px;font-size:11px;line-height:1.4;height:32px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;" onclick="event.stopPropagation();deleteProgram(${p.id})">
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 6h18"/>
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
