@@ -3931,31 +3931,25 @@ async function doLogin() {
     );
 
     if (localUser) {
-      const hashedInput = hashPasswordLocally(password);
-      const isPasswordMatch = 
-        localUser.password === password || 
-        localUser.password === hashedInput ||
-        localUser._plainPassword === password;
+      // ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ checkPassword
+      const isPasswordMatch = await checkPassword(password, localUser.password);
       
       if (isPasswordMatch) {
         localUser.device_id = deviceId;
         localUser._plainPassword = password;
         saveState('users', users);
-        
-        // Устанавливаем currentUser
         currentUser = localUser;
-        
-        // Закрываем авторизацию
         closeAuth();
-        
-        // Обновляем навигацию
         updateNavForUser();
-        
-        // Показываем приветствие
         showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋`);
-        
         document.getElementById('login-username').value = '';
         document.getElementById('login-password').value = '';
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+        return;
+      } else {
+        errEl.style.display = 'block';
+        errEl.textContent = 'Неверный пароль';
         btn.disabled = false;
         btn.textContent = 'Войти';
         return;
@@ -4002,13 +3996,8 @@ async function doLogin() {
       
       document.getElementById('login-username').value = '';
       document.getElementById('login-password').value = '';
-      
-      // Закрываем авторизацию
       closeAuth();
-      
-      // Обновляем навигацию
       updateNavForUser();
-      
       showToast(`Добро пожаловать, ${currentUser.name.split(' ')[0]}! 👋`);
     } else {
       errEl.style.display = 'block';
@@ -4017,24 +4006,20 @@ async function doLogin() {
     }
   } catch(e) {
     console.error('Login error:', e);
-    // Последняя попытка — проверить локально
+    
     const localUser = users.find(u => 
       (u.username === loginOrEmail || u.email === loginOrEmail)
     );
     
     if (localUser) {
-      const hashedInput = hashPasswordLocally(password);
-      const isPasswordMatch = 
-        localUser.password === password || 
-        localUser.password === hashedInput ||
-        localUser._plainPassword === password;
+      const isPasswordMatch = await checkPassword(password, localUser.password);
       
       if (isPasswordMatch) {
         localUser._plainPassword = password;
         currentUser = localUser;
         closeAuth();
         updateNavForUser();
-        showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋`);
+        showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋 (офлайн-режим)`);
         document.getElementById('login-username').value = '';
         document.getElementById('login-password').value = '';
         btn.disabled = false;
@@ -4062,6 +4047,29 @@ function hashPasswordLocally(password) {
     hash = hash & hash;
   }
   return 'hash_' + Math.abs(hash).toString(16);
+}
+
+// === ХЕШИРОВАНИЕ SHA-256 (для проверки паролей из Google Sheets) ===
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
+// Обновленная функция проверки пароля
+async function checkPassword(plainPassword, hashedPassword) {
+  if (plainPassword === hashedPassword) return true;
+  if (plainPassword === hashPasswordLocally(hashedPassword)) return true;
+  
+  // Проверка SHA-256 (для паролей из Google Sheets)
+  try {
+    const shaHash = await sha256(plainPassword);
+    if (shaHash === hashedPassword) return true;
+  } catch(e) {}
+  
+  return false;
 }
   
 // ============================================================
