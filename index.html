@@ -4669,35 +4669,35 @@ function showRevenueDetails(monthIndex) {
 }
 
 // === ПРОГРАММЫ (АДМИНКА) ===
-
-  function loadAdminPrograms() {
+function loadAdminPrograms() {
   document.getElementById('programs-tbody').innerHTML = programs.map(p => `
   <tr>
-    <td style="width:50px;">
+    <td style="width:50px;vertical-align:middle;">
       <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;background:var(--accent-light);display:flex;align-items:center;justify-content:center;">
         ${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;">` : `<span>🏔</span>`}
       </div>
     </td>
-    <td><strong>${p.name}</strong></td>
-    <td><span class="tag tag-green">${p.season}</span></td>
-    <td>${p.transport}</td>
-    <td>${p.days}</td>
-    <td style="font-weight:600;">${p.price.toLocaleString('ru')} ₽</td>
-    <td class="td-actions" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-start;white-space:nowrap;">
-      <button class="btn btn-edit" style="padding:5px 10px;font-size:11px;line-height:1.4;height:32px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;" onclick="event.stopPropagation();openEditProgram(${p.id})">Изменить</button>
-      <button class="btn btn-danger" style="padding:5px 10px;font-size:11px;line-height:1.4;height:32px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;" onclick="event.stopPropagation();deleteProgram(${p.id})">
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 6h18"/>
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    <line x1="10" y1="11" x2="10" y2="17"/>
-    <line x1="14" y1="11" x2="14" y2="17"/>
-  </svg>
-</button>
+    <td style="vertical-align:middle;"><strong>${p.name}</strong></td>
+    <td style="vertical-align:middle;"><span class="tag tag-green">${p.season}</span></td>
+    <td style="vertical-align:middle;">${p.transport}</td>
+    <td style="vertical-align:middle;text-align:center;">${p.days}</td>
+    <td style="vertical-align:middle;font-weight:600;text-align:right;padding-right:16px;">${p.price.toLocaleString('ru')} ₽</td>
+    <td style="vertical-align:middle;padding:8px 12px;">
+      <div style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;white-space:nowrap;">
+        <button class="btn btn-edit" style="padding:4px 10px;font-size:11px;line-height:1.4;height:28px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:none;border-radius:6px;cursor:pointer;background:var(--accent2);color:white;" onclick="event.stopPropagation();openEditProgram(${p.id})">Изменить</button>
+        <button class="btn btn-danger" style="padding:4px 8px;font-size:11px;line-height:1.4;height:28px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:none;border-radius:6px;cursor:pointer;background:#C0392B;color:white;" onclick="event.stopPropagation();deleteProgram(${p.id})">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            <line x1="10" y1="11" x2="10" y2="17"/>
+            <line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+        </button>
+      </div>
     </td>
   </tr>
 `).join('');
 }
-
 // === УЧАСТНИКИ (АДМИНКА) ===
 function loadAdminUsers(isOwner) {
   users = loadState('users', users);
@@ -4780,30 +4780,32 @@ function renderUsersTable(isOwner) {
   tbody.innerHTML = users.map(u => {
     const count = purchases.filter(p => p.userId === u.id).length;
     return `<tr style="cursor:pointer;" onclick="openUserEditModal(${u.id})" title="Нажмите для просмотра и редактирования">
-      <td><strong>${u.name}</strong></td>
-      <td style="color:var(--text-muted);">${u.username}</td>
-      <td style="color:var(--accent);font-size:12px;">${u.email || '—'}</td>  <!-- НОВЫЙ СТОЛБЕЦ -->
-      <td onclick="event.stopPropagation();">
-        ${isOwner ? `<select class="filter-select" style="padding:5px 8px;font-size:12px;" onchange="changeUserRole(${u.id}, this.value)">
+      <td style="vertical-align:middle;"><strong>${u.name}</strong></td>
+      <td style="vertical-align:middle;color:var(--text-muted);">${u.username}</td>
+      <td style="vertical-align:middle;color:var(--accent);font-size:12px;">${u.email || '—'}</td>
+      <td style="vertical-align:middle;" onclick="event.stopPropagation();">
+        ${isOwner ? `<select class="filter-select" style="padding:4px 8px;font-size:12px;height:28px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);" onchange="changeUserRole(${u.id}, this.value)">
           <option value="owner" ${u.role === 'owner' ? 'selected' : ''}>Владелец</option>
           <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Админ</option>
           <option value="user" ${u.role === 'user' ? 'selected' : ''}>Участник</option>
         </select>` : `<span class="tag ${u.role === 'owner' ? 'tag-orange' : 'tag-green'}">${u.role === 'owner' ? 'Владелец' : u.role === 'admin' ? 'Админ' : 'Участник'}</span>`}
       </td>
-      <td>${count}</td>  <!-- Заголовок "Туров" -->
-      <td onclick="event.stopPropagation();">
-        <input type="number" class="filter-input" style="width:70px; padding:6px;" value="${u.discount || 0}" onchange="updateUserDiscount(${u.id}, this.value)">
+      <td style="vertical-align:middle;text-align:center;">${count}</td>
+      <td style="vertical-align:middle;" onclick="event.stopPropagation();">
+        <input type="number" class="filter-input" style="width:60px;padding:4px 6px;height:28px;font-size:12px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);text-align:center;" value="${u.discount || 0}" onchange="updateUserDiscount(${u.id}, this.value)">
       </td>
-      <td class="td-actions" onclick="event.stopPropagation();" style="padding-right:8px;">  <!-- Уменьшен отступ -->
-        <button class="btn btn-outline btn-sm" onclick="showUserStats(${u.id})">Статистика</button>
-        ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteUser(${u.id})">
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 6h18"/>
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    <line x1="10" y1="11" x2="10" y2="17"/>
-    <line x1="14" y1="11" x2="14" y2="17"/>
-  </svg>
-</button>` : ''}
+      <td style="vertical-align:middle;padding:8px 12px;" onclick="event.stopPropagation();">
+        <div style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;white-space:nowrap;">
+          <button class="btn btn-outline btn-sm" style="padding:4px 8px;font-size:11px;line-height:1.4;height:28px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:6px;border:1.5px solid var(--border);background:transparent;cursor:pointer;" onclick="showUserStats(${u.id})">Статистика</button>
+          ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;line-height:1.4;height:28px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:none;border-radius:6px;cursor:pointer;background:#C0392B;color:white;" onclick="deleteUser(${u.id})">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <line x1="10" y1="11" x2="10" y2="17"/>
+              <line x1="14" y1="11" x2="14" y2="17"/>
+            </svg>
+          </button>` : ''}
+        </div>
       </td>
     </tr>`;
   }).join('');
@@ -4871,17 +4873,24 @@ async function deleteUser(userId) {
 
 // === ЗАЯВКИ (АДМИНКА) ===
 function loadAdminLeads() {
-  document.getElementById('leads-tbody').innerHTML = leads.map(l => `
+  document.getElementById('leads-tbody').innerHTML = leads.map(l => {
+    // Форматируем дату из YYYY-MM-DD в DD.MM.YYYY
+    let formattedDate = l.date || '';
+    if (formattedDate && formattedDate.includes('-')) {
+      const parts = formattedDate.split('-');
+      formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+    }
+    return `
     <tr style="cursor:pointer;" onclick="openLeadModal(${l.id})" title="Нажмите для действий">
-      <td><strong>${l.name}</strong></td>
-      <td style="color:var(--accent);">${l.contact}</td>
-      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.message || '—'}</td>
-      <td style="color:var(--text-muted);white-space:nowrap;">${l.date}</td>
-      <td>
-        <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();openLeadModal(${l.id})">Открыть →</button>
+      <td style="vertical-align:middle;"><strong>${l.name}</strong></td>
+      <td style="vertical-align:middle;color:var(--accent);">${l.contact}</td>
+      <td style="vertical-align:middle;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.message || '—'}</td>
+      <td style="vertical-align:middle;color:var(--text-muted);white-space:nowrap;">${formattedDate}</td>
+      <td style="vertical-align:middle;">
+        <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;height:28px;border-radius:6px;" onclick="event.stopPropagation();openLeadModal(${l.id})">Открыть →</button>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
   // === МОДАЛКА ЗАЯВКИ ===
 function openLeadModal(leadId) {
@@ -4909,7 +4918,7 @@ function openLeadModal(leadId) {
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:9px;">
-  ${isPhone ? `<a href="tel:${lead.contact}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">📞 Позвонить</a>` : ''}
+  ${isPhone ? `<a href="tel:${String(lead.contact).replace(/[^\d+]/g, '').replace(/^8/, '+7')}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">📞 Позвонить</a>` : ''}
   ${isEmail ? `<a href="mailto:${lead.contact}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">✉️ Написать письмо</a>` : ''}
   ${tgMatch ? `<a href="https://t.me/${tgMatch[0].slice(1)}" target="_blank" class="btn btn-outline" style="width:100%;justify-content:center;text-decoration:none;">💬 Открыть в Telegram</a>` : ''}
   ${!isPhone && !isEmail && !tgMatch ? `<a href="#" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;" onclick="navigator.clipboard.writeText('${lead.contact}');showToast('Скопировано');return false;">📋 Скопировать контакт</a>` : ''}
