@@ -4958,6 +4958,7 @@ function addUserFromLead(leadId) {
   const lead = leads.find(l => l.id === leadId);
   if (!lead) return;
 
+  // Приводим к строке (ИСПРАВЛЕНИЕ)
   const contactStr = String(lead.contact || '');
   const isEmail = contactStr.includes('@');
   const isPhone = !isEmail && /[\d]/.test(contactStr);
