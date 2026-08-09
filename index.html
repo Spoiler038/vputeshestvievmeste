@@ -6609,8 +6609,9 @@ async function cycleGroupStatus(groupId) {
   showToast('Статус изменён: ' + g.status);
 }
 
-// === ЗАВЕРШЕНИЕ ГРУППЫ — запись в историю поездок ===
 
+// === ЗАВЕРШЕНИЕ ГРУППЫ — запись в историю поездок ===
+function finalizeGroup(g) {
   const prog = programs.find(p => p.id === g.programId);
   if (!prog) {
     showToast('Программа не найдена, поездка не добавлена');
@@ -6665,7 +6666,7 @@ async function cycleGroupStatus(groupId) {
   }
 }
 
-  // === ПОЛУЧЕНИЕ ПОЕЗДОК ПОЛЬЗОВАТЕЛЯ ===
+// === ПОЛУЧЕНИЕ ПОЕЗДОК ПОЛЬЗОВАТЕЛЯ ===
 function getUserProgramIds(userId) {
   const userPurchases = purchases.filter(p => p.userId === userId);
   return userPurchases.map(p => p.programId);
