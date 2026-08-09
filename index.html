@@ -518,7 +518,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   width: 100%; 
   max-height: 90vh; 
   overflow: hidden;
-  padding: 0; 
+  padding: 0;
   box-shadow: var(--shadow-lg); 
   transform: translateY(20px); 
   transition: transform 0.3s;
@@ -531,7 +531,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   display: flex; 
   justify-content: space-between; 
   align-items: center; 
-  padding: 20px 24px 16px;
+  padding: 20px 28px 16px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   gap: 10px;
@@ -562,37 +562,43 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 }
 .modal-close:hover { background: var(--bg); color: var(--text); }
 
+/* Основной контейнер для скролла — внутри него будут отступы */
 .modal-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 24px 16px;
+  padding: 24px 28px 20px;  /* Отступы со всех сторон */
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
   border-radius: 0 0 var(--radius) var(--radius);
 }
 
-/* Тонкий скролл для модалок — чтобы были видны скругленные углы */
+/* Стилизация скроллбара с отступами от углов */
 .modal-scroll::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
   background: transparent;
 }
 .modal-scroll::-webkit-scrollbar-track {
   background: transparent;
-  margin: 6px 0;
+  margin: 8px 0;  /* Отступ сверху и снизу, чтобы не доходил до углов */
   border-radius: 4px;
 }
 .modal-scroll::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 4px;
-  background-clip: padding-box;
 }
 .modal-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
 
+/* Для Firefox — скроллбар с отступами через padding */
+.modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
 .modal-footer {
-  padding: 16px 24px 20px;
+  padding: 16px 28px 20px;
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
@@ -609,7 +615,10 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 }
 .modal-grid .form-group.full { grid-column: 1 / -1; }
 
-/* Стили для компактной модалки программы */
+* Стили для компактной модалки программы */
+#program-modal .modal-scroll {
+  padding: 16px 20px 16px;
+}
 #program-modal .modal-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2576,6 +2585,33 @@ async function uploadImage(file, folder) {
   }
 }
 
+// ============================================================
+// === ФОРМАТИРОВАНИЕ ДАТ ======================================
+// ============================================================
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  // Если дата уже в формате DD.MM.YYYY — возвращаем как есть
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(dateStr)) return dateStr;
+  
+  // Если дата в формате YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const parts = dateStr.split('-');
+    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+  }
+  
+  // Пробуем распарсить через Date
+  const date = new Date(dateStr);
+  if (!isNaN(date.getTime())) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  }
+  
+  return dateStr;
+}
+  
 // ============================================================
 // === АВТОРИЗАЦИЯ =============================================
 // ============================================================
@@ -6300,7 +6336,7 @@ function loadAdminGroups() {
             <span class="tag ${statusColor}" onclick="cycleGroupStatus(${g.id})" style="cursor:pointer;user-select:none;" title="Нажмите для смены статуса">${g.status} ✎</span>
           </div>
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">🗺 ${prog ? prog.name : (g.programName || '—')}</div>
-          ${g.startDate ? `<div style="font-size:13px;color:var(--text-muted);">📅 ${g.startDate}${g.endDate ? ' — ' + g.endDate : ''}</div>` : ''}
+          ${g.startDate ? `<div style="font-size:13px;color:var(--text-muted);">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
         </div>
         <div style="text-align:center;min-width:100px;">
           <div style="font-size:28px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${filled}/${max}</div>
