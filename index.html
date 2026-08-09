@@ -3217,6 +3217,16 @@ function getDeviceId() {
   }
   return deviceId;
 }
+  function getUserTrips(userId) {
+  const userPurchases = purchases.filter(p => p.userId === userId);
+  return userPurchases.map(p => {
+    const prog = programs.find(pr => pr.id === p.programId);
+    return {
+      ...p,
+      programName: prog ? prog.name : 'Программа удалена'
+    };
+  });
+}
 
 // ============================================================
 // === ЛИЧНЫЙ КАБИНЕТ ==========================================
@@ -3225,7 +3235,7 @@ function getDeviceId() {
 function loadDashboard() {
   if (!currentUser) return;
   const u = currentUser;
-
+ 
   // Аватар
   const avatarDiv = document.getElementById('profile-avatar-big');
   if (u.avatar) {
@@ -3308,20 +3318,26 @@ function loadDashboard() {
 function updatePhotoProgramSelect(userId) {
   const sel = document.getElementById('photo-program');
   if (!sel) return;
-  const userPurchases = purchases.filter(p => p.userId === userId);
+  
+  // Получаем ID программ, в которых пользователь участвовал
+  const userProgramIds = getUserProgramIds(userId);
   const cur = sel.value;
+  
   sel.innerHTML = '<option value="">— Общее фото —</option>';
-  userPurchases.forEach(pu => {
-    const prog = programs.find(p => p.id === pu.programId);
+  
+  // Добавляем только те программы, в которых пользователь был
+  userProgramIds.forEach(progId => {
+    const prog = programs.find(p => p.id === progId);
     if (!prog) return;
     const opt = document.createElement('option');
     opt.value = prog.id;
     opt.textContent = prog.name;
     sel.appendChild(opt);
   });
+  
+  // Если выбранное значение все еще доступно — оставляем
   if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
-
 function renderUserGallery(userId) {
   const container = document.getElementById('user-gallery-by-program');
   if (!container) return;
@@ -3471,17 +3487,11 @@ async function addPhoto() {
     return;
   }
 
-  if (currentUser.role === 'user') {
-    const userPurchases = purchases.filter(p => p.userId === currentUser.id);
-    if (userPurchases.length === 0) {
-      showToast('Добавлять фото могут только участники путешествий');
-      return;
-    }
-  }
-
   const fileInput = document.getElementById('photo-file');
   const urlInput = document.getElementById('photo-url');
   const caption = (document.getElementById('photo-caption').value.trim()) || 'Моё фото';
+  const programSelect = document.getElementById('photo-program');
+  const programId = programSelect ? (parseInt(programSelect.value) || null) : null;
   const statusEl = document.getElementById('photo-upload-status');
   const btn = document.getElementById('photo-upload-btn');
 
@@ -3493,10 +3503,28 @@ async function addPhoto() {
     return;
   }
 
-  async function saveGalleryItem(photoUrl) {
-    const programSelect = document.getElementById('photo-program');
-    const programId = programSelect ? (parseInt(programSelect.value) || null) : null;
+  // Проверяем, может ли пользователь добавить фото
+  if (currentUser.role === 'user') {
+    // Если выбрана конкретная программа — проверяем участие в ней
+    if (programId) {
+      const hasTraveled = purchases.some(p => 
+        p.userId === currentUser.id && p.programId === programId
+      );
+      if (!hasTraveled) {
+        showToast('Вы можете добавлять фото только к поездкам, в которых участвовали');
+        return;
+      }
+    } else {
+      // Если не выбрана программа — проверяем, есть ли вообще поездки
+      const userPurchases = purchases.filter(p => p.userId === currentUser.id);
+      if (userPurchases.length === 0) {
+        showToast('Добавлять фото могут только участники путешествий');
+        return;
+      }
+    }
+  }
 
+  async function saveGalleryItem(photoUrl) {
     const item = {
       id: gallery.length > 0 ? Math.max(...gallery.map(g => parseInt(g.id) || 0)) + 1 : 1,
       url: photoUrl,
@@ -6543,13 +6571,21 @@ async function cycleGroupStatus(groupId) {
 
   // Для финальных статусов — спросить подтверждение
   if (next === 'завершена') {
+    const memberCount = (g.members || []).length;
+    const registeredCount = (g.members || []).filter(m => m.userId).length;
+    
     const ok = await confirmDialog(
-      'Группа «' + g.name + '» будет отмечена как завершённая.\nПутешествие будет добавлено в историю всем участникам.',
+      'Группа «' + g.name + '» будет отмечена как завершённая.\n' +
+      'Участников в группе: ' + memberCount + '\n' +
+      'Зарегистрированных участников: ' + registeredCount + '\n\n' +
+      'Путешествие будет добавлено в историю всем зарегистрированным участникам.',
       { icon: '✅', title: 'Завершить группу?', ok: 'Завершить', danger: false }
     );
     if (!ok) return;
+    
     g.status = 'завершена';
     finalizeGroup(g);
+    
   } else if (next === 'отменена') {
     const ok = await confirmDialog(
       'Группа «' + g.name + '» будет отмечена как отменённая.',
@@ -6557,6 +6593,7 @@ async function cycleGroupStatus(groupId) {
     );
     if (!ok) return;
     g.status = 'отменена';
+    
   } else {
     g.status = next;
   }
@@ -6573,42 +6610,70 @@ async function cycleGroupStatus(groupId) {
 }
 
 // === ЗАВЕРШЕНИЕ ГРУППЫ — запись в историю поездок ===
-function finalizeGroup(g) {
+
   const prog = programs.find(p => p.id === g.programId);
-  if (!prog) return;
+  if (!prog) {
+    showToast('Программа не найдена, поездка не добавлена');
+    return;
+  }
 
   let added = 0;
+  const today = new Date().toISOString().slice(0, 10);
 
   (g.members || []).forEach(member => {
-    if (!member.userId) return; // только зарегистрированные
+    // Проверяем, есть ли userId у участника (только зарегистрированные)
+    if (!member.userId) return;
 
+    // Проверяем, не добавлена ли уже эта поездка
     const already = purchases.find(
       p => p.userId === member.userId && p.programId === g.programId
     );
-    if (already) return; // уже есть — не дублировать
+    if (already) return;
 
-    purchases.push({
+    // Определяем цену поездки
+    const price = parseFloat(member.amount) || prog.price || 0;
+    
+    // Создаем запись о поездке
+    const purchase = {
       id: purchases.length > 0 ? Math.max(...purchases.map(p => p.id)) + 1 : 1,
       userId: member.userId,
       programId: g.programId,
-      price: parseFloat(member.amount) || prog.price,
-      date: g.endDate || new Date().toISOString().slice(0, 10),
+      price: price,
+      date: g.endDate || today,
       status: 'завершено',
       groupId: g.id,
-    });
+      groupName: g.name,
+      programName: prog.name
+    };
+
+    purchases.push(purchase);
     added++;
+
+    // Синхронизируем покупку с Google Sheets
+    gasPost({ 
+      action: 'upsert', 
+      sheet: 'purchases', 
+      data: purchase 
+    }).catch(() => {});
   });
 
   if (added > 0) {
     saveState('purchases', purchases);
-
-    // Синхронизируем новые записи purchases в Sheets
-    purchases.filter(p => p.groupId === g.id).forEach(p => {
-      gasPost({ action: 'upsert', sheet: 'purchases', data: p }).catch(() => {});
-    });
-
-    showToast('Путешествие добавлено в историю ' + added + ' участникам ✓');
+    showToast('✅ Путешествие добавлено в историю ' + added + ' участникам!');
+  } else {
+    showToast('⚠️ Новых поездок не добавлено (возможно, уже были добавлены)');
   }
+}
+
+  // === ПОЛУЧЕНИЕ ПОЕЗДОК ПОЛЬЗОВАТЕЛЯ ===
+function getUserProgramIds(userId) {
+  const userPurchases = purchases.filter(p => p.userId === userId);
+  return userPurchases.map(p => p.programId);
+}
+
+// === ПРОВЕРКА, БЫЛ ЛИ ПОЛЬЗОВАТЕЛЬ В ПОЕЗДКЕ ===
+function hasUserTraveled(userId, programId) {
+  return purchases.some(p => p.userId === userId && p.programId === programId);
 }
   // ============================================================
 // === GOOGLE SHEETS СИНХРОНИЗАЦИЯ =============================
