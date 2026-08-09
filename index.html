@@ -510,6 +510,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   transition: all 0.3s; 
 }
 .modal-overlay.open { opacity: 1; visibility: visible; }
+
 .modal { 
   background: var(--surface); 
   border-radius: var(--radius); 
@@ -533,32 +534,23 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+  border-radius: 0 0 var(--radius) var(--radius);
 }
 
-/* Тонкий скролл для модалок — чтобы были видны скругленные углы */
 .modal-scroll::-webkit-scrollbar {
-  width: 3px;
-}
-.modal-scroll::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 0 var(--radius) var(--radius) 0;
-}
-.modal-scroll::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-.modal-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  width: 4px;
 }
 
-.modal-header { 
+  .modal-header { 
   display: flex; 
   justify-content: space-between; 
   align-items: center; 
   padding: 20px 32px 16px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  gap: 10px; 
+  gap: 10px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface);
 }
 .modal-title { 
   font-family: var(--font-family); 
@@ -2002,6 +1994,35 @@ input, textarea {
       <button class="modal-close" onclick="closeModal('user-edit-modal')">✕</button>
     </div>
     <div id="user-edit-content"></div>
+  </div>
+</div>
+
+  <!-- Модалка: Список поездок пользователя -->
+<div class="modal-overlay" id="user-trips-modal">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="user-trips-modal-title">✈️ Поездки участника</h2>
+      <button class="modal-close" onclick="closeModal('user-trips-modal')">✕</button>
+    </div>
+    <div class="modal-scroll">
+      <div id="user-trips-content"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('user-trips-modal')">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: Подтверждение удаления поездки -->
+<div class="modal-overlay" id="delete-trip-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="delete-trip-modal-title">⚠️ Подтверждение удаления</h2>
+      <button class="modal-close" onclick="closeModal('delete-trip-modal')">✕</button>
+    </div>
+    <div class="modal-scroll">
+      <div id="delete-trip-content"></div>
+    </div>
   </div>
 </div>
 
@@ -5060,7 +5081,15 @@ function renderUsersTable(isOwner) {
           <option value="user" ${u.role === 'user' ? 'selected' : ''}>Участник</option>
         </select>` : `<span class="tag ${u.role === 'owner' ? 'tag-orange' : 'tag-green'}">${u.role === 'owner' ? 'Владелец' : u.role === 'admin' ? 'Админ' : 'Участник'}</span>`}
       </td>
-      <td style="vertical-align:middle;text-align:center;">${count}</td>
+      <td style="vertical-align:middle;text-align:center;cursor:pointer;" onclick="event.stopPropagation();openUserTripsModal(${u.id})" title="Нажмите для просмотра поездок">
+        <span style="display:inline-flex;align-items:center;gap:4px;color:var(--accent2);font-weight:600;text-decoration:underline;text-underline-offset:2px;text-decoration-style:dotted;">
+          ${count}
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </span>
+      </td>
       <td style="vertical-align:middle;" onclick="event.stopPropagation();">
         <input type="number" class="filter-input" style="width:60px;padding:4px 6px;height:28px;font-size:12px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);text-align:center;" value="${u.discount || 0}" onchange="updateUserDiscount(${u.id}, this.value)">
       </td>
@@ -6812,6 +6841,178 @@ function finalizeGroup(g) {
   }
 }
 
+// === ОТКРЫТИЕ СПИСКА ПОЕЗДОК ПОЛЬЗОВАТЕЛЯ ===
+function openUserTripsModal(userId) {
+  const u = users.find(x => x.id === userId);
+  if (!u) return;
+
+  const userPurchases = purchases.filter(p => p.userId === userId);
+  
+  if (userPurchases.length === 0) {
+    showToast('У пользователя нет поездок');
+    return;
+  }
+
+  // Сортируем по дате (сначала новые)
+  userPurchases.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const modalContent = document.getElementById('user-trips-content');
+  modalContent.innerHTML = `
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="user-avatar" style="width:40px;height:40px;font-size:18px;flex-shrink:0;background:var(--accent-light);color:var(--accent);">
+        ${u.avatar ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;">` : u.name[0]}
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:16px;">${u.name}</div>
+        <div style="font-size:12px;color:var(--text-muted);">Всего поездок: ${userPurchases.length}</div>
+      </div>
+    </div>
+    <div style="max-height:50vh;overflow-y:auto;padding-right:4px;">
+      ${userPurchases.map(p => {
+        const prog = programs.find(pr => pr.id === p.programId);
+        // Форматируем дату
+        let formattedDate = p.date || '';
+        if (formattedDate && formattedDate.includes('-')) {
+          const parts = formattedDate.split('-');
+          formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+        }
+        // Проверяем, есть ли фото у этой поездки
+        const hasPhotos = gallery.some(g => g.userId === userId && g.programId === p.programId);
+        
+        return `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:4px;">
+            <div style="flex:1;min-width:120px;">
+              <div style="font-weight:600;font-size:14px;">${prog ? prog.name : 'Программа удалена'}</div>
+              <div style="font-size:12px;color:var(--text-muted);display:flex;gap:12px;flex-wrap:wrap;">
+                <span>📅 ${formattedDate}</span>
+                <span>💰 ${p.price.toLocaleString('ru')} ₽</span>
+                ${p.groupName ? `<span>👥 ${p.groupName}</span>` : ''}
+                ${hasPhotos ? `<span style="color:var(--accent);">📸 Фото есть</span>` : ''}
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <button class="btn btn-danger" style="padding:4px 10px;font-size:11px;height:28px;display:inline-flex;align-items:center;gap:4px;" onclick="openDeleteTripConfirm(${userId}, ${p.id}, ${p.programId}, '${p.date}')">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <line x1="10" y1="11" x2="10" y2="17"/>
+                  <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+                Удалить
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  document.getElementById('user-trips-modal-title').textContent = '✈️ Поездки участника';
+  openModal('user-trips-modal');
+}
+
+// === ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ ПОЕЗДКИ ===
+let deleteTripData = null;
+
+function openDeleteTripConfirm(userId, purchaseId, programId, date) {
+  deleteTripData = { userId, purchaseId, programId, date };
+  
+  const hasPhotos = gallery.some(g => g.userId === userId && g.programId === programId);
+  const prog = programs.find(p => p.id === programId);
+  const programName = prog ? prog.name : 'Программа удалена';
+  const user = users.find(u => u.id === userId);
+  
+  let formattedDate = date || '';
+  if (formattedDate && formattedDate.includes('-')) {
+    const parts = formattedDate.split('-');
+    formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+  }
+
+  const modalContent = document.getElementById('delete-trip-content');
+  modalContent.innerHTML = `
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:24px;margin-bottom:8px;">🗑️</div>
+      <div style="font-weight:600;font-size:16px;">Удалить поездку</div>
+    </div>
+    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;">
+        <span style="color:var(--text-muted);">Участник:</span>
+        <span style="font-weight:600;">${user ? user.name : '—'}</span>
+        <span style="color:var(--text-muted);">Программа:</span>
+        <span>${programName}</span>
+        <span style="color:var(--text-muted);">Дата:</span>
+        <span>${formattedDate}</span>
+        ${hasPhotos ? `<span style="color:var(--text-muted);">📸 Фото:</span><span style="color:var(--accent);">${gallery.filter(g => g.userId === userId && g.programId === programId).length} фото</span>` : ''}
+      </div>
+    </div>
+    ${hasPhotos ? `
+    <div class="consent-checkbox-wrapper" style="margin-bottom:16px;">
+      <input type="checkbox" id="delete-photos-checkbox" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
+      <label for="delete-photos-checkbox" style="font-size:13px;cursor:pointer;color:var(--text);">
+        🗑️ Удалить также <strong>${gallery.filter(g => g.userId === userId && g.programId === programId).length}</strong> фото, загруженные к этой поездке
+      </label>
+    </div>` : ''}
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn btn-outline" onclick="closeModal('delete-trip-modal')">Отмена</button>
+      <button class="btn btn-danger" onclick="confirmDeleteTrip()" style="display:flex;align-items:center;gap:6px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+        Удалить
+      </button>
+    </div>
+  `;
+
+  document.getElementById('delete-trip-modal-title').textContent = '⚠️ Подтверждение удаления';
+  openModal('delete-trip-modal');
+}
+
+// === ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ ПОЕЗДКИ ===
+function confirmDeleteTrip() {
+  if (!deleteTripData) return;
+  
+  const { userId, purchaseId, programId } = deleteTripData;
+  const deletePhotos = document.getElementById('delete-photos-checkbox')?.checked || false;
+
+  // Удаляем поездку
+  purchases = purchases.filter(p => p.id !== purchaseId);
+  saveState('purchases', purchases);
+
+  // Если нужно удалить фото
+  if (deletePhotos) {
+    const photosToDelete = gallery.filter(g => g.userId === userId && g.programId === programId);
+    gallery = gallery.filter(g => !(g.userId === userId && g.programId === programId));
+    saveState('gallery', gallery);
+    
+    // Синхронизация удаления фото с Sheets
+    photosToDelete.forEach(photo => {
+      gasPost({ action: 'delete', sheet: 'gallery', id: photo.id }).catch(() => {});
+    });
+    
+    showToast(`✅ Поездка удалена, удалено ${photosToDelete.length} фото`);
+  } else {
+    showToast('✅ Поездка удалена, фото сохранены');
+  }
+
+  // Синхронизация удаления поездки с Sheets
+  gasPost({ action: 'delete', sheet: 'purchases', id: purchaseId }).catch(() => {});
+
+  // Обновляем интерфейс
+  if (currentUser && currentUser.role === 'owner') {
+    loadAdminUsers(true);
+    loadAdminStats();
+  }
+  
+  // Обновляем модальное окно со списком поездок
+  openUserTripsModal(userId);
+  
+  deleteTripData = null;
+  closeModal('delete-trip-modal');
+}
+  
 // === ПОЛУЧЕНИЕ ПОЕЗДОК ПОЛЬЗОВАТЕЛЯ ===
 function getUserProgramIds(userId) {
   const userPurchases = purchases.filter(p => p.userId === userId);
