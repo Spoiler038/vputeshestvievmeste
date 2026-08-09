@@ -562,11 +562,11 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 }
 .modal-close:hover { background: var(--bg); color: var(--text); }
 
-/* Основной контейнер для скролла — внутри него будут отступы */
+/* Основной контейнер для скролла — ОТСТУПЫ СО ВСЕХ СТОРОН */
 .modal-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 28px 20px;
+  padding: 24px 28px 24px;  /* Увеличен отступ снизу */
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
@@ -591,12 +591,6 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   background: var(--text-muted);
 }
 
-/* Для Firefox */
-.modal-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-
 .modal-footer {
   padding: 16px 28px 20px;
   border-top: 1px solid var(--border);
@@ -608,6 +602,7 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   border-radius: 0 0 var(--radius) var(--radius);
 }
 
+/* Сетка для контента внутри модалки */
 .modal-grid { 
   display: grid; 
   grid-template-columns: 1fr 1fr; 
@@ -615,9 +610,28 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 }
 .modal-grid .form-group.full { grid-column: 1 / -1; }
 
+/* ===== СТИЛИ ДЛЯ КОНТЕНТА ВНУТРИ МОДАЛОК ===== */
+/* У всех модалок контент внутри .modal-scroll получает отступы */
+
+/* Модалка статистики участника */
+#user-stats-modal .modal-scroll,
+#revenue-detail-modal .modal-scroll,
+#lead-modal .modal-scroll,
+#group-modal .modal-scroll,
+#group-member-modal .modal-scroll,
+#create-user-modal .modal-scroll,
+#gallery-modal .modal-scroll,
+#user-edit-modal .modal-scroll,
+#user-trips-modal .modal-scroll,
+#delete-trip-modal .modal-scroll,
+#reset-password-modal .modal-scroll,
+#docs-modal .modal-scroll {
+  padding: 24px 28px 24px;
+}
+
 /* Стили для компактной модалки программы */
 #program-modal .modal-scroll {
-  padding: 16px 20px 16px;
+  padding: 16px 20px 20px;
 }
 #program-modal .modal-grid {
   display: grid;
@@ -653,19 +667,32 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
   font-size: 12px;
 }
 
-/* Специальные модалки с меньшими отступами */
-#lead-modal .modal-scroll,
-#create-user-modal .modal-scroll,
-#reset-password-modal .modal-scroll,
-#delete-trip-modal .modal-scroll {
-  padding: 20px 24px 16px;
-}
-
-/* Модалка подтверждения */
+/* Модалка подтверждения — центрированный контент */
 #confirm-overlay .modal-scroll {
-  padding: 20px 24px 16px;
+  padding: 20px 28px 24px;
   text-align: center;
 }
+#confirm-overlay .modal-scroll #confirm-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+#confirm-overlay .modal-scroll #confirm-title {
+  font-family: var(--font-family);
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+#confirm-overlay .modal-scroll #confirm-text {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+#confirm-overlay .modal-footer {
+  border-top: none;
+  padding-top: 0;
+}
+  
 
 /* Фото-загрузка */
 .photo-upload-area { 
@@ -1941,7 +1968,12 @@ input, textarea {
       <h2 class="modal-title">Статистика участника</h2>
       <button class="modal-close" onclick="closeModal('user-stats-modal')">✕</button>
     </div>
-    <div id="user-stats-content"></div>
+    <div class="modal-scroll">
+      <div id="user-stats-content"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('user-stats-modal')">Закрыть</button>
+    </div>
   </div>
 </div>
 
@@ -1952,7 +1984,12 @@ input, textarea {
       <h2 class="modal-title" id="revenue-modal-title">Детали выручки</h2>
       <button class="modal-close" onclick="closeModal('revenue-detail-modal')">✕</button>
     </div>
-    <div id="revenue-detail-content"></div>
+    <div class="modal-scroll">
+      <div id="revenue-detail-content"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('revenue-detail-modal')">Закрыть</button>
+    </div>
   </div>
 </div>
 
@@ -1963,9 +2000,15 @@ input, textarea {
       <h2 class="modal-title">Заявка</h2>
       <button class="modal-close" onclick="closeModal('lead-modal')">✕</button>
     </div>
-    <div id="lead-modal-content"></div>
+    <div class="modal-scroll">
+      <div id="lead-modal-content"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('lead-modal')">Закрыть</button>
+    </div>
   </div>
 </div>
+
 
 <!-- Модалка: Группа -->
 <div class="modal-overlay" id="group-modal">
