@@ -3658,6 +3658,15 @@ async function addPhoto() {
   }
 
   async function saveGalleryItem(photoUrl) {
+    let groupId = null;
+  if (programId && currentUser) {
+    const purchase = purchases.find(
+      p => p.userId === currentUser.id && p.programId === programId
+    );
+    if (purchase) {
+      groupId = purchase.groupId;
+    }
+  }
     const item = {
       id: gallery.length > 0 ? Math.max(...gallery.map(g => parseInt(g.id) || 0)) + 1 : 1,
       url: photoUrl,
@@ -3665,6 +3674,7 @@ async function addPhoto() {
       author: currentUser.name.split(' ')[0],
       userId: currentUser.id,
       programId: programId,
+      groupId: groupId,
       createdAt: new Date().toISOString().slice(0, 10)
     };
 
@@ -6732,11 +6742,35 @@ function addMemberToGroup() {
 }
 
 async function removeMember(groupId, memberIndex) {
-  const ok = await confirmDialog('Участник будет удалён из группы.', { icon: '👤', title: 'Удалить участника?', ok: 'Удалить', danger: true });
-  if (!ok) return;
-
   const g = groups.find(x => x.id === groupId);
   if (!g || !g.members) return;
+
+  const member = g.members[memberIndex];
+  if (!member) return;
+
+  // Проверяем, есть ли у участника userId и поездка в этой группе
+  const hasTraveled = member.userId && purchases.some(
+    p => p.userId === member.userId && p.groupId === groupId
+  );
+
+  // Проверяем, есть ли фото у этой поездки
+  const hasPhotos = member.userId && gallery.some(
+    img => img.userId === member.userId && img.groupId === groupId
+  );
+
+  // Если группа завершена и есть поездка — показываем расширенное подтверждение
+  if (g.status === 'завершена' && hasTraveled) {
+    // Открываем модальное окно подтверждения удаления участника из завершенной группы
+    openDeleteGroupMemberConfirm(groupId, memberIndex, member, hasPhotos);
+    return;
+  }
+
+  // Обычное подтверждение для незавершенной группы
+  const ok = await confirmDialog(
+    'Участник «' + member.name + '» будет удалён из группы.',
+    { icon: '👤', title: 'Удалить участника?', ok: 'Удалить', danger: true }
+  );
+  if (!ok) return;
 
   g.members.splice(memberIndex, 1);
   saveState('groups', groups);
@@ -6749,6 +6783,147 @@ async function removeMember(groupId, memberIndex) {
   loadAdminGroups();
   showToast('Участник удалён');
 }
+
+// === ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ УЧАСТНИКА ИЗ ЗАВЕРШЕННОЙ ГРУППЫ ===
+function openDeleteGroupMemberConfirm(groupId, memberIndex, member, hasPhotos) {
+  // Сохраняем данные для удаления
+  window._deleteGroupMemberData = { groupId, memberIndex, member };
+
+  // Находим программу группы
+  const g = groups.find(x => x.id === groupId);
+  const prog = programs.find(p => p.id === g.programId);
+  const programName = prog ? prog.name : 'Программа удалена';
+
+  // Форматируем дату
+  let formattedDate = g.endDate || g.startDate || '';
+  if (formattedDate && formattedDate.includes('-')) {
+    const parts = formattedDate.split('-');
+    formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+  }
+
+  const modalContent = document.getElementById('delete-trip-content');
+  modalContent.innerHTML = `
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:24px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#C0392B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+      </div>
+      <div style="font-weight:600;font-size:16px;">Удалить участника из завершенной поездки</div>
+    </div>
+    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;">
+        <span style="color:var(--text-muted);">Участник:</span>
+        <span style="font-weight:600;">${member.name}</span>
+        <span style="color:var(--text-muted);">Группа:</span>
+        <span>${g.name}</span>
+        <span style="color:var(--text-muted);">Программа:</span>
+        <span>${programName}</span>
+        <span style="color:var(--text-muted);">Дата:</span>
+        <span>${formattedDate}</span>
+        ${member.amount ? `<span style="color:var(--text-muted);">Сумма:</span><span style="font-weight:600;color:var(--accent2);">${Number(member.amount).toLocaleString('ru')} ₽</span>` : ''}
+        ${hasPhotos ? `<span style="color:var(--text-muted);">📸 Фото:</span><span style="color:var(--accent);">${gallery.filter(img => img.userId === member.userId && img.groupId === groupId).length} фото</span>` : ''}
+      </div>
+    </div>
+    <div style="background:var(--warning-bg, #FFF8E1);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;border-left:4px solid #F39C12;">
+      <div style="font-size:13px;color:var(--text-muted);">
+        ⚠️ <strong>Внимание!</strong> Эта поездка уже завершена. Удаление участника удалит поездку из его истории.
+      </div>
+    </div>
+    ${hasPhotos ? `
+    <div class="consent-checkbox-wrapper" style="margin-bottom:16px;">
+      <input type="checkbox" id="delete-photos-checkbox" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
+      <label for="delete-photos-checkbox" style="font-size:13px;cursor:pointer;color:var(--text);">
+        🗑️ Удалить также <strong>${gallery.filter(img => img.userId === member.userId && img.groupId === groupId).length}</strong> фото, загруженные к этой поездке
+      </label>
+    </div>` : ''}
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn btn-outline" onclick="closeModal('delete-trip-modal')">Отмена</button>
+      <button class="btn btn-danger" onclick="confirmDeleteGroupMember()" style="display:flex;align-items:center;gap:6px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+        Удалить
+      </button>
+    </div>
+  `;
+
+  document.getElementById('delete-trip-modal-title').textContent = '⚠️ Удаление участника';
+  openModal('delete-trip-modal');
+}
+
+  // === ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ УЧАСТНИКА ИЗ ЗАВЕРШЕННОЙ ГРУППЫ ===
+function confirmDeleteGroupMember() {
+  const data = window._deleteGroupMemberData;
+  if (!data) return;
+
+  const { groupId, memberIndex, member } = data;
+  const g = groups.find(x => x.id === groupId);
+  if (!g) return;
+
+  const deletePhotos = document.getElementById('delete-photos-checkbox')?.checked || false;
+
+  // Если у участника есть userId и поездка — удаляем из purchases
+  if (member.userId) {
+    // Находим запись о поездке в этой группе
+    const purchaseToDelete = purchases.find(
+      p => p.userId === member.userId && p.groupId === groupId
+    );
+    
+    if (purchaseToDelete) {
+      purchases = purchases.filter(p => p.id !== purchaseToDelete.id);
+      saveState('purchases', purchases);
+      
+      // Синхронизация удаления поездки с Sheets
+      gasPost({ action: 'delete', sheet: 'purchases', id: purchaseToDelete.id }).catch(() => {});
+    }
+  }
+
+  // Если нужно удалить фото
+  if (deletePhotos && member.userId) {
+    const photosToDelete = gallery.filter(
+      img => img.userId === member.userId && img.groupId === groupId
+    );
+    gallery = gallery.filter(
+      img => !(img.userId === member.userId && img.groupId === groupId)
+    );
+    saveState('gallery', gallery);
+    
+    // Синхронизация удаления фото с Sheets
+    photosToDelete.forEach(photo => {
+      gasPost({ action: 'delete', sheet: 'gallery', id: photo.id }).catch(() => {});
+    });
+    
+    showToast(`✅ Участник удален, удалено ${photosToDelete.length} фото`);
+  } else {
+    showToast('✅ Участник удален, фото сохранены');
+  }
+
+  // Удаляем участника из группы
+  g.members.splice(memberIndex, 1);
+  saveState('groups', groups);
+
+  gasPost({
+    action: 'upsert', sheet: 'groups',
+    data: { ...g, members: JSON.stringify(g.members) }
+  }).catch(e => console.warn('Remove member sync:', e));
+
+  // Обновляем интерфейс
+  loadAdminGroups();
+  if (currentUser && currentUser.role === 'owner') {
+    loadAdminStats();
+  }
+
+  window._deleteGroupMemberData = null;
+  closeModal('delete-trip-modal');
+}
+  
   // === СМЕНА СТАТУСА ГРУППЫ ===
 async function cycleGroupStatus(groupId) {
   const g = groups.find(x => x.id === groupId);
@@ -7547,6 +7722,7 @@ function confirmDialog(text, opts) {
     _confirmResolve = resolve;
   });
 }
+  
 function confirmResolve(val) {
   document.getElementById('confirm-overlay').classList.remove('open');
   if (_confirmResolve) {
