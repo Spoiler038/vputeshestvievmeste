@@ -5600,7 +5600,7 @@ function syncAllDataFromSheets(silent = false) {
           loadAdmin();
         }
         
-        if (!silent) showToast('✅ Данные синхронизированы');
+        if (!silent) showToast('✅ Данные актуальны');
       } else if (result && result.timeout) {
         if (!silent) showToast('⏱️ Таймаут, данные из кэша');
       }
