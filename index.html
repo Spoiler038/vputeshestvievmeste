@@ -4987,6 +4987,9 @@ function switchAdmin(section) {
 }
 
 function loadAdmin() {
+  // Принудительно загружаем purchases
+  purchases = loadState('purchases', purchases);
+  
   const isOwner = currentUser && currentUser.role === 'owner';
 
   const dashboardNavItem = document.querySelector('.admin-nav-item[onclick*="dashboard"]');
@@ -5005,6 +5008,17 @@ function loadAdmin() {
       loadRevenueChart();
     }
   }
+
+  loadAdminPrograms();
+  loadAdminUsers(isOwner);
+  loadAdminLeads();
+  loadAdminGroups();
+
+  const activeSection = document.querySelector('.admin-section.active');
+  if (!isOwner && activeSection && activeSection.id === 'admin-dashboard') {
+    switchAdmin('programs');
+  }
+}
 
   loadAdminPrograms();
   loadAdminUsers(isOwner);
@@ -5183,13 +5197,17 @@ function renderUsersTable(isOwner) {
   const tbody = document.getElementById('users-tbody');
   if (!tbody) return;
   
+  // Убеждаемся, что purchases загружены
+  purchases = loadState('purchases', purchases);
+  
   if (users.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">👥 Нет участников. Добавьте первого!</td></tr>`;
     return;
   }
   
   tbody.innerHTML = users.map(u => {
-    const count = purchases.filter(p => p.userId === u.id).length;
+    // Подсчет туров с проверкой
+    const count = purchases ? purchases.filter(p => p.userId === u.id).length : 0;
     return `<tr style="cursor:pointer;" onclick="openUserEditModal(${u.id})" title="Нажмите для просмотра и редактирования">
       <td style="vertical-align:middle;white-space:nowrap;"><strong>${u.name}</strong></td>
       <td style="vertical-align:middle;color:var(--text-muted);word-break:break-all;max-width:160px;">${u.username}</td>
@@ -5721,87 +5739,89 @@ function openUserEditModal(userId) {
 
   document.getElementById('user-edit-modal-title').textContent = u.name;
   document.getElementById('user-edit-content').innerHTML = `
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-      <div class="user-avatar" style="width:52px;height:52px;font-size:22px;flex-shrink:0;">
-        ${u.avatar ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;">` : u.name[0]}
-      </div>
-      <div>
-        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;">Участник с ${formattedDate}</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <span class="tag ${u.role === 'owner' ? 'tag-orange' : u.role === 'admin' ? 'tag-orange' : 'tag-green'}">${u.role === 'owner' ? 'Владелец' : u.role === 'admin' ? 'Админ' : 'Участник'}</span>
-          <span style="font-size:12px;color:var(--text-muted);">@${u.username}</span>
+    <div style="padding:4px 0;"> <!-- ДОБАВЛЕН ВНЕШНИЙ КОНТЕЙНЕР С ОТСТУПАМИ -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+        <div class="user-avatar" style="width:52px;height:52px;font-size:22px;flex-shrink:0;">
+          ${u.avatar ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;">` : u.name[0]}
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;">Участник с ${formattedDate}</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span class="tag ${u.role === 'owner' ? 'tag-orange' : u.role === 'admin' ? 'tag-orange' : 'tag-green'}">${u.role === 'owner' ? 'Владелец' : u.role === 'admin' ? 'Админ' : 'Участник'}</span>
+            <span style="font-size:12px;color:var(--text-muted);">@${u.username}</span>
+          </div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-direction:column;text-align:center;min-width:80px;">
+          <div style="font-size:28px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${userPurchases.length}</div>
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">путешествий</div>
         </div>
       </div>
-      <div style="margin-left:auto;display:flex;gap:8px;flex-direction:column;text-align:center;min-width:80px;">
-        <div style="font-size:28px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${userPurchases.length}</div>
-        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">путешествий</div>
+      <div class="modal-grid" style="margin-bottom:18px;">
+        <div class="form-group">
+          <label>Имя</label>
+          <input type="text" class="form-input" id="ue-name" value="${u.name}">
+        </div>
+        <div class="form-group">
+          <label>Логин</label>
+          <input type="text" class="form-input" id="ue-username" value="${u.username}" ${u.role === 'owner' ? 'readonly' : ''}>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" class="form-input" id="ue-email" value="${u.email}">
+        </div>
+        <div class="form-group">
+          <label>Телефон</label>
+          <input type="text" class="form-input" id="ue-phone" value="${u.phone || ''}">
+        </div>
+        <div class="form-group">
+          <label>Скидка (%)</label>
+          <input type="number" class="form-input" id="ue-discount" value="${u.discount || 0}" min="0" max="100">
+        </div>
+        ${isOwner ? `
+        <div class="form-group">
+          <label>Роль</label>
+          <select class="filter-select" id="ue-role">
+            <option value="owner" ${u.role === 'owner' ? 'selected' : ''}>Владелец</option>
+            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Админ</option>
+            <option value="user" ${u.role === 'user' ? 'selected' : ''}>Участник</option>
+          </select>
+        </div>` : '<div></div>'}
+        <div class="form-group full">
+          <label>О себе</label>
+          <textarea class="form-textarea" id="ue-bio" style="min-height:70px;">${u.bio || ''}</textarea>
+        </div>
       </div>
-    </div>
-    <div class="modal-grid" style="margin-bottom:18px;">
-      <div class="form-group">
-        <label>Имя</label>
-        <input type="text" class="form-input" id="ue-name" value="${u.name}">
+      ${userPurchases.length > 0 ? `
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;margin-bottom:18px;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">История путешествий · итого ${(total / 1000).toFixed(0)}к ₽</div>
+        ${userPurchases.map(pu => {
+          const prog = programs.find(p => p.id === pu.programId);
+          return `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;">
+            <div><span style="font-weight:600;">${prog ? prog.name : '—'}</span><span style="color:var(--text-muted);font-size:11px;margin-left:8px;">${pu.date}</span></div>
+            <span style="font-weight:600;color:var(--accent2);">${pu.price.toLocaleString('ru')} ₽</span>
+          </div>`;
+        }).join('')}
+      </div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:12px 28px;font-size:14px;display:inline-flex;align-items:center;gap:6px;" onclick="deleteUser(${u.id})">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            <line x1="10" y1="11" x2="10" y2="17"/>
+            <line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+          Удалить
+        </button>` : '<div></div>'}
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-outline" onclick="closeModal('user-edit-modal')">Отмена</button>
+          <button class="btn btn-primary" onclick="saveUserEdit(${u.id})">Сохранить</button>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Логин</label>
-        <input type="text" class="form-input" id="ue-username" value="${u.username}" ${u.role === 'owner' ? 'readonly' : ''}>
-      </div>
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" class="form-input" id="ue-email" value="${u.email}">
-      </div>
-      <div class="form-group">
-        <label>Телефон</label>
-        <input type="text" class="form-input" id="ue-phone" value="${u.phone || ''}">
-      </div>
-      <div class="form-group">
-        <label>Скидка (%)</label>
-        <input type="number" class="form-input" id="ue-discount" value="${u.discount || 0}" min="0" max="100">
-      </div>
-      ${isOwner ? `
-      <div class="form-group">
-        <label>Роль</label>
-        <select class="filter-select" id="ue-role">
-          <option value="owner" ${u.role === 'owner' ? 'selected' : ''}>Владелец</option>
-          <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Админ</option>
-          <option value="user" ${u.role === 'user' ? 'selected' : ''}>Участник</option>
-        </select>
-      </div>` : '<div></div>'}
-      <div class="form-group full">
-        <label>О себе</label>
-        <textarea class="form-textarea" id="ue-bio" style="min-height:70px;">${u.bio || ''}</textarea>
-      </div>
-    </div>
-    ${userPurchases.length > 0 ? `
-    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;margin-bottom:18px;">
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">История путешествий · итого ${(total / 1000).toFixed(0)}к ₽</div>
-      ${userPurchases.map(pu => {
-        const prog = programs.find(p => p.id === pu.programId);
-        return `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;">
-          <div><span style="font-weight:600;">${prog ? prog.name : '—'}</span><span style="color:var(--text-muted);font-size:11px;margin-left:8px;">${pu.date}</span></div>
-          <span style="font-weight:600;color:var(--accent2);">${pu.price.toLocaleString('ru')} ₽</span>
-        </div>`;
-      }).join('')}
-    </div>` : ''}
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-      ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:12px 28px;font-size:14px;display:inline-flex;align-items:center;gap:6px;" onclick="deleteUser(${u.id})">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18"/>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <line x1="10" y1="11" x2="10" y2="17"/>
-          <line x1="14" y1="11" x2="14" y2="17"/>
-        </svg>
-        Удалить
-      </button>` : '<div></div>'}
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-outline" onclick="closeModal('user-edit-modal')">Отмена</button>
-        <button class="btn btn-primary" onclick="saveUserEdit(${u.id})">Сохранить</button>
-      </div>
-    </div>
+    </div> <!-- КОНЕЦ ВНЕШНЕГО КОНТЕЙНЕРА -->
   `;
   openModal('user-edit-modal');
 }
-
+  
 async function saveUserEdit(userId) {
   const u = users.find(x => x.id === userId);
   if (!u) return;
@@ -6393,7 +6413,7 @@ function loadAdminGroups() {
             <span class="tag ${statusColor}" onclick="cycleGroupStatus(${g.id})" style="cursor:pointer;user-select:none;" title="Нажмите для смены статуса">${g.status} ✎</span>
           </div>
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">🗺 ${prog ? prog.name : (g.programName || '—')}</div>
-          ${g.startDate ? `<div style="font-size:13px;color:var(--text-muted);">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
+          ${g.startDate ? `<div style="font-size:13px;color:var(--text-muted);padding:4px 0;">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
         </div>
         <div style="text-align:center;min-width:100px;">
           <div style="font-size:28px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${filled}/${max}</div>
@@ -6906,55 +6926,57 @@ function openDeleteGroupMemberConfirm(groupId, memberIndex, member, hasPhotos) {
 
   const modalContent = document.getElementById('delete-trip-content');
   modalContent.innerHTML = `
-    <div style="text-align:center;margin-bottom:16px;">
-      <div style="font-size:24px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;">
-        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#C0392B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18"/>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <line x1="10" y1="11" x2="10" y2="17"/>
-          <line x1="14" y1="11" x2="14" y2="17"/>
-        </svg>
+    <div style="padding:4px 0;"> <!-- ДОБАВЛЕН ВНЕШНИЙ КОНТЕЙНЕР С ОТСТУПАМИ -->
+      <div style="text-align:center;margin-bottom:16px;">
+        <div style="font-size:24px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#C0392B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            <line x1="10" y1="11" x2="10" y2="17"/>
+            <line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+        </div>
+        <div style="font-weight:600;font-size:16px;">Удалить участника из завершенной поездки</div>
       </div>
-      <div style="font-weight:600;font-size:16px;">Удалить участника из завершенной поездки</div>
-    </div>
-    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;">
-      <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;">
-        <span style="color:var(--text-muted);">Участник:</span>
-        <span style="font-weight:600;">${member.name}</span>
-        <span style="color:var(--text-muted);">Группа:</span>
-        <span>${g.name}</span>
-        <span style="color:var(--text-muted);">Программа:</span>
-        <span>${programName}</span>
-        <span style="color:var(--text-muted);">Дата:</span>
-        <span>${formattedDate}</span>
-        ${member.amount ? `<span style="color:var(--text-muted);">Сумма:</span><span style="font-weight:600;color:var(--accent2);">${Number(member.amount).toLocaleString('ru')} ₽</span>` : ''}
-        ${hasPhotos ? `<span style="color:var(--text-muted);">📸 Фото:</span><span style="color:var(--accent);">${gallery.filter(img => img.userId === member.userId && img.groupId === groupId).length} фото</span>` : ''}
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;">
+          <span style="color:var(--text-muted);">Участник:</span>
+          <span style="font-weight:600;">${member.name}</span>
+          <span style="color:var(--text-muted);">Группа:</span>
+          <span>${g.name}</span>
+          <span style="color:var(--text-muted);">Программа:</span>
+          <span>${programName}</span>
+          <span style="color:var(--text-muted);">Дата:</span>
+          <span>${formattedDate}</span>
+          ${member.amount ? `<span style="color:var(--text-muted);">Сумма:</span><span style="font-weight:600;color:var(--accent2);">${Number(member.amount).toLocaleString('ru')} ₽</span>` : ''}
+          ${hasPhotos ? `<span style="color:var(--text-muted);">📸 Фото:</span><span style="color:var(--accent);">${gallery.filter(img => img.userId === member.userId && img.groupId === groupId).length} фото</span>` : ''}
+        </div>
       </div>
-    </div>
-    <div style="background:var(--warning-bg, #FFF8E1);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;border-left:4px solid #F39C12;">
-      <div style="font-size:13px;color:var(--text-muted);">
-        ⚠️ <strong>Внимание!</strong> Эта поездка уже завершена. Удаление участника удалит поездку из его истории.
+      <div style="background:var(--warning-bg, #FFF8E1);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;border-left:4px solid #F39C12;">
+        <div style="font-size:13px;color:var(--text-muted);">
+          ⚠️ <strong>Внимание!</strong> Эта поездка уже завершена. Удаление участника удалит поездку из его истории.
+        </div>
       </div>
-    </div>
-    ${hasPhotos ? `
-    <div class="consent-checkbox-wrapper" style="margin-bottom:16px;">
-      <input type="checkbox" id="delete-photos-checkbox" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
-      <label for="delete-photos-checkbox" style="font-size:13px;cursor:pointer;color:var(--text);">
-        🗑️ Удалить также <strong>${gallery.filter(img => img.userId === member.userId && img.groupId === groupId).length}</strong> фото, загруженные к этой поездке
-      </label>
-    </div>` : ''}
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
-      <button class="btn btn-outline" onclick="closeModal('delete-trip-modal')">Отмена</button>
-      <button class="btn btn-danger" onclick="confirmDeleteGroupMember()" style="display:flex;align-items:center;gap:6px;">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18"/>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <line x1="10" y1="11" x2="10" y2="17"/>
-          <line x1="14" y1="11" x2="14" y2="17"/>
-        </svg>
-        Удалить
-      </button>
-    </div>
+      ${hasPhotos ? `
+      <div class="consent-checkbox-wrapper" style="margin-bottom:16px;">
+        <input type="checkbox" id="delete-photos-checkbox" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
+        <label for="delete-photos-checkbox" style="font-size:13px;cursor:pointer;color:var(--text);">
+          🗑️ Удалить также <strong>${gallery.filter(img => img.userId === member.userId && img.groupId === groupId).length}</strong> фото, загруженные к этой поездке
+        </label>
+      </div>` : ''}
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-outline" onclick="closeModal('delete-trip-modal')">Отмена</button>
+        <button class="btn btn-danger" onclick="confirmDeleteGroupMember()" style="display:flex;align-items:center;gap:6px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            <line x1="10" y1="11" x2="10" y2="17"/>
+            <line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+          Удалить
+        </button>
+      </div>
+    </div> <!-- КОНЕЦ ВНЕШНЕГО КОНТЕЙНЕРА -->
   `;
 
   document.getElementById('delete-trip-modal-title').textContent = '⚠️ Удаление участника';
