@@ -2532,6 +2532,181 @@ const ALL_TRANSPORTS = [
 ];
 let enabledTransports = loadState('enabledTransports', ['поезд', 'самолёт', 'авто', 'корабль']);
 
+function smoothScroll(id) {
+  // Если мы не на главной странице — переключаемся на неё
+  if (currentPage !== 'home') {
+    showPage('home');
+    setTimeout(() => smoothScroll(id), 350);
+    return;
+  }
+  const el = document.getElementById(id);
+  if (el) {
+    const navHeight = document.getElementById('navbar')?.getBoundingClientRect().height || 70;
+    const y = el.getBoundingClientRect().top + window.pageYOffset - navHeight - 10;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  }
+}
+
+function showPage(page) {
+  // Скрываем все страницы
+  document.getElementById('page-home').style.display = 'none';
+  const detail = document.getElementById('page-detail');
+  if (detail) { detail.classList.remove('active'); detail.style.display = 'none'; }
+  const dashboard = document.getElementById('page-dashboard');
+  if (dashboard) { dashboard.classList.add('hidden'); dashboard.style.display = 'none'; }
+  const admin = document.getElementById('page-admin');
+  if (admin) { admin.classList.add('hidden'); admin.style.display = 'none'; }
+  
+  currentPage = page;
+  
+  // Показываем нужную
+  if (page === 'home') {
+    document.getElementById('page-home').style.display = '';
+  } else if (page === 'detail') {
+    const d = document.getElementById('page-detail');
+    if (d) { d.classList.add('active'); d.style.display = ''; }
+  } else if (page === 'dashboard') {
+    if (!currentUser) { openAuth(); return; }
+    const d = document.getElementById('page-dashboard');
+    if (d) { d.classList.remove('hidden'); d.style.display = ''; }
+    loadDashboard();
+  } else if (page === 'admin') {
+    if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) {
+      showToast('Доступ запрещён');
+      return;
+    }
+    const a = document.getElementById('page-admin');
+    if (a) { a.classList.remove('hidden'); a.style.display = ''; }
+    loadAdmin();
+  }
+  window.scrollTo(0, 0);
+}
+
+// === Свайп по карусели «Избранные» (touch) ===
+function initCarouselSwipe() {
+  const outer = document.querySelector('.carousel-track-outer');
+  if (!outer) return;
+  let startX = 0, startY = 0, dragging = false;
+  
+  outer.addEventListener('touchstart', e => {
+    if (!e.touches || e.touches.length !== 1) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    dragging = true;
+  }, { passive: true });
+  
+  outer.addEventListener('touchend', e => {
+    if (!dragging) return;
+    dragging = false;
+    const endX = (e.changedTouches && e.changedTouches[0].clientX) || startX;
+    const endY = (e.changedTouches && e.changedTouches[0].clientY) || startY;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) carouselNext(); 
+      else carouselPrev();
+    }
+  }, { passive: true });
+})();
+
+// ============================================================
+// === КАК МЫ ПУТЕШЕСТВУЕМ =====================================
+// ============================================================
+
+function renderHowCards() {
+  const cards = ALL_TRANSPORTS.filter(t => enabledTransports.includes(t.val));
+  const grid = document.getElementById('how-cards-grid');
+  grid.className = grid.className.replace(/\bcount-\S+/g, '').trim();
+  const n = cards.length;
+  grid.classList.add(n <= 6 ? 'count-' + n : 'count-many');
+
+  grid.innerHTML = cards.length === 0
+    ? '<p style="color:var(--text-muted);text-align:center;grid-column:1/-1;">Нет активных видов транспорта.</p>'
+    : cards.map(t => {
+        const imgSrc = t.photo || t.icon || null;
+        return `<div class="how-card" onclick="navigateToTransportFilter('${t.val}')" style="cursor:pointer;">
+          <div class="how-photo">
+            ${imgSrc
+              ? `<img src="${imgSrc}" alt="${t.label}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                 <span style="display:none;font-size:40px;align-items:center;justify-content:center;">${t.emoji}</span>`
+              : `<span style="display:flex;font-size:40px;align-items:center;justify-content:center;">${t.emoji}</span>`}
+          </div>
+          <h3>${t.label}</h3>
+          <p>${t.desc || ''}</p>
+        </div>`;
+      }).join('');
+}
+
+function navigateToTransportFilter(transportVal) {
+  smoothScroll('programs');
+  const select = document.getElementById('f-transport');
+  if (select) {
+    setTimeout(() => {
+      select.value = transportVal;
+      applyFilters();
+      select.style.borderColor = 'var(--accent)';
+      select.style.background = 'var(--accent-light)';
+      setTimeout(() => {
+        select.style.borderColor = '';
+        select.style.background = '';
+      }, 1500);
+    }, 600);
+  }
+}
+
+// ============================================================
+// === ФИЛЬТР ==================================================
+// ============================================================
+
+function toggleTag(btn) {
+  const tag = btn.dataset.tag;
+  btn.classList.toggle('active');
+  if (btn.classList.contains('active')) {
+    activeTags.push(tag);
+  } else {
+    activeTags = activeTags.filter(t => t !== tag);
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  const season = document.getElementById('f-season').value;
+  const transport = document.getElementById('f-transport').value;
+  const duration = document.getElementById('f-duration').value;
+  const people = document.getElementById('f-people').value;
+  const maxPrice = parseInt(document.getElementById('f-price').value) || Infinity;
+
+  const filtered = programs.filter(p => {
+    if (season && p.season !== season) return false;
+    if (transport && p.transport !== transport) return false;
+    if (duration) {
+      const parts = duration.split('-').map(Number);
+      if (p.days < parts[0] || p.days > (parts[1] || 99)) return false;
+    }
+    if (people) {
+      if (people === '1' && p.maxPeople > 1) return false;
+      if (people === '2' && p.maxPeople > 2) return false;
+      if (people === '3-4' && p.maxPeople < 3) return false;
+      if (people === '5+' && p.maxPeople < 5) return false;
+    }
+    if (p.price > maxPrice) return false;
+    if (activeTags.length > 0 && !activeTags.some(t => (p.tags || []).includes(t))) return false;
+    return true;
+  });
+
+  renderPrograms(filtered);
+}
+
+function resetFilters() {
+  ['f-season', 'f-transport', 'f-duration', 'f-people'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-price').value = '';
+  activeTags = [];
+  document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+  renderPrograms(programs);
+}  
+
+  
+  
 // ============================================================
 // === СОСТОЯНИЕ ПРИЛОЖЕНИЯ ====================================
 // ============================================================
@@ -3919,56 +4094,7 @@ function carouselPrev() {
     updateCarousel();
   }
 }
-// ============================================================
-// === ФИЛЬТР ==================================================
-// ============================================================
 
-function toggleTag(btn) {
-  const tag = btn.dataset.tag;
-  btn.classList.toggle('active');
-  if (btn.classList.contains('active')) {
-    activeTags.push(tag);
-  } else {
-    activeTags = activeTags.filter(t => t !== tag);
-  }
-  applyFilters();
-}
-
-function applyFilters() {
-  const season = document.getElementById('f-season').value;
-  const transport = document.getElementById('f-transport').value;
-  const duration = document.getElementById('f-duration').value;
-  const people = document.getElementById('f-people').value;
-  const maxPrice = parseInt(document.getElementById('f-price').value) || Infinity;
-
-  const filtered = programs.filter(p => {
-    if (season && p.season !== season) return false;
-    if (transport && p.transport !== transport) return false;
-    if (duration) {
-      const parts = duration.split('-').map(Number);
-      if (p.days < parts[0] || p.days > (parts[1] || 99)) return false;
-    }
-    if (people) {
-      if (people === '1' && p.maxPeople > 1) return false;
-      if (people === '2' && p.maxPeople > 2) return false;
-      if (people === '3-4' && p.maxPeople < 3) return false;
-      if (people === '5+' && p.maxPeople < 5) return false;
-    }
-    if (p.price > maxPrice) return false;
-    if (activeTags.length > 0 && !activeTags.some(t => (p.tags || []).includes(t))) return false;
-    return true;
-  });
-
-  renderPrograms(filtered);
-}
-
-function resetFilters() {
-  ['f-season', 'f-transport', 'f-duration', 'f-people'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('f-price').value = '';
-  activeTags = [];
-  document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
-  renderPrograms(programs);
-}
 
 // ============================================================
 // === ГАЛЕРЕЯ =================================================
@@ -4033,50 +4159,7 @@ function showAllGallery() {
   openModal('gallery-modal');
 }
 
-// ============================================================
-// === КАК МЫ ПУТЕШЕСТВУЕМ =====================================
-// ============================================================
 
-function renderHowCards() {
-  const cards = ALL_TRANSPORTS.filter(t => enabledTransports.includes(t.val));
-  const grid = document.getElementById('how-cards-grid');
-  grid.className = grid.className.replace(/\bcount-\S+/g, '').trim();
-  const n = cards.length;
-  grid.classList.add(n <= 6 ? 'count-' + n : 'count-many');
-
-  grid.innerHTML = cards.length === 0
-    ? '<p style="color:var(--text-muted);text-align:center;grid-column:1/-1;">Нет активных видов транспорта.</p>'
-    : cards.map(t => {
-        const imgSrc = t.photo || t.icon || null;
-        return `<div class="how-card" onclick="navigateToTransportFilter('${t.val}')" style="cursor:pointer;">
-          <div class="how-photo">
-            ${imgSrc
-              ? `<img src="${imgSrc}" alt="${t.label}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                 <span style="display:none;font-size:40px;align-items:center;justify-content:center;">${t.emoji}</span>`
-              : `<span style="display:flex;font-size:40px;align-items:center;justify-content:center;">${t.emoji}</span>`}
-          </div>
-          <h3>${t.label}</h3>
-          <p>${t.desc || ''}</p>
-        </div>`;
-      }).join('');
-}
-
-function navigateToTransportFilter(transportVal) {
-  smoothScroll('programs');
-  const select = document.getElementById('f-transport');
-  if (select) {
-    setTimeout(() => {
-      select.value = transportVal;
-      applyFilters();
-      select.style.borderColor = 'var(--accent)';
-      select.style.background = 'var(--accent-light)';
-      setTimeout(() => {
-        select.style.borderColor = '';
-        select.style.background = '';
-      }, 1500);
-    }, 600);
-  }
-}
 // ============================================================
 // === БЛОК ОСНОВАТЕЛЯ =========================================
 // ============================================================
