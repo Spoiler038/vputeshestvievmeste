@@ -5019,18 +5019,7 @@ function loadAdmin() {
     switchAdmin('programs');
   }
 }
-
-  loadAdminPrograms();
-  loadAdminUsers(isOwner);
-  loadAdminLeads();
-  loadAdminGroups();
-
-  const activeSection = document.querySelector('.admin-section.active');
-  if (!isOwner && activeSection && activeSection.id === 'admin-dashboard') {
-    switchAdmin('programs');
-  }
-}
-
+  
 // === ДАШБОРД ===
 function loadAdminStats() {
   const totalRevenue = purchases.reduce((s, p) => s + p.price, 0);
