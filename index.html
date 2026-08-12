@@ -7382,17 +7382,15 @@ function gasGet(params) {
     const cbId = '_gc' + Date.now() + Math.random().toString(36).slice(2, 8);
     let isResolved = false;
     
-    // Таймаут увеличен до 45 секунд
     const timer = setTimeout(() => {
       if (!isResolved) {
         isResolved = true;
         try { delete window[cbId]; } catch(e) {}
         const s = document.getElementById('_gs_' + cbId);
         if (s && s.parentNode) s.parentNode.removeChild(s);
-        // Не reject, а resolve с пометкой timeout
         resolve({ ok: false, timeout: true, error: 'Таймаут загрузки данных' });
       }
-    }, 45000);
+    }, 15000);
 
     window[cbId] = function(data) {
       if (isResolved) return;
@@ -7408,13 +7406,14 @@ function gasGet(params) {
     const script = document.createElement('script');
     script.id = '_gs_' + cbId;
     script.src = GAS_URL + '?' + qs.toString();
-    script.onerror = () => {
+    script.onerror = function() {
       if (isResolved) return;
       isResolved = true;
       clearTimeout(timer);
       try { delete window[cbId]; } catch(e) {}
       if (script.parentNode) script.parentNode.removeChild(script);
-      resolve({ ok: false, error: 'Ошибка загрузки скрипта' });
+      // Возвращаем успех с локальными данными вместо ошибки
+      resolve({ ok: false, error: 'Ошибка загрузки, используем локальные данные' });
     };
     document.head.appendChild(script);
   });
