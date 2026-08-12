@@ -5009,6 +5009,7 @@ function loadAdmin() {
     }
   }
 
+  // Загружаем все разделы сразу (данные уже должны быть в кеше)
   loadAdminPrograms();
   loadAdminUsers(isOwner);
   loadAdminLeads();
@@ -5018,6 +5019,9 @@ function loadAdmin() {
   if (!isOwner && activeSection && activeSection.id === 'admin-dashboard') {
     switchAdmin('programs');
   }
+  
+  // Фоновая проверка обновлений (не блокирует интерфейс)
+  checkDataVersionInBackground();
 }
   
 // === ДАШБОРД ===
@@ -5125,14 +5129,20 @@ function loadAdminUsers(isOwner) {
     return;
   }
   
-  if (GAS_URL && !GAS_URL.includes('ВСТАВЬТЕ')) {
-    showToast('🔄 Обновление данных...');
-    
+  // Используем try/catch для безопасного вызова
+  try {
     const localVersion = localStorage.getItem('vputi_data_version') || '0';
     
     gasGet({ action: 'checkVersion', version: localVersion })
       .then(versionResult => {
-        if (versionResult && versionResult.ok && versionResult.needsUpdate) {
+        // Проверяем, что результат получен и не является ошибкой
+        if (!versionResult || !versionResult.ok) {
+          console.log('Version check failed, using local data');
+          renderUsersTable(isOwner);
+          return;
+        }
+        
+        if (versionResult.needsUpdate) {
           showToast('🔄 Загрузка участников...');
           return gasGet({ action: 'getFullData' });
         }
@@ -5170,7 +5180,10 @@ function loadAdminUsers(isOwner) {
         } else if (fullResult && fullResult.timeout) {
           showToast('⏱️ Таймаут, данные из кэша');
         } else {
-          showToast('✅ Данные актуальны');
+          // Если fullResult === null (не было обновления) - просто показываем локальные данные
+          if (!fullResult) {
+            console.log('No update needed, using local data');
+          }
         }
         renderUsersTable(isOwner);
       })
@@ -5179,6 +5192,9 @@ function loadAdminUsers(isOwner) {
         showToast('📌 Офлайн-режим (локальные данные)');
         renderUsersTable(isOwner);
       });
+  } catch(e) {
+    console.warn('Load users error:', e);
+    renderUsersTable(isOwner);
   }
 }
 
@@ -7388,43 +7404,54 @@ function gasPost(body) {
 }
 
 // GET через JSONP (для чтения данных) с улучшенной обработкой таймаута
+// GET через JSONP (для чтения данных) с улучшенной обработкой
 function gasGet(params) {
-  return new Promise((resolve, reject) => {
-    const cbId = '_gc' + Date.now() + Math.random().toString(36).slice(2, 8);
+  return new Promise((resolve) => {  // ← используем resolve вместо reject
+    const cbId = '_gc' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     let isResolved = false;
+    let script = null;
+    let timeoutId = null;
     
-    const timer = setTimeout(() => {
-      if (!isResolved) {
-        isResolved = true;
-        try { delete window[cbId]; } catch(e) {}
-        const s = document.getElementById('_gs_' + cbId);
-        if (s && s.parentNode) s.parentNode.removeChild(s);
-        resolve({ ok: false, timeout: true, error: 'Таймаут загрузки данных' });
+    // Очистка ресурсов
+    function cleanup() {
+      if (script && script.parentNode) {
+        script.parentNode.removeChild(script);
       }
+      try { delete window[cbId]; } catch(e) {}
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+    
+    // Таймаут
+    timeoutId = setTimeout(() => {
+      if (isResolved) return;
+      isResolved = true;
+      cleanup();
+      resolve({ ok: false, timeout: true, error: 'Таймаут загрузки данных' });
     }, 15000);
 
+    // Callback
     window[cbId] = function(data) {
       if (isResolved) return;
       isResolved = true;
-      clearTimeout(timer);
-      try { delete window[cbId]; } catch(e) {}
-      const s = document.getElementById('_gs_' + cbId);
-      if (s && s.parentNode) s.parentNode.removeChild(s);
+      cleanup();
       resolve(data);
     };
 
-    const qs = new URLSearchParams({ ...params, callback: cbId, _t: Date.now() });
-    const script = document.createElement('script');
+    // Создаем скрипт
+    const qs = new URLSearchParams({ 
+      ...params, 
+      callback: cbId, 
+      _t: Date.now() 
+    });
+    
+    script = document.createElement('script');
     script.id = '_gs_' + cbId;
     script.src = GAS_URL + '?' + qs.toString();
     script.onerror = function() {
       if (isResolved) return;
       isResolved = true;
-      clearTimeout(timer);
-      try { delete window[cbId]; } catch(e) {}
-      if (script.parentNode) script.parentNode.removeChild(script);
-      // Возвращаем успех с локальными данными вместо ошибки
-      resolve({ ok: false, error: 'Ошибка загрузки, используем локальные данные' });
+      cleanup();
+      resolve({ ok: false, error: 'Ошибка загрузки скрипта' });
     };
     document.head.appendChild(script);
   });
@@ -7482,7 +7509,27 @@ async function initSheetsSync() {
   sheetsInitialized = true;
   await loadAllFromSheets();
 }
-
+// Фоновая проверка обновлений данных
+async function checkDataVersionInBackground() {
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
+  
+  const localVersion = localStorage.getItem('vputi_data_version') || '0';
+  
+  try {
+    const result = await gasGet({ action: 'checkVersion', version: localVersion });
+    
+    if (result && result.ok && result.needsUpdate) {
+      console.log('🔄 Обнаружено обновление данных, загружаю...');
+      // Загружаем все данные в фоне
+      await loadAllFromSheets();
+    } else {
+      console.log('✅ Данные актуальны (версия: ' + localVersion + ')');
+    }
+  } catch(e) {
+    console.warn('Background version check error:', e);
+  }
+}
+  
 // Загрузка всех данных из Google Sheets
 async function loadAllFromSheets() {
   if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) {
@@ -7495,8 +7542,15 @@ async function loadAllFromSheets() {
   try {
     const result = await gasGet({ action: 'readAll' });
 
-    // Проверяем результат, даже если ошибка — продолжаем с локальными данными
-    if (!result || !result.ok) {
+    // Проверяем, что результат получен
+    if (!result) {
+      console.warn('Sheets returned no result, using local data');
+      showToast('Офлайн-режим (данные из кэша)');
+      return;
+    }
+
+    // Проверяем на таймаут или ошибку
+    if (!result.ok) {
       console.warn('Sheets read error, using local data');
       showToast('Офлайн-режим (данные из кэша)');
       return;
@@ -7509,6 +7563,29 @@ async function loadAllFromSheets() {
       programs = d.programs.map(normalizeProgram);
       saveState('programs', programs);
       console.log('Загружено ' + programs.length + ' программ');
+    }
+
+    // Загружаем пользователей (сохраняем владельца)
+    if (d.users && Array.isArray(d.users) && d.users.length > 0) {
+      const remoteUsers = d.users.map(normalizeUser);
+      const localOwner = users.find(u => u.role === 'owner');
+      let mergedUsers = [];
+      if (localOwner) {
+        mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
+      } else {
+        mergedUsers = remoteUsers;
+      }
+      const uniqueUsers = [];
+      const seenIds = new Set();
+      mergedUsers.forEach(u => {
+        if (!seenIds.has(u.id)) {
+          seenIds.add(u.id);
+          uniqueUsers.push(u);
+        }
+      });
+      users = uniqueUsers;
+      saveState('users', users);
+      console.log('Загружено ' + users.length + ' пользователей');
     }
 
     // Загружаем галерею
@@ -7530,6 +7607,13 @@ async function loadAllFromSheets() {
       groups = d.groups.map(normalizeGroup);
       saveState('groups', groups);
       console.log('Загружено ' + groups.length + ' групп');
+    }
+
+    // Загружаем покупки (путешествия)
+    if (d.purchases && Array.isArray(d.purchases) && d.purchases.length > 0) {
+      purchases = d.purchases;
+      saveState('purchases', purchases);
+      console.log('Загружено ' + purchases.length + ' покупок');
     }
 
     // Загружаем настройки
@@ -7596,7 +7680,7 @@ async function loadAllFromSheets() {
     applyContactsContent();
     updateTransportSelects();
 
-    // Обновляем админку если открыта
+    // Если админка открыта — обновляем
     if (currentPage === 'admin' && currentUser) {
       loadAdmin();
     }
@@ -8370,9 +8454,13 @@ function init() {
   initMobileAdminItems();
   updateNavbarHeight();
 
+  // ✅ Фоновая проверка обновлений ДО входа в админку
+  setTimeout(() => {
+    checkDataVersionInBackground();
+  }, 3000); // Задержка 3 секунды после загрузки страницы
+
   console.log('✅ ВПУТЕШЕСТВИЕВМЕСТЕ инициализирован');
 }
-
 // Запуск
 init();
 </script>
