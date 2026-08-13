@@ -1955,7 +1955,15 @@ input, textarea {
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-danger" id="delete-program-btn" style="display:none;" onclick="deleteProgram(editingProgramId)">🗑 Удалить</button>
+      <button class="btn btn-danger" id="delete-program-btn" style="display:none;" onclick="deleteProgram(editingProgramId)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+        Удалить
+      </button>
       <button class="btn btn-outline" onclick="closeModal('program-modal')">Отмена</button>
       <button class="btn btn-primary" id="save-program-btn" onclick="saveProgram()">Сохранить программу</button>
     </div>
@@ -2005,7 +2013,15 @@ input, textarea {
       <div id="lead-modal-content"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-danger" id="delete-lead-btn" style="display:none;" onclick="deleteLead(currentLeadId)">🗑 Удалить</button>
+      <button class="btn btn-danger" id="delete-lead-btn" style="display:none;" onclick="deleteLead(currentLeadId)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+        Удалить
+      </button>
       <button class="btn btn-outline" onclick="closeModal('lead-modal')">Закрыть</button>
     </div>
   </div>
@@ -2022,7 +2038,15 @@ input, textarea {
       <div id="group-modal-content"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-danger" id="delete-group-btn" style="display:none;" onclick="deleteGroup(editingGroupId)">🗑 Удалить</button>
+      <button class="btn btn-danger" id="delete-group-btn" style="display:none;" onclick="deleteGroup(editingGroupId)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+        Удалить
+      </button>
       <button class="btn btn-outline" onclick="closeModal('group-modal')">Отмена</button>
       <button class="btn btn-primary" onclick="saveGroup()">Сохранить группу</button>
     </div>
@@ -2141,7 +2165,15 @@ input, textarea {
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('delete-trip-modal')">Отмена</button>
-      <button class="btn btn-danger" onclick="confirmDeleteGroupMember()">🗑 Удалить</button>
+       <button class="btn btn-danger" onclick="confirmDeleteGroupMember()">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+        Удалить
+      </button>
     </div>
   </div>
 </div>
@@ -5295,6 +5327,8 @@ function loadAdmin() {
 
 // === ДАШБОРД ===
 function loadAdminStats() {
+  purchases = loadState('purchases', purchases);
+  
   const totalRevenue = purchases.reduce((s, p) => s + p.price, 0);
   document.getElementById('stats-grid').innerHTML = `
     <div class="stat-card"><div class="stat-label">Программ</div><div class="stat-value">${programs.length}</div></div>
@@ -5602,6 +5636,17 @@ function openLeadModal(leadId) {
   const isEmail = contactStr.includes('@');
   const tgMatch = contactStr.match(/@[\w]+/);
 
+  // Нормализуем телефон для отображения
+  let displayContact = contactStr;
+  let phoneForLink = '';
+  if (isPhone) {
+    // Нормализуем для отображения
+    const normalized = normalizePhone(contactStr);
+    displayContact = normalized;
+    // Для ссылки tel: используем только цифры и +
+    phoneForLink = normalized.replace(/[^\d+]/g, '');
+  }
+
   // Форматируем дату из YYYY-MM-DD в DD.MM.YYYY
   let formattedDate = lead.date || '';
   if (formattedDate && formattedDate.includes('-')) {
@@ -5621,7 +5666,7 @@ function openLeadModal(leadId) {
           <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);padding-top:2px;">Имя</span>
           <strong>${lead.name}</strong>
           <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);padding-top:2px;">Контакт</span>
-          <span style="color:var(--accent);">${lead.contact}</span>
+          <span style="color:var(--accent);">${displayContact}</span>
           ${lead.message ? `
           <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);padding-top:2px;">Сообщение</span>
           <span style="color:var(--text-muted);line-height:1.6;">${lead.message}</span>` : ''}
@@ -5630,7 +5675,7 @@ function openLeadModal(leadId) {
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:9px;">
-        ${isPhone ? `<a href="tel:${String(lead.contact).replace(/[^\d+]/g, '').replace(/^8/, '+7')}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">📞 Позвонить</a>` : ''}
+        ${isPhone ? `<a href="tel:${phoneForLink}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">📞 Позвонить</a>` : ''}
         ${isEmail ? `<a href="mailto:${lead.contact}" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;">✉️ Написать письмо</a>` : ''}
         ${tgMatch ? `<a href="https://t.me/${tgMatch[0].slice(1)}" target="_blank" class="btn btn-outline" style="width:100%;justify-content:center;text-decoration:none;">💬 Открыть в Telegram</a>` : ''}
         ${!isPhone && !isEmail && !tgMatch ? `<a href="#" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;" onclick="navigator.clipboard.writeText('${lead.contact}');showToast('Скопировано');return false;">📋 Скопировать контакт</a>` : ''}
@@ -5642,7 +5687,7 @@ function openLeadModal(leadId) {
 
   openModal('lead-modal');
 }
-
+  
 async function deleteLead(leadId) {
   if (!leadId) return;
   const ok = await confirmDialog('Заявка будет удалена безвозвратно.', { 
@@ -6881,13 +6926,19 @@ function saveGroup() {
           { icon: '✅', title: 'Завершить группу?', ok: 'Завершить', danger: false }
         ).then(ok => {
           if (ok) {
+            // Обновляем статус и завершаем группу
+            g.status = 'завершена';
             finalizeGroup(g);
             // Сохраняем после подтверждения
             saveState('groups', groups);
             syncGroupToSheets(g);
             closeModal('group-modal');
             loadAdminGroups();
-            showToast('Группа обновлена ✓');
+            // Обновляем статистику если нужно
+            if (currentUser && currentUser.role === 'owner') {
+              loadAdminStats();
+            }
+            showToast('Группа завершена ✓');
           } else {
             // Возвращаем старый статус, если пользователь отменил
             g.status = oldStatus;
@@ -6927,6 +6978,10 @@ function saveGroup() {
 
   closeModal('group-modal');
   loadAdminGroups();
+  // Обновляем статистику если нужно
+  if (currentUser && currentUser.role === 'owner') {
+    loadAdminStats();
+  }
 }
 
 // Вспомогательная функция для синхронизации группы
@@ -6938,8 +6993,63 @@ function syncGroupToSheets(group) {
 }
 async function deleteGroup(id) {
   if (!id) return;
-  const ok = await confirmDialog('Группа и все её участники будут удалены безвозвратно.', { icon: '🗑', title: 'Удалить группу?', ok: 'Удалить' });
-  if (!ok) return;
+  
+  const g = groups.find(x => x.id === id);
+  if (!g) return;
+  
+  // Проверяем, есть ли зарегистрированные участники в завершенной группе
+  const hasRegisteredMembers = (g.members || []).some(m => m.userId);
+  
+  if (g.status === 'завершена' && hasRegisteredMembers) {
+    // Показываем расширенное подтверждение
+    const registeredCount = (g.members || []).filter(m => m.userId).length;
+    const hasPhotos = gallery.some(img => img.groupId === id);
+    
+    const message = `Группа "${g.name}" уже завершена.\n` +
+                    `В ней ${registeredCount} зарегистрированных участников.\n` +
+                    (hasPhotos ? `📸 Загружено ${gallery.filter(img => img.groupId === id).length} фото.\n\n` : '\n') +
+                    `Удаление группы удалит поездки из истории всех участников.`;
+    
+    const ok = await confirmDialog(message, { 
+      icon: '🗑', 
+      title: 'Удалить завершенную группу?', 
+      ok: 'Удалить' 
+    });
+    if (!ok) return;
+    
+    // Удаляем поездки участников
+    (g.members || []).forEach(member => {
+      if (member.userId) {
+        const purchaseToDelete = purchases.find(
+          p => p.userId === member.userId && p.groupId === id
+        );
+        if (purchaseToDelete) {
+          purchases = purchases.filter(p => p.id !== purchaseToDelete.id);
+          gasPost({ action: 'delete', sheet: 'purchases', id: purchaseToDelete.id }).catch(() => {});
+        }
+      }
+    });
+    saveState('purchases', purchases);
+    
+    // Удаляем фото, связанные с группой
+    const photosToDelete = gallery.filter(img => img.groupId === id);
+    if (photosToDelete.length > 0) {
+      gallery = gallery.filter(img => img.groupId !== id);
+      saveState('gallery', gallery);
+      photosToDelete.forEach(photo => {
+        gasPost({ action: 'delete', sheet: 'gallery', id: photo.id }).catch(() => {});
+      });
+      showToast(`🗑 Удалено ${photosToDelete.length} фото`);
+    }
+  } else {
+    // Обычное подтверждение для незавершенной группы
+    const ok = await confirmDialog('Группа и все её участники будут удалены безвозвратно.', { 
+      icon: '🗑', 
+      title: 'Удалить группу?', 
+      ok: 'Удалить' 
+    });
+    if (!ok) return;
+  }
 
   groups = groups.filter(g => g.id !== id);
   saveState('groups', groups);
@@ -6948,6 +7058,7 @@ async function deleteGroup(id) {
   loadAdminGroups();
   showToast('Группа удалена');
 }
+  
   // === ДОБАВЛЕНИЕ УЧАСТНИКА В ГРУППУ ===
 function openAddMember(groupId) {
   const g = groups.find(x => x.id === groupId);
@@ -7092,6 +7203,13 @@ function addMemberToGroup() {
     const u = users.find(x => x.id === uid);
     if (!u) { showToast('Пользователь не найден'); return; }
 
+    // === ПРОВЕРКА: уже ли этот пользователь в группе ===
+    const alreadyInGroup = (g.members || []).some(m => m.userId === uid);
+    if (alreadyInGroup) {
+      showToast('Этот участник уже добавлен в группу!');
+      return;
+    }
+
     const amount = document.getElementById('gm-reg-amount').value;
     const payMethod = document.getElementById('gm-reg-method').value;
     const note = document.getElementById('gm-reg-note').value;
@@ -7182,6 +7300,10 @@ function openDeleteGroupMemberConfirm(groupId, memberIndex, member, hasPhotos) {
     formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
   }
 
+  // Количество фото пользователя в этой группе
+  const userPhotos = gallery.filter(img => img.userId === member.userId && img.groupId === groupId);
+  const photoCount = userPhotos.length;
+
   const modalContent = document.getElementById('delete-trip-content');
   modalContent.innerHTML = `
     <div style="padding:4px 0;">
@@ -7207,7 +7329,7 @@ function openDeleteGroupMemberConfirm(groupId, memberIndex, member, hasPhotos) {
           <span style="color:var(--text-muted);">Дата:</span>
           <span>${formattedDate}</span>
           ${member.amount ? `<span style="color:var(--text-muted);">Сумма:</span><span style="font-weight:600;color:var(--accent2);">${Number(member.amount).toLocaleString('ru')} ₽</span>` : ''}
-          ${hasPhotos ? `<span style="color:var(--text-muted);">📸 Фото:</span><span style="color:var(--accent);">${gallery.filter(img => img.userId === member.userId && img.groupId === groupId).length} фото</span>` : ''}
+          ${photoCount > 0 ? `<span style="color:var(--text-muted);">📸 Фото:</span><span style="color:var(--accent);">${photoCount} фото</span>` : ''}
         </div>
       </div>
       <div style="background:var(--warning-bg, #FFF8E1);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;border-left:4px solid #F39C12;">
@@ -7215,11 +7337,11 @@ function openDeleteGroupMemberConfirm(groupId, memberIndex, member, hasPhotos) {
           ⚠️ <strong>Внимание!</strong> Эта поездка уже завершена. Удаление участника удалит поездку из его истории.
         </div>
       </div>
-      ${hasPhotos ? `
-      <div class="consent-checkbox-wrapper" style="margin-bottom:16px;">
+      ${photoCount > 0 ? `
+      <div class="consent-checkbox-wrapper" style="margin-bottom:16px;background:var(--bg);">
         <input type="checkbox" id="delete-photos-checkbox" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
         <label for="delete-photos-checkbox" style="font-size:13px;cursor:pointer;color:var(--text);">
-          🗑️ Удалить также <strong>${gallery.filter(img => img.userId === member.userId && img.groupId === groupId).length}</strong> фото, загруженные к этой поездке
+          🗑️ Удалить также <strong>${photoCount}</strong> фото, загруженные к этой поездке
         </label>
       </div>` : ''}
     </div>
@@ -7229,7 +7351,7 @@ function openDeleteGroupMemberConfirm(groupId, memberIndex, member, hasPhotos) {
   openModal('delete-trip-modal');
 }
 
-  // === ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ УЧАСТНИКА ИЗ ЗАВЕРШЕННОЙ ГРУППЫ ===
+ // === ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ УЧАСТНИКА ИЗ ЗАВЕРШЕННОЙ ГРУППЫ ===
 function confirmDeleteGroupMember() {
   const data = window._deleteGroupMemberData;
   if (!data) return;
@@ -7306,6 +7428,12 @@ async function cycleGroupStatus(groupId) {
 
   // Для финальных статусов — спросить подтверждение
   if (next === 'завершена') {
+    // Проверяем, не была ли группа уже завершена
+    if (g.status === 'завершена') {
+      showToast('Группа уже завершена');
+      return;
+    }
+    
     const memberCount = (g.members || []).length;
     const registeredCount = (g.members || []).filter(m => m.userId).length;
     
@@ -7341,6 +7469,10 @@ async function cycleGroupStatus(groupId) {
   }).catch(e => console.warn('Status sync error:', e));
 
   loadAdminGroups();
+  // Обновляем статистику если нужно
+  if (currentUser && currentUser.role === 'owner') {
+    loadAdminStats();
+  }
   showToast('Статус изменён: ' + g.status);
 }
 
@@ -7362,9 +7494,14 @@ function finalizeGroup(g) {
 
     // Проверяем, не добавлена ли уже эта поездка
     const already = purchases.find(
-      p => p.userId === member.userId && p.programId === g.programId
+      p => p.userId === member.userId && p.programId === g.programId && p.groupId === g.id
     );
-    if (already) return;
+    if (already) {
+      // Если уже есть, обновляем дату и статус
+      already.date = g.endDate || today;
+      already.status = 'завершено';
+      return;
+    }
 
     // Определяем цену поездки
     const price = parseFloat(member.amount) || prog.price || 0;
@@ -7400,7 +7537,7 @@ function finalizeGroup(g) {
     showToast('⚠️ Новых поездок не добавлено (возможно, уже были добавлены)');
   }
 }
-
+  
 // === ОТКРЫТИЕ СПИСКА ПОЕЗДОК ПОЛЬЗОВАТЕЛЯ ===
 function openUserTripsModal(userId) {
   const u = users.find(x => x.id === userId);
