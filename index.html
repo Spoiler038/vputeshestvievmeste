@@ -5019,7 +5019,7 @@ function loadAdmin() {
     switchAdmin('programs');
   }
 }
-
+  
 // === ДАШБОРД ===
 function loadAdminStats() {
   const totalRevenue = purchases.reduce((s, p) => s + p.price, 0);
@@ -5810,7 +5810,7 @@ function openUserEditModal(userId) {
   `;
   openModal('user-edit-modal');
 }
-
+  
 async function saveUserEdit(userId) {
   const u = users.find(x => x.id === userId);
   if (!u) return;
