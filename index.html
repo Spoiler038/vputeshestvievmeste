@@ -2376,13 +2376,9 @@ input[type=number] {
 </button>
 
 <!-- ===== БИБЛИОТЕКИ ===== -->
-<!-- Основные источники (с обработкой ошибок) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="loadFallbackJS('jspdf')"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" onerror="loadFallbackJS('jspdf-autotable')"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" onerror="loadFallbackJS('html2canvas')"></script>
-
+<!-- СНАЧАЛА ОБЪЯВЛЯЕМ ФУНКЦИЮ ЗАГРУЗКИ -->
 <script>
-// Функция загрузки запасных библиотек
+// Функция загрузки запасных библиотек (объявляем ДО всех скриптов)
 function loadFallbackJS(lib) {
   console.warn(lib + ' не загрузился с CDN, пробуем альтернативный источник...');
   
@@ -2404,7 +2400,6 @@ function loadFallbackJS(lib) {
     script.src = src;
     script.onload = function() {
       console.log('✅ ' + lib + ' загружен с альтернативного источника');
-      // Если это jspdf — устанавливаем кодировку
       if (lib === 'jspdf' && window.jspdf) {
         window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
         window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
@@ -2416,8 +2411,15 @@ function loadFallbackJS(lib) {
     document.head.appendChild(script);
   }
 }
+</script>
 
-// Принудительная установка кодировки для кириллицы (если jspdf уже загружен)
+<!-- ТЕПЕРЬ ПЫТАЕМСЯ ЗАГРУЗИТЬ С CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="loadFallbackJS('jspdf')"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" onerror="loadFallbackJS('jspdf-autotable')"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" onerror="loadFallbackJS('html2canvas')"></script>
+
+<script>
+// Установка кодировки для кириллицы (если jspdf уже загружен)
 (function setEncoding() {
   if (window.jspdf && window.jspdf.jsPDF) {
     window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
@@ -2426,38 +2428,31 @@ function loadFallbackJS(lib) {
   }
 })();
 
-// Дополнительная проверка через 3 секунды (на случай, если загрузка затянулась)
+// Дополнительная проверка через 5 секунд
 setTimeout(function() {
-  var needsReload = false;
+  var loaded = false;
   
   if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
     console.warn('⚠️ jspdf не загружен, пробуем загрузить...');
     loadFallbackJS('jspdf');
     loadFallbackJS('jspdf-autotable');
-    needsReload = true;
+    loaded = true;
   }
   
   if (typeof html2canvas === 'undefined') {
     console.warn('⚠️ html2canvas не загружен, пробуем загрузить...');
     loadFallbackJS('html2canvas');
-    needsReload = true;
+    loaded = true;
   }
   
-  // Если всё загрузилось — устанавливаем кодировку
-  if (!needsReload && window.jspdf && window.jspdf.jsPDF) {
+  if (!loaded && window.jspdf && window.jspdf.jsPDF) {
     window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
     window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
   }
-}, 3000);
-
-// Функция для проверки загрузки всех библиотек (можно вызвать в консоли)
-function checkLibrariesLoaded() {
-  console.log('=== Проверка библиотек ===');
-  console.log('jspdf:', typeof window.jspdf !== 'undefined' ? '✅ Загружен' : '❌ Не загружен');
-  console.log('html2canvas:', typeof html2canvas !== 'undefined' ? '✅ Загружен' : '❌ Не загружен');
-  console.log('jsPDF:', typeof window.jspdf?.jsPDF !== 'undefined' ? '✅ Доступен' : '❌ Не доступен');
-}
+}, 5000);
 </script>
+
+  
 <!-- ДОПОЛНИТЕЛЬНЫЙ CSS ДЛЯ МОДАЛЬНЫХ ОКОН -->
 <style>
 /* ===== МОДАЛЬНЫЕ ОКНА ===== */
