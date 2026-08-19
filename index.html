@@ -2376,81 +2376,203 @@ input[type=number] {
 </button>
 
 <!-- ===== БИБЛИОТЕКИ ===== -->
-<!-- СНАЧАЛА ОБЪЯВЛЯЕМ ФУНКЦИЮ ЗАГРУЗКИ -->
 <script>
-// Функция загрузки запасных библиотек (объявляем ДО всех скриптов)
-function loadFallbackJS(lib) {
-  console.warn(lib + ' не загрузился с CDN, пробуем альтернативный источник...');
-  
-  var src = '';
-  switch(lib) {
-    case 'jspdf':
-      src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
-      break;
-    case 'jspdf-autotable':
-      src = 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
-      break;
-    case 'html2canvas':
-      src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-      break;
-  }
-  
-  if (src) {
-    var script = document.createElement('script');
-    script.src = src;
-    script.onload = function() {
-      console.log('✅ ' + lib + ' загружен с альтернативного источника');
-      if (lib === 'jspdf' && window.jspdf) {
-        window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
-        window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
-      }
-    };
-    script.onerror = function() {
-      console.warn('⚠️ ' + lib + ' не загрузился с альтернативного источника');
-    };
-    document.head.appendChild(script);
-  }
+// Глобальный объект для отслеживания состояния загрузки библиотек
+window._LIB_LOAD_STATE = window._LIB_LOAD_STATE || {
+    jspdf: false,
+    autotable: false,
+    html2canvas: false
+};
+
+// Универсальная функция загрузки библиотек с несколькими источниками
+function loadLibraryWithFallback(libName, sources, onSuccess, onError) {
+    console.log(`📦 Загрузка ${libName}...`);
+    
+    let currentSourceIndex = 0;
+    let loaded = false;
+    
+    function tryLoadNextSource() {
+        if (loaded) return;
+        if (currentSourceIndex >= sources.length) {
+            console.error(`❌ Не удалось загрузить ${libName} ни из одного источника`);
+            if (onError) onError(new Error(`Все источники для ${libName} недоступны`));
+            return;
+        }
+        
+        const source = sources[currentSourceIndex];
+        console.log(`  Попытка ${currentSourceIndex + 1}/${sources.length}: ${source}`);
+        
+        const script = document.createElement('script');
+        script.src = source;
+        script.async = false;
+        script.crossOrigin = 'anonymous';
+        
+        // Уникальный идентификатор для этого скрипта
+        const scriptId = 'lib_' + libName + '_' + Date.now() + '_' + currentSourceIndex;
+        script.dataset.lib = libName;
+        script.dataset.source = currentSourceIndex;
+        
+        script.onload = function() {
+            if (loaded) return;
+            loaded = true;
+            console.log(`✅ ${libName} успешно загружен из: ${source}`);
+            if (onSuccess) onSuccess();
+        };
+        
+        script.onerror = function() {
+            if (loaded) return;
+            console.warn(`⚠️ ${libName} не загрузился из: ${source}`);
+            currentSourceIndex++;
+            // Удаляем скрипт в случае ошибки
+            if (script.parentNode) script.parentNode.removeChild(script);
+            // Пробуем следующий источник
+            setTimeout(tryLoadNextSource, 200);
+        };
+        
+        document.head.appendChild(script);
+    }
+    
+    tryLoadNextSource();
 }
-</script>
 
-<!-- ТЕПЕРЬ ПЫТАЕМСЯ ЗАГРУЗИТЬ С CDN -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="loadFallbackJS('jspdf')"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" onerror="loadFallbackJS('jspdf-autotable')"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" onerror="loadFallbackJS('html2canvas')"></script>
+// Функция проверки загрузки jspdf
+function checkJspdfLoaded() {
+    return typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined';
+}
 
-<script>
-// Установка кодировки для кириллицы (если jspdf уже загружен)
-(function setEncoding() {
-  if (window.jspdf && window.jspdf.jsPDF) {
-    window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
-    window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
-    console.log('✅ Кодировка UTF-8 установлена');
-  }
-})();
+// Функция проверки загрузки html2canvas
+function checkHtml2canvasLoaded() {
+    return typeof window.html2canvas !== 'undefined';
+}
 
-// Дополнительная проверка через 5 секунд
+// Загрузка jspdf с несколькими источниками
+loadLibraryWithFallback(
+    'jspdf',
+    [
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+        'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+        'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'
+    ],
+    function() {
+        window._LIB_LOAD_STATE.jspdf = true;
+        // Устанавливаем кодировку для кириллицы
+        if (window.jspdf && window.jspdf.jsPDF) {
+            window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
+            window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
+            console.log('✅ Кодировка UTF-8 для jspdf установлена');
+        }
+        // После загрузки jspdf пробуем загрузить autotable
+        if (window.jspdf && window.jspdf.jsPDF) {
+            loadLibraryWithFallback(
+                'jspdf-autotable',
+                [
+                    'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js',
+                    'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js',
+                    'https://unpkg.com/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js'
+                ],
+                function() {
+                    window._LIB_LOAD_STATE.autotable = true;
+                    console.log('✅ jspdf-autotable успешно загружен');
+                }
+            );
+        }
+    },
+    function(err) {
+        console.warn('⚠️ jspdf не загружен, некоторые функции PDF будут недоступны');
+    }
+);
+
+// Загрузка html2canvas с несколькими источниками
+loadLibraryWithFallback(
+    'html2canvas',
+    [
+        'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+        'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+        'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'
+    ],
+    function() {
+        window._LIB_LOAD_STATE.html2canvas = true;
+        console.log('✅ html2canvas успешно загружен');
+    },
+    function(err) {
+        console.warn('⚠️ html2canvas не загружен, функции создания PDF из HTML будут недоступны');
+    }
+);
+
+// Функция проверки готовности библиотек (можно использовать в коде)
+window.waitForLibraries = function(libs, timeout = 10000) {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        const checkInterval = setInterval(() => {
+            let allLoaded = true;
+            if (libs.includes('jspdf') && !window._LIB_LOAD_STATE.jspdf) allLoaded = false;
+            if (libs.includes('autotable') && !window._LIB_LOAD_STATE.autotable) allLoaded = false;
+            if (libs.includes('html2canvas') && !window._LIB_LOAD_STATE.html2canvas) allLoaded = false;
+            
+            if (allLoaded) {
+                clearInterval(checkInterval);
+                resolve(true);
+            }
+            
+            if (Date.now() - startTime > timeout) {
+                clearInterval(checkInterval);
+                resolve(false); // Таймаут, но не reject, чтобы не ломать приложение
+            }
+        }, 300);
+    });
+};
+
+// Периодическая проверка и повторная попытка загрузки, если библиотеки не загрузились
 setTimeout(function() {
-  var loaded = false;
-  
-  if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
-    console.warn('⚠️ jspdf не загружен, пробуем загрузить...');
-    loadFallbackJS('jspdf');
-    loadFallbackJS('jspdf-autotable');
-    loaded = true;
-  }
-  
-  if (typeof html2canvas === 'undefined') {
-    console.warn('⚠️ html2canvas не загружен, пробуем загрузить...');
-    loadFallbackJS('html2canvas');
-    loaded = true;
-  }
-  
-  if (!loaded && window.jspdf && window.jspdf.jsPDF) {
-    window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
-    window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
-  }
+    if (!window._LIB_LOAD_STATE.jspdf || !window._LIB_LOAD_STATE.html2canvas) {
+        console.log('🔄 Повторная попытка загрузки библиотек...');
+        if (!window._LIB_LOAD_STATE.jspdf) {
+            // Повторная попытка загрузки jspdf
+            loadLibraryWithFallback(
+                'jspdf-retry',
+                [
+                    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                    'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'
+                ],
+                function() {
+                    window._LIB_LOAD_STATE.jspdf = true;
+                    if (window.jspdf && window.jspdf.jsPDF) {
+                        window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
+                        window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
+                    }
+                }
+            );
+        }
+        if (!window._LIB_LOAD_STATE.html2canvas) {
+            loadLibraryWithFallback(
+                'html2canvas-retry',
+                [
+                    'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+                    'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'
+                ],
+                function() {
+                    window._LIB_LOAD_STATE.html2canvas = true;
+                }
+            );
+        }
+    }
 }, 5000);
+
+// Вывод статуса загрузки в консоль для отладки
+console.log('📚 Библиотеки загружаются...');
+setTimeout(function() {
+    console.log('📊 Статус библиотек:', {
+        jspdf: window._LIB_LOAD_STATE.jspdf ? '✅ Загружен' : '⏳ Загрузка...',
+        autotable: window._LIB_LOAD_STATE.autotable ? '✅ Загружен' : '⏳ Загрузка...',
+        html2canvas: window._LIB_LOAD_STATE.html2canvas ? '✅ Загружен' : '⏳ Загрузка...'
+    });
+}, 2000);
 </script>
+
+<!-- Запасной вариант: если скрипты не загрузились через динамическую загрузку, пробуем через обычные теги -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 
   
 <!-- ДОПОЛНИТЕЛЬНЫЙ CSS ДЛЯ МОДАЛЬНЫХ ОКОН -->
