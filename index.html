@@ -940,11 +940,12 @@ html.modal-open {overflow: hidden !important;}
   .td-actions .btn {
     padding: 4px 8px;
     font-size: 10px;
+    width: 28px;
     height: 28px;
   }
   .td-actions .btn svg {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
   }
   .modal {
     max-height: 95vh;
@@ -2363,6 +2364,30 @@ input, textarea {
   }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- ЗАПАСНЫЕ ИСТОЧНИКИ (если CDN недоступен) -->
+<script>
+(function loadFallbackLibraries() {
+  // Проверяем, загрузился ли jspdf
+  if (typeof window.jspdf === 'undefined') {
+    console.warn('jspdf не загрузился, пробуем альтернативный источник...');
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+    document.head.appendChild(script);
+    
+    const script2 = document.createElement('script');
+    script2.src = 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
+    document.head.appendChild(script2);
+  }
+  
+  if (typeof html2canvas === 'undefined') {
+    console.warn('html2canvas не загрузился, пробуем альтернативный источник...');
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+    document.head.appendChild(script);
+  }
+})();
+</script>
 
 <!-- ДОПОЛНИТЕЛЬНЫЙ CSS ДЛЯ МОДАЛЬНЫХ ОКОН -->
 <style>
@@ -5539,8 +5564,8 @@ function renderUsersTable(isOwner) {
       </td>
       <td style="vertical-align:middle;padding:6px 8px;white-space:nowrap;" onclick="event.stopPropagation();">
         <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;white-space:nowrap;">
-          <button class="btn btn-outline btn-sm" style="padding:3px 6px;font-size:10px;line-height:1.4;height:26px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:4px;border:1.5px solid var(--border);background:transparent;cursor:pointer;" onclick="showUserStats(${u.id})">📊</button>
-          ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:3px 6px;font-size:10px;line-height:1.4;height:26px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:none;border-radius:4px;cursor:pointer;background:#C0392B;color:white;" onclick="deleteUser(${u.id})">
+          <button class="btn btn-outline btn-sm" style="padding:3px 6px;font-size:10px;line-height:1.4;height:26px;width:26px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:4px;border:1.5px solid var(--border);background:transparent;cursor:pointer;" onclick="showUserStats(${u.id})">📊</button>
+          ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:3px 6px;font-size:10px;line-height:1.4;height:26px;width:26px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:none;border-radius:4px;cursor:pointer;background:#C0392B;color:white;" onclick="deleteUser(${u.id})">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 6h18"/>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
