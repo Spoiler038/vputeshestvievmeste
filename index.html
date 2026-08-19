@@ -931,6 +931,17 @@ html.modal-open {overflow: hidden !important;}
   .admin-panel { padding-top: 80px; }
   .admin-table { font-size: 11px; }
   .admin-table th, .admin-table td { padding: 8px 10px; }
+  .admin-table td .btn-sm {
+    height: 22px;
+    width: 22px;
+    min-width: 22px;
+    font-size: 11px;
+  }
+  .admin-table td input[type="number"] {
+    width: 32px !important;
+    height: 22px !important;
+    font-size: 11px !important;
+  }
   .td-actions { 
     flex-direction: row; 
     gap: 4px; 
@@ -1019,6 +1030,17 @@ input, textarea {
   -webkit-user-select: text;
   user-select: text;
 }
+
+/* Скрываем стандартные стрелки у input type=number */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}  
 </style>
 </head>
 <body>
@@ -2354,41 +2376,88 @@ input, textarea {
 </button>
 
 <!-- ===== БИБЛИОТЕКИ ===== -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<!-- Основные источники (с обработкой ошибок) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="loadFallbackJS('jspdf')"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js" onerror="loadFallbackJS('jspdf-autotable')"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" onerror="loadFallbackJS('html2canvas')"></script>
+
 <script>
-  // Принудительная установка кодировки для кириллицы
-  if (window.jspdf) {
+// Функция загрузки запасных библиотек
+function loadFallbackJS(lib) {
+  console.warn(lib + ' не загрузился с CDN, пробуем альтернативный источник...');
+  
+  var src = '';
+  switch(lib) {
+    case 'jspdf':
+      src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+      break;
+    case 'jspdf-autotable':
+      src = 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
+      break;
+    case 'html2canvas':
+      src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      break;
+  }
+  
+  if (src) {
+    var script = document.createElement('script');
+    script.src = src;
+    script.onload = function() {
+      console.log('✅ ' + lib + ' загружен с альтернативного источника');
+      // Если это jspdf — устанавливаем кодировку
+      if (lib === 'jspdf' && window.jspdf) {
+        window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
+        window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
+      }
+    };
+    script.onerror = function() {
+      console.warn('⚠️ ' + lib + ' не загрузился с альтернативного источника');
+    };
+    document.head.appendChild(script);
+  }
+}
+
+// Принудительная установка кодировки для кириллицы (если jspdf уже загружен)
+(function setEncoding() {
+  if (window.jspdf && window.jspdf.jsPDF) {
     window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
     window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
+    console.log('✅ Кодировка UTF-8 установлена');
   }
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+})();
 
-  <!-- ЗАПАСНЫЕ ИСТОЧНИКИ (если CDN недоступен) -->
-<script>
-(function loadFallbackLibraries() {
-  // Проверяем, загрузился ли jspdf
-  if (typeof window.jspdf === 'undefined') {
-    console.warn('jspdf не загрузился, пробуем альтернативный источник...');
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
-    document.head.appendChild(script);
-    
-    const script2 = document.createElement('script');
-    script2.src = 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js';
-    document.head.appendChild(script2);
+// Дополнительная проверка через 3 секунды (на случай, если загрузка затянулась)
+setTimeout(function() {
+  var needsReload = false;
+  
+  if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+    console.warn('⚠️ jspdf не загружен, пробуем загрузить...');
+    loadFallbackJS('jspdf');
+    loadFallbackJS('jspdf-autotable');
+    needsReload = true;
   }
   
   if (typeof html2canvas === 'undefined') {
-    console.warn('html2canvas не загрузился, пробуем альтернативный источник...');
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-    document.head.appendChild(script);
+    console.warn('⚠️ html2canvas не загружен, пробуем загрузить...');
+    loadFallbackJS('html2canvas');
+    needsReload = true;
   }
-})();
-</script>
+  
+  // Если всё загрузилось — устанавливаем кодировку
+  if (!needsReload && window.jspdf && window.jspdf.jsPDF) {
+    window.jspdf.jsPDF.prototype.Encodings = window.jspdf.jsPDF.prototype.Encodings || {};
+    window.jspdf.jsPDF.prototype.Encodings['UTF-8'] = 'UTF-8';
+  }
+}, 3000);
 
+// Функция для проверки загрузки всех библиотек (можно вызвать в консоли)
+function checkLibrariesLoaded() {
+  console.log('=== Проверка библиотек ===');
+  console.log('jspdf:', typeof window.jspdf !== 'undefined' ? '✅ Загружен' : '❌ Не загружен');
+  console.log('html2canvas:', typeof html2canvas !== 'undefined' ? '✅ Загружен' : '❌ Не загружен');
+  console.log('jsPDF:', typeof window.jspdf?.jsPDF !== 'undefined' ? '✅ Доступен' : '❌ Не доступен');
+}
+</script>
 <!-- ДОПОЛНИТЕЛЬНЫЙ CSS ДЛЯ МОДАЛЬНЫХ ОКОН -->
 <style>
 /* ===== МОДАЛЬНЫЕ ОКНА ===== */
@@ -5201,6 +5270,23 @@ async function syncProgramToSheets(program) {
 async function deleteProgramFromSheets(id) {
   await gasPost({ action: 'delete', sheet: 'programs', id: id });
 }
+
+// === УПРАВЛЕНИЕ СКИДКОЙ ===
+function validateDiscount(input) {
+  let val = parseInt(input.value) || 0;
+  if (val < 0) input.value = 0;
+  if (val > 100) input.value = 100;
+}
+
+function adjustDiscount(userId, delta) {
+  const input = document.getElementById('discount-input-' + userId);
+  if (!input) return;
+  let val = parseInt(input.value) || 0;
+  val = Math.max(0, Math.min(100, val + delta));
+  input.value = val;
+  updateUserDiscount(userId, val);
+}
+  
   // ============================================================
 // === ТЕГИ ПРЕДПОЧТЕНИЙ =======================================
 // ============================================================
@@ -5529,7 +5615,6 @@ function renderUsersTable(isOwner) {
   const tbody = document.getElementById('users-tbody');
   if (!tbody) return;
   
-  // Убеждаемся, что purchases загружены
   purchases = loadState('purchases', purchases);
   
   if (users.length === 0) {
@@ -5559,8 +5644,12 @@ function renderUsersTable(isOwner) {
           </svg>
         </span>
       </td>
-      <td style="vertical-align:middle;white-space:nowrap;min-width:70px;max-width:90px;" onclick="event.stopPropagation();">
-        <input type="number" class="filter-input" style="width:55px;padding:4px 4px;height:28px;font-size:12px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);text-align:center;" value="${u.discount || 0}" onchange="updateUserDiscount(${u.id}, this.value)">
+      <td style="vertical-align:middle;white-space:nowrap;min-width:90px;max-width:110px;padding:4px 6px;" onclick="event.stopPropagation();">
+        <div style="display:flex;align-items:center;gap:2px;">
+          <button class="btn btn-outline btn-sm" style="padding:2px 4px;font-size:12px;line-height:1;height:24px;width:24px;min-width:24px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:4px;border:1.5px solid var(--border);background:transparent;cursor:pointer;color:var(--text-muted);" onclick="adjustDiscount(${u.id}, -1)">−</button>
+          <input type="number" class="filter-input" id="discount-input-${u.id}" style="width:42px;padding:2px 2px;height:24px;font-size:12px;border-radius:4px;border:1.5px solid var(--border);background:var(--bg);text-align:center;flex-shrink:0;appearance:textfield;-moz-appearance:textfield;" value="${u.discount || 0}" min="0" max="100" onchange="updateUserDiscount(${u.id}, this.value)" oninput="validateDiscount(this)">
+          <button class="btn btn-outline btn-sm" style="padding:2px 4px;font-size:12px;line-height:1;height:24px;width:24px;min-width:24px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:4px;border:1.5px solid var(--border);background:transparent;cursor:pointer;color:var(--text-muted);" onclick="adjustDiscount(${u.id}, 1)">+</button>
+        </div>
       </td>
       <td style="vertical-align:middle;padding:6px 8px;white-space:nowrap;" onclick="event.stopPropagation();">
         <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;white-space:nowrap;">
