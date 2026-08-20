@@ -73,7 +73,7 @@ img { max-width: 100%; display: block; }
 .tag-orange { background: #FDF0E4; color: var(--accent2); }
 
 /* ===== КНОПКИ ===== */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 28px; border-radius: 50px; font-family: var(--font-family); font-weight: 500; font-size: 14px; letter-spacing: 0.03em; cursor: pointer; border: none; transition: all 0.25s ease; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: 50px; font-family: var(--font-family); font-weight: 500; font-size: 14px; letter-spacing: 0.03em; cursor: pointer; border: none; transition: all 0.25s ease; }
 .btn-primary { background: var(--accent); color: white; }
 .btn-primary:hover { background: #4a7440; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(92,138,78,0.35); }
 .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
@@ -1999,7 +1999,7 @@ input[type=number] {
         Удалить
       </button>
       <button class="btn btn-outline" onclick="closeModal('program-modal')">Отмена</button>
-      <button class="btn btn-primary" id="save-program-btn" onclick="saveProgram()">Сохранить программу</button>
+      <button class="btn btn-primary" id="save-program-btn" onclick="saveProgram()">Сохранить</button>
     </div>
   </div>
 </div>
@@ -2675,7 +2675,7 @@ setTimeout(function() {
 }
 
 .modal-footer {
-  padding: 16px 28px 20px;
+  padding: 16px 8px 20px;
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
