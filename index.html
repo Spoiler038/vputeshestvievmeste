@@ -410,8 +410,8 @@ footer { background: var(--text); color: rgba(255,255,255,0.65); padding: 56px 0
 
 /* ===== ЛИЧНЫЙ КАБИНЕТ ===== */
 .dashboard { min-height: 100vh; padding-top: 80px; }
-.dashboard-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 28px 0; }
-.dashboard-header-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+.dashboard-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 0; }
+.dashboard-header-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 .dashboard-tabs { display: flex; gap: 4px; background: var(--bg); border-radius: 50px; padding: 4px; border: 1px solid var(--border); flex-wrap: wrap; justify-content: center; }
 .tab-btn { padding: 8px 18px; border-radius: 50px; border: none; background: transparent; font-family: var(--font-family); font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.2s; }
 .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
@@ -875,6 +875,7 @@ html.modal-open {overflow: hidden !important;}
     font-size: 11px;
     padding: 4px 10px;
   }
+  .dashboard-header { padding: 10px 0; }
   .hero {
     padding-top: 110px;
     padding-bottom: 40px;
@@ -980,6 +981,20 @@ html.modal-open {overflow: hidden !important;}
   }
   #program-modal .modal-grid .form-group.full {
     grid-column: 1;
+  }
+  #group-status-filters {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 4px;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 0;
+  }
+  #group-status-filters .filter-tag {
+    font-size: 11px;
+    padding: 4px 10px;
+    white-space: nowrap;
   }
   .modal-grid { grid-template-columns: 1fr; }
   .profile-grid { grid-template-columns: 1fr; }
@@ -3480,14 +3495,25 @@ function updateCarousel() {
   const items = track.querySelectorAll('.carousel-item');
   if (items.length === 0) return;
 
+  const containerWidth = outer.offsetWidth;
   const itemWidth = items[0].offsetWidth + 24;
-  const visibleCount = Math.max(1, Math.round((outer.offsetWidth + 24) / itemWidth));
+  const visibleCount = Math.max(1, Math.round((containerWidth + 24) / itemWidth));
   const maxOffset = Math.max(0, items.length - visibleCount);
 
   if (carouselOffset > maxOffset) carouselOffset = maxOffset;
   if (carouselOffset < 0) carouselOffset = 0;
 
   track.style.transform = `translateX(-${carouselOffset * itemWidth}px)`;
+  
+  // ✅ Скрываем кнопки, если все карточки помещаются на экране
+  const btns = document.querySelector('.carousel-btns');
+  if (btns) {
+    if (items.length <= visibleCount) {
+      btns.style.display = 'none';
+    } else {
+      btns.style.display = 'flex';
+    }
+  }
 }
 
 function carouselNext() {
@@ -7138,14 +7164,17 @@ function loadAdminGroups() {
     const pct = max > 0 ? Math.min(100, Math.round(filled / max * 100)) : 0;
     const statusColor = { набор: 'tag-green', укомплектована: 'tag-orange', завершена: 'tag-green', 'в пути': 'tag-orange', отменена: 'tag-orange' }[g.status] || 'tag-green';
     const totalPaid = (g.members || []).reduce((s, m) => s + (parseFloat(m.amount) || 0), 0);
+    const hasMembers = (g.members || []).length > 0;
+    const groupId = g.id;
 
     return `
     <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:16px;overflow:hidden;">
-      <div style="padding:20px 22px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+      <!-- Основная строка группы (кликабельная) -->
+      <div style="padding:20px 22px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;cursor:pointer;" onclick="toggleGroupMembers(${groupId})">
         <div style="flex:1;min-width:200px;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
             <strong style="font-size:17px;font-family:var(--font-family);">${g.name}</strong>
-            <span class="tag ${statusColor}" onclick="cycleGroupStatus(${g.id})" style="cursor:pointer;user-select:none;" title="Нажмите для смены статуса">${g.status} ✎</span>
+            <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${groupId})" style="cursor:pointer;user-select:none;" title="Нажмите для смены статуса">${g.status} ✎</span>
           </div>
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">🗺 ${prog ? prog.name : (g.programName || '—')}</div>
           ${g.startDate ? `<div style="font-size:13px;color:var(--text-muted);padding:4px 0;">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
@@ -7161,10 +7190,10 @@ function loadAdminGroups() {
           <div style="font-size:22px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${totalPaid.toLocaleString('ru')} ₽</div>
           <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">сумма</div>
         </div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;">
-          <button class="btn btn-outline btn-sm" onclick="openAddMember(${g.id})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
-          <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="openEditGroup(${g.id})">✏️ Изменить</button>
-          <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;" onclick="deleteGroup(${g.id})">
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;" onclick="event.stopPropagation();">
+          <button class="btn btn-outline btn-sm" onclick="openAddMember(${groupId})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
+          <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="openEditGroup(${groupId})">✏️ Изменить</button>
+          <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;" onclick="deleteGroup(${groupId})">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 6h18"/>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -7174,8 +7203,10 @@ function loadAdminGroups() {
           </button>
         </div>
       </div>
-      ${(g.members || []).length > 0 ? `
-      <div style="border-top:1px solid var(--border);overflow-x:auto;">
+      
+      <!-- Список участников (раскрывается) -->
+      <div id="group-members-${groupId}" style="display:none;border-top:1px solid var(--border);overflow-x:auto;">
+        ${hasMembers ? `
         <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">
           <thead><tr style="background:var(--bg);">
             <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Участник</th>
@@ -7193,14 +7224,34 @@ function loadAdminGroups() {
               <td style="padding:9px 14px;font-weight:600;color:var(--accent2);">${m.amount ? Number(m.amount).toLocaleString('ru') + ' ₽' : '—'}</td>
               <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;">${m.payMethod || '—'}</td>
               <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.note || ''}</td>
-              <td style="padding:9px 14px;"><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="removeMember(${g.id}, ${mi})">✕</button></td>
+              <td style="padding:9px 14px;"><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();removeMember(${groupId}, ${mi})">✕</button></td>
             </tr>`).join('')}
           </tbody>
         </table>
-      </div>` : ''}
+        ` : `
+        <div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">
+          👥 В группе пока нет участников
+        </div>
+        `}
+      </div>
     </div>`;
   }).join('');
 }
+
+// Переключение видимости списка участников в группе
+function toggleGroupMembers(groupId) {
+  const el = document.getElementById('group-members-' + groupId);
+  if (!el) return;
+  
+  if (el.style.display === 'none' || el.style.display === '') {
+    el.style.display = 'block';
+    // Сделаем плавное появление
+    el.style.transition = 'all 0.3s ease';
+  } else {
+    el.style.display = 'none';
+  }
+}
+  
   // === СОЗДАНИЕ/РЕДАКТИРОВАНИЕ ГРУППЫ ===
 function openAddGroup() {
   editingGroupId = null;
@@ -7863,11 +7914,20 @@ async function cycleGroupStatus(groupId) {
 
   const order = ['набор', 'укомплектована', 'в пути', 'завершена', 'отменена'];
   const cur = order.indexOf(g.status);
+  
+  // Если статус не найден в списке, устанавливаем первый
+  if (cur === -1) {
+    g.status = 'набор';
+    saveState('groups', groups);
+    syncGroupToSheets(g);
+    loadAdminGroups();
+    return;
+  }
+  
   const next = order[(cur + 1) % order.length];
 
   // Для финальных статусов — спросить подтверждение
   if (next === 'завершена') {
-    // Проверяем, не была ли группа уже завершена
     if (g.status === 'завершена') {
       showToast('Группа уже завершена');
       return;
@@ -7875,6 +7935,17 @@ async function cycleGroupStatus(groupId) {
     
     const memberCount = (g.members || []).length;
     const registeredCount = (g.members || []).filter(m => m.userId).length;
+    
+    // Проверяем, есть ли уже поездки у участников
+    const existingPurchases = purchases.filter(p => p.groupId === g.id);
+    if (existingPurchases.length > 0) {
+      showToast('⚠️ Поездки уже добавлены участникам');
+      g.status = 'завершена';
+      saveState('groups', groups);
+      syncGroupToSheets(g);
+      loadAdminGroups();
+      return;
+    }
     
     const ok = await confirmDialog(
       'Группа «' + g.name + '» будет отмечена как завершённая.\n' +
@@ -7886,9 +7957,19 @@ async function cycleGroupStatus(groupId) {
     if (!ok) return;
     
     g.status = 'завершена';
-    finalizeGroup(g);
+    // Записываем поездки участникам
+    const added = finalizeGroup(g);
+    if (added > 0) {
+      showToast('✅ Группа завершена, добавлено ' + added + ' поездок');
+    } else {
+      showToast('✅ Группа завершена');
+    }
     
   } else if (next === 'отменена') {
+    if (g.status === 'отменена') {
+      showToast('Группа уже отменена');
+      return;
+    }
     const ok = await confirmDialog(
       'Группа «' + g.name + '» будет отмечена как отменённая.',
       { icon: '❌', title: 'Отменить группу?', ok: 'Да, отменить', danger: true }
@@ -7901,14 +7982,9 @@ async function cycleGroupStatus(groupId) {
   }
 
   saveState('groups', groups);
-
-  gasPost({
-    action: 'upsert', sheet: 'groups',
-    data: { ...g, members: JSON.stringify(g.members || []) }
-  }).catch(e => console.warn('Status sync error:', e));
-
+  syncGroupToSheets(g);
   loadAdminGroups();
-  // Обновляем статистику если нужно
+  
   if (currentUser && currentUser.role === 'owner') {
     loadAdminStats();
   }
@@ -7921,14 +7997,13 @@ function finalizeGroup(g) {
   const prog = programs.find(p => p.id === g.programId);
   if (!prog) {
     showToast('Программа не найдена, поездка не добавлена');
-    return;
+    return 0;
   }
 
   let added = 0;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = g.endDate || new Date().toISOString().slice(0, 10);
 
   (g.members || []).forEach(member => {
-    // Проверяем, есть ли userId у участника (только зарегистрированные)
     if (!member.userId) return;
 
     // Проверяем, не добавлена ли уже эта поездка
@@ -7936,22 +8011,19 @@ function finalizeGroup(g) {
       p => p.userId === member.userId && p.programId === g.programId && p.groupId === g.id
     );
     if (already) {
-      // Если уже есть, обновляем дату и статус
-      already.date = g.endDate || today;
+      already.date = today;
       already.status = 'завершено';
       return;
     }
 
-    // Определяем цену поездки
     const price = parseFloat(member.amount) || prog.price || 0;
     
-    // Создаем запись о поездке
     const purchase = {
       id: purchases.length > 0 ? Math.max(...purchases.map(p => p.id)) + 1 : 1,
       userId: member.userId,
       programId: g.programId,
       price: price,
-      date: g.endDate || today,
+      date: today,
       status: 'завершено',
       groupId: g.id,
       groupName: g.name,
@@ -7961,7 +8033,6 @@ function finalizeGroup(g) {
     purchases.push(purchase);
     added++;
 
-    // Синхронизируем покупку с Google Sheets
     gasPost({ 
       action: 'upsert', 
       sheet: 'purchases', 
@@ -7972,9 +8043,11 @@ function finalizeGroup(g) {
   if (added > 0) {
     saveState('purchases', purchases);
     showToast('✅ Путешествие добавлено в историю ' + added + ' участникам!');
-  } else {
+  }else {
     showToast('⚠️ Новых поездок не добавлено (возможно, уже были добавлены)');
   }
+  
+  return added;
 }
   
 // === ОТКРЫТИЕ СПИСКА ПОЕЗДОК ПОЛЬЗОВАТЕЛЯ ===
@@ -8358,6 +8431,13 @@ async function loadAllFromSheets() {
       console.log('Загружено ' + groups.length + ' групп');
     }
 
+    // Загружаем покупки (поездки)
+    if (d.purchases && Array.isArray(d.purchases) && d.purchases.length > 0) {
+      purchases = d.purchases.map(normalizePurchase);
+      saveState('purchases', purchases);
+      console.log('Загружено ' + purchases.length + ' поездок');
+    }
+
     // Загружаем настройки
     if (d.settings && Array.isArray(d.settings)) {
       for (const s of d.settings) {
@@ -8434,6 +8514,20 @@ async function loadAllFromSheets() {
     console.warn('Sync error:', e);
     showToast('Офлайн-режим (данные из кэша)');
   }
+}
+
+function normalizePurchase(p) {
+  return {
+    id: parseInt(p.id) || p.id,
+    userId: parseInt(p.userId) || p.userId,
+    programId: parseInt(p.programId) || p.programId,
+    price: parseInt(p.price) || 0,
+    date: p.date || '',
+    status: p.status || 'завершено',
+    groupId: p.groupId || null,
+    groupName: p.groupName || '',
+    programName: p.programName || ''
+  };
 }
 
 // Нормализация программы
