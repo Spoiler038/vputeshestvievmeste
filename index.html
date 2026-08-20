@@ -3802,10 +3802,8 @@ function applyContactsContent() {
     if (tgLink) tgLink.href = 'https://t.me/' + tg.replace('@', '');
   }
 }
-  // ============================================================
-// === ФОРМА СВЯЗИ =============================================
-// ============================================================
-
+  
+  // === ФОРМА ОБРАТНОЙ СВЯЗИ ===
 async function submitLead() {
   // Проверяем согласие
   const consentCheckbox = document.getElementById('lead-consent');
@@ -3839,8 +3837,8 @@ async function submitLead() {
   // Отправляем в Google Sheets
   saveLeadToSheets(lead);
 
-  // Фиксируем согласие в логах
-  await recordConsent('lead_submit', {
+  // ✅ ФИКСАЦИЯ СОГЛАСИЯ ПРИ ОТПРАВКЕ ФОРМЫ
+  await recordConsent('lead_consent', {
     lead_name: name,
     lead_contact: contact,
     consent_type: 'lead_form'
@@ -3856,7 +3854,7 @@ async function submitLead() {
 
   showToast('Заявка успешно отправлена!');
 }
-
+  
   // ============================================================
 // === НОРМАЛИЗАЦИЯ ТЕЛЕФОНА ===================================
 // ============================================================
@@ -4739,10 +4737,7 @@ function generatePersonalDocPDF(docType) {
   });
 }
 
-// ============================================================
-// === ФИКСАЦИЯ СОГЛАСИЯ =======================================
-// ============================================================
-
+// === ФИКСАЦИЯ СОГЛАСИЯ ===
 async function recordConsent(action, details = {}) {
   const deviceId = getDeviceId();
   const userId = currentUser ? currentUser.id : 'guest';
@@ -4752,12 +4747,14 @@ async function recordConsent(action, details = {}) {
     data: {
       userId: userId,
       action: action,
-      details: JSON.stringify({
-        ...details,
-        device_id: deviceId,
-        page: window.location.pathname,
-        timestamp: new Date().toISOString()
-      })
+      lead_name: details.lead_name || '',
+      lead_contact: details.lead_contact || '',
+      username: details.username || '',
+      email: details.email || '',
+      consent_type: details.consent_type || '',
+      device_id: deviceId,
+      page: window.location.pathname,
+      timestamp: new Date().toISOString()
     }
   };
 
@@ -4770,6 +4767,7 @@ async function recordConsent(action, details = {}) {
     return { ok: false, error: e.message };
   }
 }
+  
   // ============================================================
 // === АВТОРИЗАЦИЯ ЧЕРЕЗ GAS ===================================
 // ============================================================
@@ -4855,7 +4853,7 @@ async function doRegister() {
       // Успешная регистрация
       const user = result.user;
 
-      // Фиксируем согласие в логах
+      // ✅ ФИКСАЦИЯ СОГЛАСИЯ ПРИ РЕГИСТРАЦИИ
       await recordConsent('register_consent', {
         username: username,
         email: email,
@@ -4937,7 +4935,6 @@ async function doLogin() {
     );
 
     if (localUser) {
-      // ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ checkPassword
       const isPasswordMatch = await checkPassword(password, localUser.password);
       
       if (isPasswordMatch) {
@@ -4978,10 +4975,11 @@ async function doLogin() {
     const result = await gasPost(payload);
 
     if (result && result.ok && result.user) {
-      await recordConsent('login', { 
-        username: result.user.username, 
-        email: result.user.email 
-      });
+      // ❌ УДАЛЯЕМ ЭТОТ БЛОК - больше не логируем consent при входе!
+      // await recordConsent('login', { 
+      //   username: result.user.username, 
+      //   email: result.user.email 
+      // });
 
       const user = result.user;
       
