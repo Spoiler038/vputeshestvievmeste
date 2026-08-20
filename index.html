@@ -1016,6 +1016,14 @@ html.modal-open {overflow: hidden !important;}
     font-size: 11px;
     padding: 3px 8px;
   }
+
+  #admin-groups .btn-primary {
+    display: block;
+    margin: 0 auto !important;
+    width: 100%;
+    max-width: 200px;
+    justify-content: center;
+  }
   
   /* ===== МОБИЛЬНАЯ ВЕРСИЯ ДЕТАЛЬНОЙ СТРАНИЦЫ ===== */
   .program-detail-grid { grid-template-columns: 1fr; gap: 30px; }
@@ -1858,38 +1866,37 @@ input[type=number] {
       <div class="admin-section" id="admin-groups">
         <div class="admin-page-title">Группы</div>
         <div class="admin-page-sub">Формирование групп для программ путешествий</div>
-
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
-          <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;" id="group-status-filters">
-  <button class="filter-tag active" data-status="" onclick="setGroupFilter(this,'')">Все</button>
-  <button class="filter-tag" data-status="набор" onclick="setGroupFilter(this,'набор')">
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
-      <circle cx="12" cy="12" r="10" fill="#4CAF50" stroke="none"/>
-    </svg> Набор
-  </button>
-  <button class="filter-tag" data-status="укомплектована" onclick="setGroupFilter(this,'укомплектована')">
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
-      <circle cx="12" cy="12" r="10" fill="#FFC107" stroke="none"/>
-    </svg> Укомплектована
-  </button>
-  <button class="filter-tag" data-status="в пути" onclick="setGroupFilter(this,'в пути')">
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
-      <circle cx="12" cy="12" r="10" fill="#2196F3" stroke="none"/>
-    </svg> В пути
-  </button>
-  <button class="filter-tag" data-status="завершена" onclick="setGroupFilter(this,'завершена')">
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
-      <circle cx="12" cy="12" r="10" fill="#4CAF50" stroke="none"/>
-    </svg> Завершена
-  </button>
-  <button class="filter-tag" data-status="отменена" onclick="setGroupFilter(this,'отменена')">
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
-      <circle cx="12" cy="12" r="10" fill="#F44336" stroke="none"/>
-    </svg> Отменена
-  </button>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:18px;">
+  <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:center;width:100%;" id="group-status-filters">
+    <button class="filter-tag active" data-status="" onclick="setGroupFilter(this,'')">Все</button>
+    <button class="filter-tag" data-status="набор" onclick="setGroupFilter(this,'набор')">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+        <circle cx="12" cy="12" r="10" fill="#4CAF50" stroke="none"/>
+      </svg> Набор
+    </button>
+    <button class="filter-tag" data-status="укомплектована" onclick="setGroupFilter(this,'укомплектована')">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+        <circle cx="12" cy="12" r="10" fill="#FFC107" stroke="none"/>
+      </svg> Укомплектована
+    </button>
+    <button class="filter-tag" data-status="в пути" onclick="setGroupFilter(this,'в пути')">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+        <circle cx="12" cy="12" r="10" fill="#2196F3" stroke="none"/>
+      </svg> В пути
+    </button>
+    <button class="filter-tag" data-status="завершена" onclick="setGroupFilter(this,'завершена')">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+        <circle cx="12" cy="12" r="10" fill="#4CAF50" stroke="none"/>
+      </svg> Завершена
+    </button>
+    <button class="filter-tag" data-status="отменена" onclick="setGroupFilter(this,'отменена')">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+        <circle cx="12" cy="12" r="10" fill="#F44336" stroke="none"/>
+      </svg> Отменена
+    </button>
+  </div>
+  <button class="btn btn-primary" style="flex-shrink:0;display:block;margin:0 auto;max-width:200px;width:100%;justify-content:center;" onclick="openAddGroup()">+ Создать группу</button>
 </div>
-          <button class="btn btn-primary" style="flex-shrink:0;" onclick="openAddGroup()">+ Создать группу</button>
-        </div>
 
         <div id="groups-list"></div>
       </div>
@@ -7170,31 +7177,31 @@ function loadAdminGroups() {
     return `
     <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:16px;overflow:hidden;">
       <!-- Основная строка группы (кликабельная) -->
-      <div style="padding:20px 22px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;cursor:pointer;" onclick="toggleGroupMembers(${groupId})">
-        <div style="flex:1;min-width:200px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+      <div style="padding:20px 22px;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;cursor:pointer;" onclick="toggleGroupMembers(${groupId})">
+        <div style="flex:1;min-width:160px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
             <strong style="font-size:17px;font-family:var(--font-family);">${g.name}</strong>
-            <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${groupId})" style="cursor:pointer;user-select:none;" title="Нажмите для смены статуса">${g.status} ✎</span>
+            <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${groupId})" style="cursor:pointer;user-select:none;font-size:10px;padding:3px 10px;" title="Нажмите для смены статуса">${g.status} ✎</span>
           </div>
-          <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">🗺 ${prog ? prog.name : (g.programName || '—')}</div>
-          ${g.startDate ? `<div style="font-size:13px;color:var(--text-muted);padding:4px 0;">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:2px;">🗺 ${prog ? prog.name : (g.programName || '—')}</div>
+          ${g.startDate ? `<div style="font-size:12px;color:var(--text-muted);padding:2px 0;">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
         </div>
-        <div style="text-align:center;min-width:100px;">
-          <div style="font-size:28px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${filled}/${max}</div>
-          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">участников</div>
-          <div style="background:var(--bg2);border-radius:4px;height:6px;margin-top:6px;overflow:hidden;">
+        <div style="text-align:center;min-width:70px;flex-shrink:0;">
+          <div style="font-size:20px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${filled}/${max}</div>
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">участников</div>
+          <div style="background:var(--bg2);border-radius:4px;height:4px;margin-top:4px;overflow:hidden;width:60px;margin-left:auto;margin-right:auto;">
             <div style="background:${pct >= 100 ? 'var(--accent2)' : 'var(--accent)'};height:100%;width:${pct}%;border-radius:4px;transition:width 0.4s;"></div>
           </div>
         </div>
-        <div style="text-align:center;min-width:100px;">
-          <div style="font-size:22px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${totalPaid.toLocaleString('ru')} ₽</div>
-          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">сумма</div>
+        <div style="text-align:center;min-width:80px;flex-shrink:0;">
+          <div style="font-size:18px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${totalPaid.toLocaleString('ru')} ₽</div>
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">сумма</div>
         </div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;" onclick="event.stopPropagation();">
-          <button class="btn btn-outline btn-sm" onclick="openAddMember(${groupId})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
-          <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="openEditGroup(${groupId})">✏️ Изменить</button>
-          <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;" onclick="deleteGroup(${groupId})">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;width:100%;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);" onclick="event.stopPropagation();">
+          <button class="btn btn-outline btn-sm" onclick="openAddMember(${groupId})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''} style="flex:1;min-width:60px;font-size:12px;padding:5px 10px;">+ Участник</button>
+          <button class="btn btn-edit" style="padding:5px 10px;font-size:12px;flex:1;min-width:60px;" onclick="openEditGroup(${groupId})">✏️ Изменить</button>
+          <button class="btn btn-danger" style="padding:5px 10px;font-size:12px;flex-shrink:0;" onclick="deleteGroup(${groupId})">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 6h18"/>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
               <line x1="10" y1="11" x2="10" y2="17"/>
@@ -7207,29 +7214,25 @@ function loadAdminGroups() {
       <!-- Список участников (раскрывается) -->
       <div id="group-members-${groupId}" style="display:none;border-top:1px solid var(--border);overflow-x:auto;">
         ${hasMembers ? `
-        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px;">
           <thead><tr style="background:var(--bg);">
-            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Участник</th>
-            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Контакт</th>
-            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Сумма</th>
-            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Оплата</th>
-            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Заметка</th>
-            <th style="padding:8px 14px;"></th>
+            <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);">Участник</th>
+            <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);">Сумма</th>
+            <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);">Оплата</th>
+            <th style="padding:6px 10px;"></th>
           </tr></thead>
           <tbody>
             ${(g.members || []).map((m, mi) => `
             <tr style="border-top:1px solid var(--border);">
-              <td style="padding:9px 14px;font-weight:600;">${m.name}</td>
-              <td style="padding:9px 14px;color:var(--accent);font-size:12px;">${m.contact || '—'}</td>
-              <td style="padding:9px 14px;font-weight:600;color:var(--accent2);">${m.amount ? Number(m.amount).toLocaleString('ru') + ' ₽' : '—'}</td>
-              <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;">${m.payMethod || '—'}</td>
-              <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.note || ''}</td>
-              <td style="padding:9px 14px;"><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();removeMember(${groupId}, ${mi})">✕</button></td>
+              <td style="padding:6px 10px;font-weight:600;">${m.name}</td>
+              <td style="padding:6px 10px;font-weight:600;color:var(--accent2);">${m.amount ? Number(m.amount).toLocaleString('ru') + ' ₽' : '—'}</td>
+              <td style="padding:6px 10px;color:var(--text-muted);font-size:11px;">${m.payMethod || '—'}</td>
+              <td style="padding:6px 10px;"><button class="btn btn-danger" style="padding:2px 6px;font-size:10px;" onclick="event.stopPropagation();removeMember(${groupId}, ${mi})">✕</button></td>
             </tr>`).join('')}
           </tbody>
         </table>
         ` : `
-        <div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">
+        <div style="padding:12px 16px;color:var(--text-muted);text-align:center;font-size:12px;">
           👥 В группе пока нет участников
         </div>
         `}
@@ -7243,14 +7246,60 @@ function toggleGroupMembers(groupId) {
   const el = document.getElementById('group-members-' + groupId);
   if (!el) return;
   
-  if (el.style.display === 'none' || el.style.display === '') {
+  // Проверяем текущее состояние
+  const isHidden = el.style.display === 'none' || el.style.display === '';
+  
+  // На мобильных устройствах используем touch-friendly анимацию
+  const isMobile = window.innerWidth <= 768;
+  
+  if (isHidden) {
     el.style.display = 'block';
-    // Сделаем плавное появление
-    el.style.transition = 'all 0.3s ease';
+    if (isMobile) {
+      el.style.transition = 'all 0.3s ease';
+      // Плавное раскрытие
+      el.style.maxHeight = '0';
+      el.style.overflow = 'hidden';
+      setTimeout(() => {
+        el.style.maxHeight = el.scrollHeight + 'px';
+      }, 10);
+      setTimeout(() => {
+        el.style.maxHeight = 'none';
+        el.style.overflow = '';
+      }, 400);
+    }
   } else {
-    el.style.display = 'none';
+    if (isMobile) {
+      el.style.maxHeight = el.scrollHeight + 'px';
+      el.style.overflow = 'hidden';
+      setTimeout(() => {
+        el.style.maxHeight = '0';
+      }, 10);
+      setTimeout(() => {
+        el.style.display = 'none';
+        el.style.maxHeight = 'none';
+        el.style.overflow = '';
+      }, 400);
+    } else {
+      el.style.display = 'none';
+    }
   }
 }
+
+// Добавляем обработчик touch для мобильных
+document.addEventListener('touchstart', function(e) {
+  const target = e.target.closest('[onclick*="toggleGroupMembers"]');
+  if (target) {
+    // Получаем groupId из onclick атрибута
+    const onclickAttr = target.getAttribute('onclick');
+    if (onclickAttr) {
+      const match = onclickAttr.match(/toggleGroupMembers\((\d+)\)/);
+      if (match) {
+        e.preventDefault();
+        toggleGroupMembers(parseInt(match[1]));
+      }
+    }
+  }
+}, { passive: false });
   
   // === СОЗДАНИЕ/РЕДАКТИРОВАНИЕ ГРУППЫ ===
 function openAddGroup() {
