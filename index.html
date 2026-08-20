@@ -3220,6 +3220,27 @@ function clearLoginFields() {
 
 function loginSuccess(user) {
   currentUser = user;
+  
+  // ✅ ПРОВЕРЯЕМ, ЕСТЬ ЛИ ВЛАДЕЛЕЦ В СПИСКЕ USERS
+  const ownerInList = users.find(u => u.role === 'owner');
+  
+  // ✅ ЕСЛИ ВОШЕЛ ВЛАДЕЛЕЦ, НО В СПИСКЕ ЕГО НЕТ — ДОБАВЛЯЕМ
+  if (user.role === 'owner' && !ownerInList) {
+    users.push(user);
+    saveState('users', users);
+    // Синхронизируем с таблицей
+    syncOwnerToSheets(user);
+  }
+  
+  // ✅ ЕСЛИ ВОШЕЛ НЕ ВЛАДЕЛЕЦ, НО В СПИСКЕ ЕСТЬ ВЛАДЕЛЕЦ — ИСПОЛЬЗУЕМ ЕГО
+  if (user.role !== 'owner' && ownerInList) {
+    // Обновляем данные пользователя из списка
+    const updatedUser = users.find(u => u.id === user.id);
+    if (updatedUser) {
+      currentUser = updatedUser;
+    }
+  }
+  
   closeAuth();
   updateNavForUser();
   showToast(`Добро пожаловать, ${user.name.split(' ')[0]}! 👋`);
@@ -5681,12 +5702,12 @@ function loadAdminPrograms() {
 }
   
 function loadAdminUsers(isOwner) {
-  users = loadState('users', users);
-  
-  // ✅ ПРИНУДИТЕЛЬНО ЗАГРУЖАЕМ ДАННЫЕ С GAS ПРИ ОТКРЫТИИ АДМИНКИ
   const GAS_URL_VALID = GAS_URL && GAS_URL.startsWith('https://script.google.com/macros/s/') && GAS_URL.includes('/exec');
   
-  // ✅ СРАЗУ ПОКАЗЫВАЕМ ЛОКАЛЬНЫЕ ДАННЫЕ (чтобы интерфейс не был пустым)
+  // ✅ СНАЧАЛА ЗАГРУЖАЕМ ЛОКАЛЬНЫХ ПОЛЬЗОВАТЕЛЕЙ (для быстрого отображения)
+  const localUsers = loadState('users', []);
+  
+  // ✅ ПОКАЗЫВАЕМ ТО, ЧТО ЕСТЬ ЛОКАЛЬНО
   renderUsersTable(isOwner);
   
   if (!GAS_URL_VALID) {
@@ -5695,7 +5716,6 @@ function loadAdminUsers(isOwner) {
     return;
   }
   
-  // ✅ ВСЕГДА ПЫТАЕМСЯ ЗАГРУЗИТЬ СВЕЖИЕ ДАННЫЕ (особенно на мобильных)
   console.log('🔄 Загрузка участников с сервера...');
   
   const localVersion = localStorage.getItem('vputi_data_version') || '0';
@@ -5714,14 +5734,32 @@ function loadAdminUsers(isOwner) {
         }
         
         if (fullResult.data.users && fullResult.data.users.length > 0) {
+          // ✅ НОРМАЛИЗУЕМ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ ИЗ ТАБЛИЦЫ
           const remoteUsers = fullResult.data.users.map(normalizeUser);
-          const localOwner = users.find(u => u.role === 'owner');
+          
+          // ✅ НАХОДИМ ВЛАДЕЛЬЦА ИЗ ТАБЛИЦЫ
+          const remoteOwner = remoteUsers.find(u => u.role === 'owner');
+          
+          // ✅ СОХРАНЯЕМ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ (ВКЛЮЧАЯ ВЛАДЕЛЬЦА ИЗ ТАБЛИЦЫ)
           let mergedUsers = [];
-          if (localOwner) {
-            mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
-          } else {
+          
+          if (remoteOwner) {
+            // Если владелец найден в таблице — используем его
             mergedUsers = remoteUsers;
+          } else {
+            // Если владельца нет в таблице — ищем локально
+            const localOwner = localUsers.find(u => u.role === 'owner');
+            if (localOwner) {
+              // Если есть локальный владелец — добавляем его и синхронизируем с таблицей
+              mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
+              // ✅ СОХРАНЯЕМ ВЛАДЕЛЬЦА В ТАБЛИЦУ
+              syncOwnerToSheets(localOwner);
+            } else {
+              mergedUsers = remoteUsers;
+            }
           }
+          
+          // ✅ УНИКАЛИЗАЦИЯ ПО ID
           const uniqueUsers = [];
           const seenIds = new Set();
           mergedUsers.forEach(u => {
@@ -5730,15 +5768,26 @@ function loadAdminUsers(isOwner) {
               uniqueUsers.push(u);
             }
           });
+          
           users = uniqueUsers;
           saveState('users', users);
+          
+          // ✅ ПРОВЕРЯЕМ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
+          if (currentUser) {
+            const updatedCurrentUser = users.find(u => u.id === currentUser.id);
+            if (updatedCurrentUser) {
+              currentUser = updatedCurrentUser;
+              updateNavForUser();
+            }
+          }
+          
           renderUsersTable(isOwner);
           showToast('✅ Загружено ' + users.length + ' участников');
           return;
         }
       }
       
-      // Если данных нет или ошибка — показываем то, что есть
+      // Если данных нет — показываем локальные
       renderUsersTable(isOwner);
       if (fullResult && fullResult.timeout) {
         showToast('⏱️ Таймаут, данные из кэша');
@@ -5753,11 +5802,44 @@ function loadAdminUsers(isOwner) {
     });
 }
 
+// ✅ ФУНКЦИЯ ДЛЯ СИНХРОНИЗАЦИИ ВЛАДЕЛЬЦА С ТАБЛИЦЕЙ
+async function syncOwnerToSheets(owner) {
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
+  
+  try {
+    const payload = {
+      action: 'upsert',
+      sheet: 'users',
+      data: {
+        id: owner.id,
+        username: owner.username,
+        password: owner.password,
+        role: owner.role,
+        name: owner.name,
+        email: owner.email,
+        bio: owner.bio || '',
+        joinedDate: owner.joinedDate || new Date().toISOString().slice(0, 10),
+        avatar: owner.avatar || '',
+        discount: owner.discount || 0,
+        consentDate: owner.consentDate || '',
+        device_id: owner.device_id || '',
+        phone: owner.phone || '',
+        active: owner.active !== false
+      }
+    };
+    
+    await gasPost(payload);
+    console.log('✅ Владелец синхронизирован с таблицей');
+  } catch(e) {
+    console.warn('Sync owner error:', e);
+  }
+}
+  
 function renderUsersTable(isOwner) {
   const tbody = document.getElementById('users-tbody');
   if (!tbody) return;
   
-  purchases = loadState('purchases', purchases);
+  purchases = loadState('purchases', []);
   
   // ✅ ЕСЛИ USERS ПУСТОЙ — ПОКАЗЫВАЕМ СООБЩЕНИЕ
   if (!users || users.length === 0) {
@@ -5765,18 +5847,36 @@ function renderUsersTable(isOwner) {
     return;
   }
   
-  tbody.innerHTML = users.map(u => {
+  // ✅ СОРТИРУЕМ: ВЛАДЕЛЕЦ ВСЕГДА ПЕРВЫЙ
+  const sortedUsers = [...users].sort((a, b) => {
+    if (a.role === 'owner') return -1;
+    if (b.role === 'owner') return 1;
+    return 0;
+  });
+  
+  tbody.innerHTML = sortedUsers.map(u => {
     const count = purchases ? purchases.filter(p => p.userId === u.id).length : 0;
-    return `<tr style="cursor:pointer;" onclick="openUserEditModal(${u.id})" title="Нажмите для просмотра и редактирования">
-      <td style="vertical-align:middle;white-space:nowrap;"><strong>${u.name || 'Без имени'}</strong></td>
+    const isOwnerUser = u.role === 'owner';
+    
+    return `<tr style="cursor:pointer;" onclick="${isOwnerUser ? '' : `openUserEditModal(${u.id})`}" title="${isOwnerUser ? 'Владелец клуба' : 'Нажмите для просмотра и редактирования'}">
+      <td style="vertical-align:middle;white-space:nowrap;">
+        <strong>${u.name || 'Без имени'}</strong>
+        ${isOwnerUser ? '<span style="font-size:10px;color:var(--accent2);margin-left:6px;">⭐</span>' : ''}
+      </td>
       <td style="vertical-align:middle;color:var(--text-muted);word-break:break-all;max-width:160px;">${u.username || '—'}</td>
       <td style="vertical-align:middle;color:var(--accent);font-size:12px;word-break:break-all;max-width:180px;">${u.email || '—'}</td>
       <td style="vertical-align:middle;white-space:nowrap;min-width:100px;" onclick="event.stopPropagation();">
-        ${isOwner ? `<select class="filter-select" style="padding:4px 8px;font-size:12px;height:28px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);min-width:100px;" onchange="changeUserRole(${u.id}, this.value)">
-          <option value="owner" ${u.role === 'owner' ? 'selected' : ''}>Владелец</option>
-          <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Админ</option>
-          <option value="user" ${u.role === 'user' ? 'selected' : ''}>Участник</option>
-        </select>` : `<span class="tag ${u.role === 'owner' ? 'tag-orange' : 'tag-green'}">${u.role === 'owner' ? 'Владелец' : u.role === 'admin' ? 'Админ' : 'Участник'}</span>`}
+        ${isOwner ? 
+          (isOwnerUser ? 
+            `<span class="tag tag-orange">⭐ Владелец</span>` :
+            `<select class="filter-select" style="padding:4px 8px;font-size:12px;height:28px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);min-width:100px;" onchange="changeUserRole(${u.id}, this.value)">
+              <option value="owner" ${u.role === 'owner' ? 'selected' : ''}>Владелец</option>
+              <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Админ</option>
+              <option value="user" ${u.role === 'user' ? 'selected' : ''}>Участник</option>
+            </select>`
+          ) :
+          `<span class="tag ${u.role === 'owner' ? 'tag-orange' : 'tag-green'}">${u.role === 'owner' ? '⭐ Владелец' : u.role === 'admin' ? 'Админ' : 'Участник'}</span>`
+        }
       </td>
       <td style="vertical-align:middle;text-align:center;cursor:pointer;white-space:nowrap;min-width:60px;" onclick="event.stopPropagation();openUserTripsModal(${u.id})" title="Нажмите для просмотра поездок">
         <span style="display:inline-flex;align-items:center;gap:4px;color:var(--accent2);font-weight:600;text-decoration:underline;text-underline-offset:2px;text-decoration-style:dotted;">
@@ -5790,7 +5890,7 @@ function renderUsersTable(isOwner) {
       <td style="vertical-align:middle;white-space:nowrap;min-width:90px;max-width:110px;padding:4px 6px;" onclick="event.stopPropagation();">
         <div style="display:flex;align-items:center;gap:2px;">
           <button class="btn btn-outline btn-sm" style="padding:2px 4px;font-size:12px;line-height:1;height:24px;width:24px;min-width:24px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:4px;border:1.5px solid var(--border);background:transparent;cursor:pointer;color:var(--text-muted);" onclick="adjustDiscount(${u.id}, -1)">−</button>
-          <input type="number" class="filter-input" id="discount-input-${u.id}" style="width:42px;padding:2px 2px;height:24px;font-size:12px;border-radius:4px;border:1.5px solid var(--border);background:var(--bg);text-align:center;flex-shrink:0;appearance:textfield;-moz-appearance:textfield;" value="${u.discount || 0}" min="0" max="100" onchange="updateUserDiscount(${u.id}, this.value)" oninput="validateDiscount(this)">
+          <input type="number" class="filter-input" id="discount-input-${u.id}" style="width:42px;padding:2px 2px;height:24px;font-size:12px;border-radius:4px;border:1.5px solid var(--border);background:var(--bg);text-align:center;flex-shrink:0;appearance:textfield;-moz-appearance:textfield;" value="${u.discount || 0}" min="0" max="100" onchange="updateUserDiscount(${u.id}, this.value)" oninput="validateDiscount(this)" ${isOwnerUser ? 'disabled' : ''}>
           <button class="btn btn-outline btn-sm" style="padding:2px 4px;font-size:12px;line-height:1;height:24px;width:24px;min-width:24px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:4px;border:1.5px solid var(--border);background:transparent;cursor:pointer;color:var(--text-muted);" onclick="adjustDiscount(${u.id}, 1)">+</button>
         </div>
       </td>
@@ -5842,14 +5942,85 @@ function updateUserDiscount(userId, discount) {
 function changeUserRole(userId, newRole) {
   const u = users.find(x => x.id === userId);
   if (!u) return;
+  
+  // ✅ НЕ ДАЁМ ИЗМЕНИТЬ РОЛЬ ВЛАДЕЛЬЦА (КРОМЕ КАК САМОГО ВЛАДЕЛЬЦА)
+  if (u.role === 'owner' && currentUser.id !== userId) {
+    showToast('Нельзя изменить роль владельца');
+    return;
+  }
+  
+  // ✅ ЕСЛИ МЕНЯЕМ ВЛАДЕЛЬЦА — ПРЕДУПРЕЖДАЕМ
+  if (newRole === 'owner' && u.role !== 'owner') {
+    confirmDialog(
+      'Пользователь «' + u.name + '» станет владельцем клуба.\n' +
+      'Текущий владелец будет автоматически понижен до Администратора.',
+      { icon: '👑', title: 'Сменить владельца?', ok: 'Сменить', danger: true }
+    ).then(ok => {
+      if (ok) {
+        // Понижаем старого владельца
+        const oldOwner = users.find(x => x.role === 'owner');
+        if (oldOwner && oldOwner.id !== userId) {
+          oldOwner.role = 'admin';
+        }
+        u.role = newRole;
+        saveState('users', users);
+        syncAllUsersToSheets();
+        showToast('Роль изменена: ' + u.name + ' теперь владелец');
+        loadAdminUsers(currentUser.role === 'owner');
+      }
+    });
+    return;
+  }
+  
   u.role = newRole;
   saveState('users', users);
+  
   if (currentUser && currentUser.id === userId) {
     currentUser.role = newRole;
     updateNavForUser();
   }
+  
+  // ✅ СИНХРОНИЗИРУЕМ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ С ТАБЛИЦЕЙ
+  syncAllUsersToSheets();
+  
   showToast('Роль пользователя изменена');
+  loadAdminUsers(currentUser && currentUser.role === 'owner');
 }
+
+// ✅ СИНХРОНИЗАЦИЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ С ТАБЛИЦЕЙ
+async function syncAllUsersToSheets() {
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
+  
+  try {
+    for (const u of users) {
+      const payload = {
+        action: 'upsert',
+        sheet: 'users',
+        data: {
+          id: u.id,
+          username: u.username || '',
+          password: u.password || '',
+          role: u.role || 'user',
+          name: u.name || '',
+          email: u.email || '',
+          bio: u.bio || '',
+          joinedDate: u.joinedDate || new Date().toISOString().slice(0, 10),
+          avatar: u.avatar || '',
+          discount: u.discount || 0,
+          consentDate: u.consentDate || '',
+          device_id: u.device_id || '',
+          phone: u.phone || '',
+          active: u.active !== false
+        }
+      };
+      await gasPost(payload);
+    }
+    bumpDataVersion();
+    console.log('✅ Все пользователи синхронизированы с таблицей');
+  } catch(e) {
+    console.warn('Sync users error:', e);
+  }
+}  
 
 async function deleteUser(userId) {
   const u = users.find(x => x.id === userId);
