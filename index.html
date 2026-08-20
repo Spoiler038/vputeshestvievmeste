@@ -3243,10 +3243,20 @@ function updateNavForUser() {
       avatarLetter.innerHTML = currentUser.name[0];
     }
 
-    // Показываем админ-кнопки только для владельца или админа
+    // ✅ Показываем админ-кнопки ТОЛЬКО для владельца или админа
     const isAdmin = currentUser.role === 'owner' || currentUser.role === 'admin';
+    
+    // Основная кнопка в навигации
     adminBtn.classList.toggle('hidden', !isAdmin);
-    if (mobileToggle) mobileToggle.classList.toggle('hidden', !isAdmin);
+    
+    // Мобильная кнопка
+    if (mobileToggle) {
+      mobileToggle.classList.toggle('hidden', !isAdmin);
+      // Если пользователь не админ и панель открыта — закрываем
+      if (!isAdmin && isMobPanelOpen) {
+        closeMobAdmin();
+      }
+    }
 
     // Скрываем дашборд в боковом меню для не-владельцев
     const dashboardNavItem = document.querySelector('.admin-nav-item[onclick*="dashboard"]');
@@ -3254,15 +3264,9 @@ function updateNavForUser() {
       dashboardNavItem.style.display = currentUser.role === 'owner' ? 'flex' : 'none';
     }
 
-    // Скрываем мобильную панель если она открыта
-    if (!isAdmin && isMobPanelOpen) {
-      closeMobAdmin();
-    }
-
   } else {
     guestMenu.classList.remove('hidden');
     userMenu.classList.add('hidden');
-    // Закрываем админ-панель если она открыта
     if (isMobPanelOpen) closeMobAdmin();
   }
 }
@@ -4125,7 +4129,10 @@ function renderUserGallery(userId) {
 // ============================================================
 
 async function saveProfile() {
-  if (!currentUser) return;
+  if (!currentUser) {
+    showToast('Войдите в аккаунт');
+    return;
+  }
 
   const name = document.getElementById('edit-name').value.trim();
   const email = document.getElementById('edit-email').value.trim();
@@ -4137,8 +4144,12 @@ async function saveProfile() {
     return;
   }
 
+  // ✅ ПРОВЕРЯЕМ, ЧТО ID ПЕРЕДАЕТСЯ ПРАВИЛЬНО
+  const userId = currentUser.id;
+  console.log('📝 Сохранение профиля для пользователя ID:', userId);
+
   const updateData = {
-    id: currentUser.id,
+    id: userId,
     name: name,
     email: email,
     phone: phone,
@@ -4165,11 +4176,23 @@ async function saveProfile() {
         updateNavForUser();
         loadDashboard();
         showToast('Профиль обновлён ✓');
+      } else {
+        // ✅ ЕСЛИ ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН В ЛОКАЛЬНОМ СПИСКЕ — ОБНОВЛЯЕМ ЕГО
+        currentUser.name = name;
+        currentUser.email = email;
+        currentUser.phone = phone;
+        currentUser.bio = bio;
+        users.push(currentUser);
+        saveState('users', users);
+        updateNavForUser();
+        loadDashboard();
+        showToast('Профиль обновлён ✓ (локально)');
       }
     } else {
       showToast('Ошибка сохранения: ' + (result.error || 'неизвестная ошибка'));
     }
   } catch(e) {
+    console.error('Save profile error:', e);
     showToast('Ошибка соединения: ' + e.message);
   }
 }
@@ -5656,12 +5679,15 @@ function loadAdminPrograms() {
   </tr>
 `).join('');
 }
-// === УЧАСТНИКИ (АДМИНКА) ===
+  
 function loadAdminUsers(isOwner) {
   users = loadState('users', users);
-  renderUsersTable(isOwner);
-
+  
+  // ✅ ПРИНУДИТЕЛЬНО ЗАГРУЖАЕМ ДАННЫЕ С GAS ПРИ ОТКРЫТИИ АДМИНКИ
   const GAS_URL_VALID = GAS_URL && GAS_URL.startsWith('https://script.google.com/macros/s/') && GAS_URL.includes('/exec');
+  
+  // ✅ СРАЗУ ПОКАЗЫВАЕМ ЛОКАЛЬНЫЕ ДАННЫЕ (чтобы интерфейс не был пустым)
+  renderUsersTable(isOwner);
   
   if (!GAS_URL_VALID) {
     console.log('GAS URL не настроен, работаем с локальными данными');
@@ -5669,61 +5695,62 @@ function loadAdminUsers(isOwner) {
     return;
   }
   
-  if (GAS_URL && !GAS_URL.includes('ВСТАВЬТЕ')) {
-    showToast('🔄 Обновление данных...');
-    
-    const localVersion = localStorage.getItem('vputi_data_version') || '0';
-    
-    gasGet({ action: 'checkVersion', version: localVersion })
-      .then(versionResult => {
-        if (versionResult && versionResult.ok && versionResult.needsUpdate) {
-          showToast('🔄 Загрузка участников...');
-          return gasGet({ action: 'getFullData' });
+  // ✅ ВСЕГДА ПЫТАЕМСЯ ЗАГРУЗИТЬ СВЕЖИЕ ДАННЫЕ (особенно на мобильных)
+  console.log('🔄 Загрузка участников с сервера...');
+  
+  const localVersion = localStorage.getItem('vputi_data_version') || '0';
+  
+  gasGet({ action: 'checkVersion', version: localVersion })
+    .then(versionResult => {
+      if (versionResult && versionResult.ok && versionResult.needsUpdate) {
+        return gasGet({ action: 'getFullData' });
+      }
+      return null;
+    })
+    .then(fullResult => {
+      if (fullResult && fullResult.ok && fullResult.data) {
+        if (fullResult.version) {
+          localStorage.setItem('vputi_data_version', fullResult.version);
         }
-        return null;
-      })
-      .then(fullResult => {
-        if (fullResult && fullResult.ok && fullResult.data) {
-          if (fullResult.version) {
-            localStorage.setItem('vputi_data_version', fullResult.version);
-          }
-          
-          if (fullResult.data.users && fullResult.data.users.length > 0) {
-            const remoteUsers = fullResult.data.users.map(normalizeUser);
-            const localOwner = users.find(u => u.role === 'owner');
-            let mergedUsers = [];
-            if (localOwner) {
-              mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
-            } else {
-              mergedUsers = remoteUsers;
-            }
-            const uniqueUsers = [];
-            const seenIds = new Set();
-            mergedUsers.forEach(u => {
-              if (!seenIds.has(u.id)) {
-                seenIds.add(u.id);
-                uniqueUsers.push(u);
-              }
-            });
-            users = uniqueUsers;
-            saveState('users', users);
-            showToast('✅ Загружено ' + users.length + ' участников');
+        
+        if (fullResult.data.users && fullResult.data.users.length > 0) {
+          const remoteUsers = fullResult.data.users.map(normalizeUser);
+          const localOwner = users.find(u => u.role === 'owner');
+          let mergedUsers = [];
+          if (localOwner) {
+            mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
           } else {
-            showToast('✅ Данные актуальны');
+            mergedUsers = remoteUsers;
           }
-        } else if (fullResult && fullResult.timeout) {
-          showToast('⏱️ Таймаут, данные из кэша');
-        } else {
-          showToast('✅ Данные актуальны');
+          const uniqueUsers = [];
+          const seenIds = new Set();
+          mergedUsers.forEach(u => {
+            if (!seenIds.has(u.id)) {
+              seenIds.add(u.id);
+              uniqueUsers.push(u);
+            }
+          });
+          users = uniqueUsers;
+          saveState('users', users);
+          renderUsersTable(isOwner);
+          showToast('✅ Загружено ' + users.length + ' участников');
+          return;
         }
-        renderUsersTable(isOwner);
-      })
-      .catch(err => {
-        console.warn('Load users error:', err);
-        showToast('📌 Офлайн-режим (локальные данные)');
-        renderUsersTable(isOwner);
-      });
-  }
+      }
+      
+      // Если данных нет или ошибка — показываем то, что есть
+      renderUsersTable(isOwner);
+      if (fullResult && fullResult.timeout) {
+        showToast('⏱️ Таймаут, данные из кэша');
+      } else {
+        showToast('✅ Данные актуальны');
+      }
+    })
+    .catch(err => {
+      console.warn('Load users error:', err);
+      renderUsersTable(isOwner);
+      showToast('📌 Офлайн-режим (локальные данные)');
+    });
 }
 
 function renderUsersTable(isOwner) {
@@ -5732,7 +5759,8 @@ function renderUsersTable(isOwner) {
   
   purchases = loadState('purchases', purchases);
   
-  if (users.length === 0) {
+  // ✅ ЕСЛИ USERS ПУСТОЙ — ПОКАЗЫВАЕМ СООБЩЕНИЕ
+  if (!users || users.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">👥 Нет участников. Добавьте первого!</td></tr>`;
     return;
   }
@@ -5740,8 +5768,8 @@ function renderUsersTable(isOwner) {
   tbody.innerHTML = users.map(u => {
     const count = purchases ? purchases.filter(p => p.userId === u.id).length : 0;
     return `<tr style="cursor:pointer;" onclick="openUserEditModal(${u.id})" title="Нажмите для просмотра и редактирования">
-      <td style="vertical-align:middle;white-space:nowrap;"><strong>${u.name}</strong></td>
-      <td style="vertical-align:middle;color:var(--text-muted);word-break:break-all;max-width:160px;">${u.username}</td>
+      <td style="vertical-align:middle;white-space:nowrap;"><strong>${u.name || 'Без имени'}</strong></td>
+      <td style="vertical-align:middle;color:var(--text-muted);word-break:break-all;max-width:160px;">${u.username || '—'}</td>
       <td style="vertical-align:middle;color:var(--accent);font-size:12px;word-break:break-all;max-width:180px;">${u.email || '—'}</td>
       <td style="vertical-align:middle;white-space:nowrap;min-width:100px;" onclick="event.stopPropagation();">
         ${isOwner ? `<select class="filter-select" style="padding:4px 8px;font-size:12px;height:28px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);min-width:100px;" onchange="changeUserRole(${u.id}, this.value)">
@@ -8544,7 +8572,13 @@ function toggleMobileAdminPanel() {
     return;
   }
 
-  if (!currentUser || !['owner', 'admin'].includes(currentUser.role)) {
+  // ✅ ДОБАВЛЯЕМ ПРОВЕРКУ РОЛИ
+  if (!currentUser) {
+    showToast('Войдите в аккаунт');
+    return;
+  }
+  
+  if (!['owner', 'admin'].includes(currentUser.role)) {
     showToast('Доступ запрещён');
     return;
   }
@@ -8579,7 +8613,6 @@ function toggleMobileAdminPanel() {
     renderMobAdminSection(def);
     document.querySelectorAll('.mob-item').forEach(el => el.classList.toggle('active', el.dataset.section === def));
     
-    // Включаем скролл внутри оверлея
     overlay.style.overflowY = 'auto';
     overlay.style.webkitOverflowScrolling = 'touch';
   } else {
