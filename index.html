@@ -5086,8 +5086,6 @@ async function doLogin() {
 
   try {
     const deviceId = getDeviceId();
-    
-    // ✅ ВЫЧИСЛЯЕМ ХЕШ ПАРОЛЯ ДЛЯ СРАВНЕНИЯ
     const passwordHash = await sha256(password);
     console.log('🔑 Хеш введенного пароля:', passwordHash);
 
@@ -5098,13 +5096,23 @@ async function doLogin() {
 
     if (localUser) {
       console.log('👤 Найден локальный пользователь:', localUser.username);
-      console.log('📝 Хеш в БД:', localUser.password);
-      console.log('🔑 Хеш введенного:', passwordHash);
+      console.log('📝 Пароль в БД:', localUser.password);
       
-      // ✅ СРАВНИВАЕМ ХЕШИ (SHA-256)
-      const isMatch = localUser.password === passwordHash;
+      // ✅ УНИВЕРСАЛЬНАЯ ПРОВЕРКА: открытый пароль ИЛИ хеш
+      const isPlainMatch = localUser.password === password;
+      const isHashMatch = localUser.password === passwordHash;
       
-      if (isMatch) {
+      console.log('🔍 isPlainMatch:', isPlainMatch);
+      console.log('🔍 isHashMatch:', isHashMatch);
+      
+      if (isPlainMatch || isHashMatch) {
+        // ✅ Если пароль был открытым — автоматически мигрируем на хеш
+        if (isPlainMatch && !isHashMatch) {
+          localUser.password = passwordHash;
+          console.log('🔄 Пароль мигрирован на хеш для:', localUser.username);
+          saveState('users', users);
+        }
+        
         localUser.device_id = deviceId;
         saveState('users', users);
         currentUser = localUser;
@@ -5143,7 +5151,7 @@ async function doLogin() {
     if (result && result.ok && result.user) {
       const user = result.user;
       
-      // ✅ СОХРАНЯЕМ ХЕШ ДЛЯ БЫСТРОГО ВХОДА
+      // ✅ Сохраняем хеш для быстрого входа (для всех пользователей)
       localStorage.setItem('vputi_password_hash', passwordHash);
       localStorage.setItem('vputi_user_data', JSON.stringify({
         id: user.id,
@@ -5156,10 +5164,20 @@ async function doLogin() {
       
       let existingUser = users.find(u => u.id === user.id);
       if (existingUser) {
-        Object.assign(existingUser, user);
+        // Обновляем данные пользователя (кроме пароля, он уже хеширован в Sheets)
+        existingUser.name = user.name || existingUser.name;
+        existingUser.email = user.email || existingUser.email;
+        existingUser.role = user.role || existingUser.role;
+        existingUser.avatar = user.avatar || existingUser.avatar;
+        existingUser.bio = user.bio || existingUser.bio;
+        existingUser.phone = user.phone || existingUser.phone;
+        existingUser.device_id = deviceId;
+        existingUser.discount = user.discount || existingUser.discount;
+        // ✅ НЕ ТРОГАЕМ ПАРОЛЬ — он уже хеширован в Sheets
         saveState('users', users);
         currentUser = existingUser;
       } else {
+        user.device_id = deviceId;
         users.push(user);
         saveState('users', users);
         currentUser = user;
@@ -5185,9 +5203,14 @@ async function doLogin() {
     
     if (localUser) {
       const passwordHash = await sha256(password);
-      const isMatch = localUser.password === passwordHash;
+      const isPlainMatch = localUser.password === password;
+      const isHashMatch = localUser.password === passwordHash;
       
-      if (isMatch) {
+      if (isPlainMatch || isHashMatch) {
+        if (isPlainMatch && !isHashMatch) {
+          localUser.password = passwordHash;
+          saveState('users', users);
+        }
         currentUser = localUser;
         closeAuth();
         updateNavForUser();
