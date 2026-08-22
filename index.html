@@ -9109,22 +9109,22 @@ function renderMobAdminSection(section) {
 
   const isOwner = currentUser && currentUser.role === 'owner';
 
- else if (section === 'dashboard' && isOwner) {
-  // ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ СТАТИСТИКУ
-  if (typeof loadAdminStats === 'function') {
-    loadAdminStats();
-  }
-  const rev = purchases.reduce((s, p) => s + p.price, 0);
-  box.innerHTML = `
-    <h2 style="font-size:22px;font-weight:500;margin-bottom:16px;">Дашборд</h2>
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">Программ</div><div class="stat-value">${programs.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Участников</div><div class="stat-value">${users.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Заявок</div><div class="stat-value">${leads.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Выручка</div><div class="stat-value">${(rev / 1000).toFixed(0)}к ₽</div></div>
-    </div>
-  `;
-} else if (section === 'programs') {
+  if (section === 'dashboard' && isOwner) {
+    // ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ СТАТИСТИКУ
+    if (typeof loadAdminStats === 'function') {
+      loadAdminStats();
+    }
+    const rev = purchases.reduce((s, p) => s + p.price, 0);
+    box.innerHTML = `
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:16px;">Дашборд</h2>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Программ</div><div class="stat-value">${programs.length}</div></div>
+        <div class="stat-card"><div class="stat-label">Участников</div><div class="stat-value">${users.length}</div></div>
+        <div class="stat-card"><div class="stat-label">Заявок</div><div class="stat-value">${leads.length}</div></div>
+        <div class="stat-card"><div class="stat-label">Выручка</div><div class="stat-value">${(rev / 1000).toFixed(0)}к ₽</div></div>
+      </div>
+    `;
+  } else if (section === 'programs') {
     box.innerHTML = `
       <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Программы</h2>
       <button class="btn btn-primary" style="width:100%;margin-bottom:14px;" onclick="openAddProgram()">+ Добавить программу</button>
@@ -9151,40 +9151,40 @@ function renderMobAdminSection(section) {
   </div>
 `).join('')}
     `;
- } else if (section === 'users') {
-  // Принудительно загружаем пользователей перед отображением
-  if (typeof loadAdminUsers === 'function') {
-    loadAdminUsers(currentUser && currentUser.role === 'owner');
-  }
-  box.innerHTML = `
-    <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Участники</h2>
-    <div id="mob-users-list">
-      ${users.map(function(u) {
-        const count = purchases.filter(function(p){ return p.userId===u.id; }).length;
-        const total = purchases.filter(function(p){ return p.userId===u.id; }).reduce(function(s,p){ return s+p.price; }, 0);
-        return '<div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">'
-          + '<div style="padding:13px;cursor:pointer;" onclick="openUserEditModal('+u.id+')">'
-          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
-          + '<strong style="font-size:14px;">'+u.name+'</strong>'
-          + '<span class="tag '+(u.role==='owner'?'tag-orange':u.role==='admin'?'tag-orange':'tag-green')+'">'+(u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Участник')+'</span>'
-          + '</div>'
-          + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@'+u.username+' · '+u.email+'</div>'
-          + '<div style="display:flex;gap:14px;font-size:12px;color:var(--text-muted);">'
-          + '<span>✈️ Путешествий: <strong id="mob-trip-count-'+u.id+'">'+count+'</strong></span>'
-          + '<span>🏷 Скидка: <strong>'+(u.discount||0)+'%</strong></span>'
-          + (total>0 ? '<span>💰 '+(total/1000).toFixed(0)+'к ₽</span>' : '')
-          + '</div>'
-          + '</div>'
-          + '<div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">'
-          + (isOwner ? '<select class="filter-select" style="font-size:12px;padding:5px;flex:1;" onchange="changeUserRole('+u.id+',this.value)"><option value=\"owner\"'+(u.role==='owner'?' selected':'')+'>Владелец</option><option value=\"admin\"'+(u.role==='admin'?' selected':'')+'>Админ</option><option value=\"user\"'+(u.role==='user'?' selected':'')+'>Участник</option></select>' : '')
-          + '<button class="btn btn-outline btn-sm" style="font-size:11px;padding:5px 10px;" onclick="showUserStats('+u.id+')">📊</button>'
-          + (u.role!=='owner' ? '<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="deleteUser('+u.id+')">🗑</button>' : '')
-          + '</div>'
-          + '</div>';
-      }).join('')}
-    </div>
-  `;
-} else if (section === 'leads') {
+  } else if (section === 'users') {
+    // Принудительно загружаем пользователей перед отображением
+    if (typeof loadAdminUsers === 'function') {
+      loadAdminUsers(currentUser && currentUser.role === 'owner');
+    }
+    box.innerHTML = `
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Участники</h2>
+      <div id="mob-users-list">
+        ${users.map(function(u) {
+          const count = purchases.filter(function(p){ return p.userId===u.id; }).length;
+          const total = purchases.filter(function(p){ return p.userId===u.id; }).reduce(function(s,p){ return s+p.price; }, 0);
+          return '<div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">'
+            + '<div style="padding:13px;cursor:pointer;" onclick="openUserEditModal('+u.id+')">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
+            + '<strong style="font-size:14px;">'+u.name+'</strong>'
+            + '<span class="tag '+(u.role==='owner'?'tag-orange':u.role==='admin'?'tag-orange':'tag-green')+'">'+(u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Участник')+'</span>'
+            + '</div>'
+            + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@'+u.username+' · '+u.email+'</div>'
+            + '<div style="display:flex;gap:14px;font-size:12px;color:var(--text-muted);">'
+            + '<span>✈️ Путешествий: <strong id="mob-trip-count-'+u.id+'">'+count+'</strong></span>'
+            + '<span>🏷 Скидка: <strong>'+(u.discount||0)+'%</strong></span>'
+            + (total>0 ? '<span>💰 '+(total/1000).toFixed(0)+'к ₽</span>' : '')
+            + '</div>'
+            + '</div>'
+            + '<div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">'
+            + (isOwner ? '<select class="filter-select" style="font-size:12px;padding:5px;flex:1;" onchange="changeUserRole('+u.id+',this.value)"><option value=\"owner\"'+(u.role==='owner'?' selected':'')+'>Владелец</option><option value=\"admin\"'+(u.role==='admin'?' selected':'')+'>Админ</option><option value=\"user\"'+(u.role==='user'?' selected':'')+'>Участник</option></select>' : '')
+            + '<button class="btn btn-outline btn-sm" style="font-size:11px;padding:5px 10px;" onclick="showUserStats('+u.id+')">📊</button>'
+            + (u.role!=='owner' ? '<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="deleteUser('+u.id+')">🗑</button>' : '')
+            + '</div>'
+            + '</div>';
+        }).join('')}
+      </div>
+    `;
+  } else if (section === 'leads') {
     box.innerHTML = `
       <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Заявки (${leads.length})</h2>
       ${leads.length === 0
@@ -9203,48 +9203,48 @@ function renderMobAdminSection(section) {
                 <div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">
                   <button class="btn btn-primary btn-sm" style="flex:1;font-size:12px;" onclick="openLeadModal(${l.id})">Открыть →</button>
                   <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteLead(${l.id})">
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 6h18"/>
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    <line x1="10" y1="11" x2="10" y2="17"/>
-    <line x1="14" y1="11" x2="14" y2="17"/>
-  </svg>
-</button>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 6h18"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      <line x1="10" y1="11" x2="10" y2="17"/>
+                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                  </button>
                 </div>
               </div>
             `;
           }).join('')}
     `;
   } else if (section === 'groups') {
-  box.innerHTML = `
-    <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Группы</h2>
-    ${groups.length === 0 ? '<p style="color:var(--text-muted);">Групп пока нет.</p>' :
-      groups.map(function(g) {
-        const prog = programs.find(p => p.id === g.programId);
-        const filled = (g.members || []).length;
-        const max = g.maxPeople || (prog ? prog.maxPeople : 10);
-        const statusColor = { набор: 'tag-green', укомплектована: 'tag-orange', завершена: 'tag-green', 'в пути': 'tag-orange', отменена: 'tag-orange' }[g.status] || 'tag-green';
-        return `
-          <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:9px;overflow:hidden;">
-            <div style="padding:13px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
-                <strong style="font-size:15px;">${g.name}</strong>
-                <span class="tag ${statusColor}" onclick="cycleGroupStatus(${g.id})" style="cursor:pointer;user-select:none;font-size:10px;">${g.status} ✎</span>
+    box.innerHTML = `
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Группы</h2>
+      ${groups.length === 0 ? '<p style="color:var(--text-muted);">Групп пока нет.</p>' :
+        groups.map(function(g) {
+          const prog = programs.find(p => p.id === g.programId);
+          const filled = (g.members || []).length;
+          const max = g.maxPeople || (prog ? prog.maxPeople : 10);
+          const statusColor = { набор: 'tag-green', укомплектована: 'tag-orange', завершена: 'tag-green', 'в пути': 'tag-orange', отменена: 'tag-orange' }[g.status] || 'tag-green';
+          return `
+            <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:9px;overflow:hidden;">
+              <div style="padding:13px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
+                  <strong style="font-size:15px;">${g.name}</strong>
+                  <span class="tag ${statusColor}" onclick="cycleGroupStatus(${g.id})" style="cursor:pointer;user-select:none;font-size:10px;">${g.status} ✎</span>
+                </div>
+                ${prog ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">🗺 ${prog.name}</div>` : ''}
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${filled}/${max} участников</div>
               </div>
-              ${prog ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">🗺 ${prog.name}</div>` : ''}
-              <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${filled}/${max} участников</div>
+              <div style="display:flex;gap:6px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);flex-wrap:wrap;">
+                <button class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;flex:1;min-width:60px;" onclick="openAddMember(${g.id})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
+                <button class="btn btn-edit" style="padding:4px 10px;font-size:12px;flex:1;min-width:60px;" onclick="openEditGroup(${g.id})">✏️ Изменить</button>
+                <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="deleteGroup(${g.id})">🗑</button>
+              </div>
             </div>
-            <div style="display:flex;gap:6px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);flex-wrap:wrap;">
-              <button class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;flex:1;min-width:60px;" onclick="openAddMember(${g.id})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
-              <button class="btn btn-edit" style="padding:4px 10px;font-size:12px;flex:1;min-width:60px;" onclick="openEditGroup(${g.id})">✏️ Изменить</button>
-              <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="deleteGroup(${g.id})">🗑</button>
-            </div>
-          </div>
-        `;
-      }).join('')}
-    <button class="btn btn-primary" style="margin-top:12px;width:100%;" onclick="openAddGroup()">+ Создать группу</button>
-  `;
-} else if (section === 'settings') {
+          `;
+        }).join('')}
+      <button class="btn btn-primary" style="margin-top:12px;width:100%;" onclick="openAddGroup()">+ Создать группу</button>
+    `;
+  } else if (section === 'settings') {
     box.innerHTML = `
       <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Настройки</h2>
       <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
