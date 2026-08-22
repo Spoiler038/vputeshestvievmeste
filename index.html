@@ -7240,32 +7240,68 @@ function loadAdminGroups() {
 
 // Переключение видимости списка участников в группе
 function toggleGroupMembers(groupId) {
-  const el = document.getElementById('group-members-' + groupId);
-  if (!el) return;
+  // Сначала ищем в основном DOM (для ПК)
+  let el = document.getElementById('group-members-' + groupId);
   
-  if (el.style.display === 'none' || el.style.display === '') {
+  // Если не найден, ищем в мобильном контейнере
+  if (!el) {
+    el = document.getElementById('mob-group-members-' + groupId);
+  }
+  
+  if (!el) {
+    console.warn('Элемент group-members-' + groupId + ' не найден');
+    return;
+  }
+  
+  const isHidden = el.style.display === 'none' || el.style.display === '';
+  const isMobile = window.innerWidth <= 768;
+  
+  if (isHidden) {
     el.style.display = 'block';
-    // Сделаем плавное появление
-    el.style.transition = 'all 0.3s ease';
+    if (isMobile) {
+      el.style.transition = 'all 0.3s ease';
+      el.style.maxHeight = '0';
+      el.style.overflow = 'hidden';
+      setTimeout(() => {
+        el.style.maxHeight = el.scrollHeight + 'px';
+      }, 10);
+      setTimeout(() => {
+        el.style.maxHeight = 'none';
+        el.style.overflow = '';
+      }, 400);
+    }
   } else {
-    el.style.display = 'none';
+    if (isMobile) {
+      el.style.maxHeight = el.scrollHeight + 'px';
+      el.style.overflow = 'hidden';
+      setTimeout(() => {
+        el.style.maxHeight = '0';
+      }, 10);
+      setTimeout(() => {
+        el.style.display = 'none';
+        el.style.maxHeight = 'none';
+        el.style.overflow = '';
+      }, 400);
+    } else {
+      el.style.display = 'none';
+    }
   }
 }
-  
-  // === СОЗДАНИЕ/РЕДАКТИРОВАНИЕ ГРУППЫ ===
-function openAddGroup() {
-  editingGroupId = null;
-  document.getElementById('group-modal-title').textContent = 'Создать группу';
-  const content = document.getElementById('group-modal-content');
-  content.innerHTML = buildGroupForm({});
-  
-  // Скрываем кнопку удаления
-  const deleteBtn = document.getElementById('delete-group-btn');
-  if (deleteBtn) deleteBtn.style.display = 'none';
-  
-  openModal('group-modal');
-}
 
+// Добавляем обработчик touch для мобильных устройств
+document.addEventListener('touchstart', function(e) {
+  const target = e.target.closest('[onclick*="toggleGroupMembers"]');
+  if (target) {
+    const onclickAttr = target.getAttribute('onclick');
+    if (onclickAttr) {
+      const match = onclickAttr.match(/toggleGroupMembers\((\d+)\)/);
+      if (match) {
+        e.preventDefault();
+        toggleGroupMembers(parseInt(match[1]));
+      }
+    }
+  }
+}, { passive: false });
 function openEditGroup(id) {
   const g = groups.find(x => x.id === id);
   if (!g) return;
@@ -7548,6 +7584,8 @@ async function deleteGroup(id) {
   loadAdminGroups();
   showToast('Группа удалена');
 }
+
+  
   
   // === ДОБАВЛЕНИЕ УЧАСТНИКА В ГРУППУ ===
 function openAddMember(groupId) {
@@ -8055,6 +8093,9 @@ function openUserTripsModal(userId) {
   const u = users.find(x => x.id === userId);
   if (!u) return;
 
+  // Обновляем purchases из localStorage
+  purchases = loadState('purchases', []);
+  
   const userPurchases = purchases.filter(p => p.userId === userId);
   
   if (userPurchases.length === 0) {
@@ -8074,19 +8115,17 @@ function openUserTripsModal(userId) {
         </div>
         <div>
           <div style="font-weight:600;font-size:16px;">${u.name}</div>
-          <div style="font-size:12px;color:var(--text-muted);">Всего поездок: ${userPurchases.length}</div>
+          <div style="font-size:12px;color:var(--text-muted);">Всего поездок: <strong id="trips-total-count">${userPurchases.length}</strong></div>
         </div>
       </div>
       <div style="max-height:50vh;overflow-y:auto;padding-right:4px;">
         ${userPurchases.map(p => {
           const prog = programs.find(pr => pr.id === p.programId);
-          // Форматируем дату
           let formattedDate = p.date || '';
           if (formattedDate && formattedDate.includes('-')) {
             const parts = formattedDate.split('-');
             formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
           }
-          // Проверяем, есть ли фото у этой поездки
           const hasPhotos = gallery.some(g => g.userId === userId && g.programId === p.programId);
           
           return `
@@ -8140,7 +8179,15 @@ function openDeleteTripConfirm(userId, purchaseId, programId, date) {
   }
 
   const modalContent = document.getElementById('delete-trip-content');
-  modalContent.innerHTML = `
+  if (!modalContent) {
+    // Создаем контейнер если его нет
+    const container = document.createElement('div');
+    container.id = 'delete-trip-content';
+    document.getElementById('delete-trip-modal').querySelector('.modal-scroll').appendChild(container);
+  }
+  
+  const content = document.getElementById('delete-trip-content');
+  content.innerHTML = `
     <div style="padding:4px 0;">
       <div style="text-align:center;margin-bottom:16px;">
         <div style="font-size:24px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;">
@@ -8171,6 +8218,10 @@ function openDeleteTripConfirm(userId, purchaseId, programId, date) {
           🗑️ Удалить также <strong>${gallery.filter(g => g.userId === userId && g.programId === programId).length}</strong> фото, загруженные к этой поездке
         </label>
       </div>` : ''}
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn btn-outline" onclick="closeModal('delete-trip-modal')">Отмена</button>
+        <button class="btn btn-danger" onclick="confirmDeleteTrip()">🗑 Удалить</button>
+      </div>
     </div>
   `;
 
@@ -8178,7 +8229,6 @@ function openDeleteTripConfirm(userId, purchaseId, programId, date) {
   openModal('delete-trip-modal');
 }
 
-// === ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ ПОЕЗДКИ ===
 function confirmDeleteTrip() {
   if (!deleteTripData) return;
   
@@ -8216,6 +8266,13 @@ function confirmDeleteTrip() {
   
   // Обновляем модальное окно со списком поездок
   openUserTripsModal(userId);
+  
+  // Обновляем счетчик в мобильной версии
+  const mobCount = document.getElementById('mob-trip-count-' + userId);
+  if (mobCount) {
+    const newCount = purchases.filter(p => p.userId === userId).length;
+    mobCount.textContent = newCount;
+  }
   
   deleteTripData = null;
   closeModal('delete-trip-modal');
@@ -8967,43 +9024,40 @@ function renderMobAdminSection(section) {
   </div>
 `).join('')}
     `;
-  } else if (section === 'users') {
-    box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Участники</h2>
+ } else if (section === 'users') {
+  // Принудительно загружаем пользователей перед отображением
+  if (typeof loadAdminUsers === 'function') {
+    loadAdminUsers(currentUser && currentUser.role === 'owner');
+  }
+  box.innerHTML = `
+    <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Участники</h2>
+    <div id="mob-users-list">
       ${users.map(function(u) {
-        const count = purchases.filter(function(p) { return p.userId === u.id; }).length;
-        const total = purchases.filter(function(p) { return p.userId === u.id; }).reduce(function(s, p) { return s + p.price; }, 0);
-        return `
-          <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">
-            <div style="padding:13px;cursor:pointer;" onclick="openUserEditModal(${u.id})">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-                <strong style="font-size:14px;">${u.name}</strong>
-                <span class="tag ${u.role === 'owner' ? 'tag-orange' : u.role === 'admin' ? 'tag-orange' : 'tag-green'}">${u.role === 'owner' ? 'Владелец' : u.role === 'admin' ? 'Админ' : 'Участник'}</span>
-              </div>
-              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@${u.username} · ${u.email}</div>
-              <div style="display:flex;gap:14px;font-size:12px;color:var(--text-muted);">
-                <span>✈️ Путешествий: <strong>${count}</strong></span>
-                <span>🏷 Скидка: <strong>${u.discount || 0}%</strong></span>
-                ${total > 0 ? '<span>💰 ' + (total / 1000).toFixed(0) + 'к ₽</span>' : ''}
-              </div>
-            </div>
-            <div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">
-              ${isOwner ? '<select class="filter-select" style="font-size:12px;padding:5px;flex:1;" onchange="changeUserRole(' + u.id + ',this.value)"><option value="owner"' + (u.role === 'owner' ? ' selected' : '') + '>Владелец</option><option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Админ</option><option value="user"' + (u.role === 'user' ? ' selected' : '') + '>Участник</option></select>' : ''}
-              <button class="btn btn-outline btn-sm" style="font-size:11px;padding:5px 10px;" onclick="showUserStats(${u.id})">📊</button>
-              ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteUser(${u.id})">
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 6h18"/>
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    <line x1="10" y1="11" x2="10" y2="17"/>
-    <line x1="14" y1="11" x2="14" y2="17"/>
-  </svg>
-</button>` : ''}
-            </div>
-          </div>
-        `;
+        const count = purchases.filter(function(p){ return p.userId===u.id; }).length;
+        const total = purchases.filter(function(p){ return p.userId===u.id; }).reduce(function(s,p){ return s+p.price; }, 0);
+        return '<div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">'
+          + '<div style="padding:13px;cursor:pointer;" onclick="openUserEditModal('+u.id+')">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
+          + '<strong style="font-size:14px;">'+u.name+'</strong>'
+          + '<span class="tag '+(u.role==='owner'?'tag-orange':u.role==='admin'?'tag-orange':'tag-green')+'">'+(u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Участник')+'</span>'
+          + '</div>'
+          + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@'+u.username+' · '+u.email+'</div>'
+          + '<div style="display:flex;gap:14px;font-size:12px;color:var(--text-muted);">'
+          + '<span>✈️ Путешествий: <strong id="mob-trip-count-'+u.id+'">'+count+'</strong></span>'
+          + '<span>🏷 Скидка: <strong>'+(u.discount||0)+'%</strong></span>'
+          + (total>0 ? '<span>💰 '+(total/1000).toFixed(0)+'к ₽</span>' : '')
+          + '</div>'
+          + '</div>'
+          + '<div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">'
+          + (isOwner ? '<select class="filter-select" style="font-size:12px;padding:5px;flex:1;" onchange="changeUserRole('+u.id+',this.value)"><option value=\"owner\"'+(u.role==='owner'?' selected':'')+'>Владелец</option><option value=\"admin\"'+(u.role==='admin'?' selected':'')+'>Админ</option><option value=\"user\"'+(u.role==='user'?' selected':'')+'>Участник</option></select>' : '')
+          + '<button class="btn btn-outline btn-sm" style="font-size:11px;padding:5px 10px;" onclick="showUserStats('+u.id+')">📊</button>'
+          + (u.role!=='owner' ? '<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="deleteUser('+u.id+')">🗑</button>' : '')
+          + '</div>'
+          + '</div>';
       }).join('')}
-    `;
-  } else if (section === 'leads') {
+    </div>
+  `;
+} else if (section === 'leads') {
     box.innerHTML = `
       <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Заявки (${leads.length})</h2>
       ${leads.length === 0
