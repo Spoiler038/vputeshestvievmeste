@@ -1056,6 +1056,50 @@ input[type=number] {
   -moz-appearance: textfield;
   appearance: textfield;
 }  
+
+  #user-trips-modal .btn-danger {
+    font-size: 11px;
+    padding: 4px 8px;
+    height: 28px;
+  }
+  #user-trips-modal .btn-danger svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  @media (max-width: 768px) {
+  #group-members-1 table,
+  #group-members-2 table,
+  #group-members-3 table,
+  #group-members-4 table,
+  #group-members-5 table,
+  #group-members-6 table,
+  #group-members-7 table,
+  #group-members-8 table,
+  #group-members-9 table,
+  #group-members-10 table,
+  #group-members-11 table,
+  #group-members-12 table,
+  #group-members-13 table,
+  #group-members-14 table,
+  #group-members-15 table,
+  #group-members-16 table,
+  #group-members-17 table,
+  #group-members-18 table,
+  #group-members-19 table,
+  #group-members-20 table,
+  [id^="group-members-"] table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  [id^="group-members-"] table td,
+  [id^="group-members-"] table th {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}
 </style>
 </head>
 <body>
@@ -2211,18 +2255,6 @@ input[type=number] {
     </div>
     <div class="modal-scroll">
       <div id="delete-trip-content"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('delete-trip-modal')">Отмена</button>
-       <button class="btn btn-danger" onclick="confirmDeleteGroupMember()">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18"/>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <line x1="10" y1="11" x2="10" y2="17"/>
-          <line x1="14" y1="11" x2="14" y2="17"/>
-        </svg>
-        Удалить
-      </button>
     </div>
   </div>
 </div>
@@ -5730,10 +5762,7 @@ function loadAdminPrograms() {
 function loadAdminUsers(isOwner) {
   const GAS_URL_VALID = GAS_URL && GAS_URL.startsWith('https://script.google.com/macros/s/') && GAS_URL.includes('/exec');
   
-  // ✅ СНАЧАЛА ЗАГРУЖАЕМ ЛОКАЛЬНЫХ ПОЛЬЗОВАТЕЛЕЙ (для быстрого отображения)
   const localUsers = loadState('users', []);
-  
-  // ✅ ПОКАЗЫВАЕМ ТО, ЧТО ЕСТЬ ЛОКАЛЬНО
   renderUsersTable(isOwner);
   
   if (!GAS_URL_VALID) {
@@ -5760,32 +5789,22 @@ function loadAdminUsers(isOwner) {
         }
         
         if (fullResult.data.users && fullResult.data.users.length > 0) {
-          // ✅ НОРМАЛИЗУЕМ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ ИЗ ТАБЛИЦЫ
           const remoteUsers = fullResult.data.users.map(normalizeUser);
-          
-          // ✅ НАХОДИМ ВЛАДЕЛЬЦА ИЗ ТАБЛИЦЫ
           const remoteOwner = remoteUsers.find(u => u.role === 'owner');
-          
-          // ✅ СОХРАНЯЕМ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ (ВКЛЮЧАЯ ВЛАДЕЛЬЦА ИЗ ТАБЛИЦЫ)
           let mergedUsers = [];
           
           if (remoteOwner) {
-            // Если владелец найден в таблице — используем его
             mergedUsers = remoteUsers;
           } else {
-            // Если владельца нет в таблице — ищем локально
             const localOwner = localUsers.find(u => u.role === 'owner');
             if (localOwner) {
-              // Если есть локальный владелец — добавляем его и синхронизируем с таблицей
               mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
-              // ✅ СОХРАНЯЕМ ВЛАДЕЛЬЦА В ТАБЛИЦУ
               syncOwnerToSheets(localOwner);
             } else {
               mergedUsers = remoteUsers;
             }
           }
           
-          // ✅ УНИКАЛИЗАЦИЯ ПО ID
           const uniqueUsers = [];
           const seenIds = new Set();
           mergedUsers.forEach(u => {
@@ -5798,7 +5817,6 @@ function loadAdminUsers(isOwner) {
           users = uniqueUsers;
           saveState('users', users);
           
-          // ✅ ПРОВЕРЯЕМ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
           if (currentUser) {
             const updatedCurrentUser = users.find(u => u.id === currentUser.id);
             if (updatedCurrentUser) {
@@ -5808,12 +5826,17 @@ function loadAdminUsers(isOwner) {
           }
           
           renderUsersTable(isOwner);
+          
+          // ✅ ОБНОВЛЯЕМ ДАШБОРД
+          if (currentUser && currentUser.role === 'owner') {
+            loadAdminStats();
+          }
+          
           showToast('✅ Загружено ' + users.length + ' участников');
           return;
         }
       }
       
-      // Если данных нет — показываем локальные
       renderUsersTable(isOwner);
       if (fullResult && fullResult.timeout) {
         showToast('⏱️ Таймаут, данные из кэша');
@@ -7288,7 +7311,7 @@ function toggleGroupMembers(groupId) {
   }
 }
 
-// Добавляем обработчик touch для мобильных устройств
+// ✅ ДОБАВЛЯЕМ ОБРАБОТЧИК ДЛЯ КЛИКОВ НА МОБИЛЬНЫХ
 document.addEventListener('touchstart', function(e) {
   const target = e.target.closest('[onclick*="toggleGroupMembers"]');
   if (target) {
@@ -7302,6 +7325,23 @@ document.addEventListener('touchstart', function(e) {
     }
   }
 }, { passive: false });
+
+// Также добавляем обработчик кликов для мобильных
+document.addEventListener('click', function(e) {
+  const target = e.target.closest('[onclick*="toggleGroupMembers"]');
+  if (target) {
+    const onclickAttr = target.getAttribute('onclick');
+    if (onclickAttr) {
+      const match = onclickAttr.match(/toggleGroupMembers\((\d+)\)/);
+      if (match) {
+        e.preventDefault();
+        toggleGroupMembers(parseInt(match[1]));
+      }
+    }
+  }
+});
+
+  
 function openEditGroup(id) {
   const g = groups.find(x => x.id === id);
   if (!g) return;
@@ -8179,15 +8219,7 @@ function openDeleteTripConfirm(userId, purchaseId, programId, date) {
   }
 
   const modalContent = document.getElementById('delete-trip-content');
-  if (!modalContent) {
-    // Создаем контейнер если его нет
-    const container = document.createElement('div');
-    container.id = 'delete-trip-content';
-    document.getElementById('delete-trip-modal').querySelector('.modal-scroll').appendChild(container);
-  }
-  
-  const content = document.getElementById('delete-trip-content');
-  content.innerHTML = `
+  modalContent.innerHTML = `
     <div style="padding:4px 0;">
       <div style="text-align:center;margin-bottom:16px;">
         <div style="font-size:24px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;">
@@ -8212,7 +8244,7 @@ function openDeleteTripConfirm(userId, purchaseId, programId, date) {
         </div>
       </div>
       ${hasPhotos ? `
-      <div class="consent-checkbox-wrapper" style="margin-bottom:16px;">
+      <div class="consent-checkbox-wrapper" style="margin-bottom:16px;background:var(--bg);">
         <input type="checkbox" id="delete-photos-checkbox" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
         <label for="delete-photos-checkbox" style="font-size:13px;cursor:pointer;color:var(--text);">
           🗑️ Удалить также <strong>${gallery.filter(g => g.userId === userId && g.programId === programId).length}</strong> фото, загруженные к этой поездке
