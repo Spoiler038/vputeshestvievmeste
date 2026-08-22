@@ -3389,9 +3389,15 @@ function updateNavForUser() {
     if (isMobPanelOpen) closeMobAdmin();
   }
 }
+// Функция для выхода (УДАЛЯЕТ кэш ТОЛЬКО ЗДЕСЬ)
 function logout() {
   clearLoginFields();
   currentUser = null;
+  
+  // ✅ УДАЛЯЕМ КЭШ ТОЛЬКО ПРИ ВЫХОДЕ
+  localStorage.removeItem('vputi_password_hash');
+  localStorage.removeItem('vputi_user_data');
+  
   updateNavForUser();
   showPage('home');
   showToast('Вы вышли из аккаунта');
@@ -5073,41 +5079,48 @@ async function doLogin() {
   }
 
   errEl.style.display = 'none';
-
   const btn = document.querySelector('#auth-login .auth-btn');
   btn.disabled = true;
   btn.textContent = '⏳ Вход...';
 
   try {
     const deviceId = getDeviceId();
+    const passwordHash = await sha256(password);
 
-    // === 1. СНАЧАЛА ПРОВЕРЯЕМ ЛОКАЛЬНО ===
-    const localUser = users.find(u => 
-      (u.username === loginOrEmail || u.email === loginOrEmail)
-    );
-
-    if (localUser) {
-      const isPasswordMatch = await checkPassword(password, localUser.password);
-      
-      if (isPasswordMatch) {
-        localUser.device_id = deviceId;
-        localUser._plainPassword = password;
-        saveState('users', users);
-        currentUser = localUser;
-        closeAuth();
-        updateNavForUser();
-        showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋`);
-        document.getElementById('login-username').value = '';
-        document.getElementById('login-password').value = '';
-        btn.disabled = false;
-        btn.textContent = 'Войти';
-        return;
-      } else {
-        errEl.style.display = 'block';
-        errEl.textContent = 'Неверный пароль';
-        btn.disabled = false;
-        btn.textContent = 'Войти';
-        return;
+    // === 1. БЫСТРАЯ ПРОВЕРКА ПО ХЕШУ В localStorage ===
+    const storedHash = localStorage.getItem('vputi_password_hash');
+    const storedUser = localStorage.getItem('vputi_user_data');
+    
+    if (storedHash && storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        // Проверяем, что логин совпадает
+        if (userData.username === loginOrEmail || userData.email === loginOrEmail) {
+          // Проверяем хеш
+          if (storedHash === passwordHash) {
+            // ✅ БЫСТРЫЙ ВХОД! (без запроса к Sheets)
+            const user = users.find(u => u.id === userData.id);
+            if (user) {
+              currentUser = user;
+              // Обновляем device_id если изменился
+              if (user.device_id !== deviceId) {
+                user.device_id = deviceId;
+                saveState('users', users);
+              }
+              closeAuth();
+              updateNavForUser();
+              showToast(`Добро пожаловать, ${user.name.split(' ')[0]}! 👋`);
+              document.getElementById('login-username').value = '';
+              document.getElementById('login-password').value = '';
+              btn.disabled = false;
+              btn.textContent = 'Войти';
+              return;
+            }
+          }
+        }
+      } catch(e) {
+        // Если данные повреждены — игнорируем и идём в Sheets
+        console.warn('Stored session corrupted, fallback to Sheets');
       }
     }
 
@@ -5127,23 +5140,34 @@ async function doLogin() {
     const result = await gasPost(payload);
 
     if (result && result.ok && result.user) {
-      // ❌ УДАЛЯЕМ ЭТОТ БЛОК - больше не логируем consent при входе!
-      // await recordConsent('login', { 
-      //   username: result.user.username, 
-      //   email: result.user.email 
-      // });
-
       const user = result.user;
+      
+      // ✅ СОХРАНЯЕМ ХЕШ И ДАННЫЕ ПОЛЬЗОВАТЕЛЯ ДЛЯ БЫСТРОГО ВХОДА
+      // (БЕЗ СРОКА ДЕЙСТВИЯ — УДАЛЯЕТСЯ ТОЛЬКО ПРИ ВЫХОДЕ)
+      localStorage.setItem('vputi_password_hash', passwordHash);
+      localStorage.setItem('vputi_user_data', JSON.stringify({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        avatar: user.avatar || ''
+      }));
       
       let existingUser = users.find(u => u.id === user.id);
       if (existingUser) {
-        Object.assign(existingUser, user);
-        existingUser._plainPassword = password;
+        // Обновляем только необходимые поля
+        existingUser.name = user.name || existingUser.name;
+        existingUser.email = user.email || existingUser.email;
+        existingUser.role = user.role || existingUser.role;
+        existingUser.avatar = user.avatar || existingUser.avatar;
+        existingUser.bio = user.bio || existingUser.bio;
+        existingUser.phone = user.phone || existingUser.phone;
         existingUser.device_id = deviceId;
+        existingUser.discount = user.discount || existingUser.discount;
         saveState('users', users);
         currentUser = existingUser;
       } else {
-        user._plainPassword = password;
         user.device_id = deviceId;
         users.push(user);
         saveState('users', users);
@@ -5163,25 +5187,34 @@ async function doLogin() {
   } catch(e) {
     console.error('Login error:', e);
     
-    const localUser = users.find(u => 
-      (u.username === loginOrEmail || u.email === loginOrEmail)
-    );
+    // === 3. ОФЛАЙН-РЕЖИМ: пробуем войти по хешу ===
+    const storedHash = localStorage.getItem('vputi_password_hash');
+    const storedUser = localStorage.getItem('vputi_user_data');
     
-    if (localUser) {
-      const isPasswordMatch = await checkPassword(password, localUser.password);
-      
-      if (isPasswordMatch) {
-        localUser._plainPassword = password;
-        currentUser = localUser;
-        closeAuth();
-        updateNavForUser();
-        showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋 (офлайн-режим)`);
-        document.getElementById('login-username').value = '';
-        document.getElementById('login-password').value = '';
-        btn.disabled = false;
-        btn.textContent = 'Войти';
-        return;
-      }
+    if (storedHash && storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        const passwordHash = await sha256(password);
+        
+        if (storedHash === passwordHash && 
+            (userData.username === loginOrEmail || userData.email === loginOrEmail)) {
+          const user = users.find(u => u.id === userData.id);
+          if (user) {
+            // Обновляем device_id
+            user.device_id = deviceId;
+            saveState('users', users);
+            currentUser = user;
+            closeAuth();
+            updateNavForUser();
+            showToast(`Добро пожаловать, ${user.name.split(' ')[0]}! 👋 (офлайн-режим)`);
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            btn.disabled = false;
+            btn.textContent = 'Войти';
+            return;
+          }
+        }
+      } catch(e) {}
     }
     
     errEl.style.display = 'block';
@@ -7312,6 +7345,7 @@ function loadAdminGroups() {
 }
 
 // Переключение видимости списка участников в группе
+// Переключение видимости списка участников в группе
 function toggleGroupMembers(groupId) {
   // Сначала ищем в основном DOM (для ПК)
   let el = document.getElementById('group-members-' + groupId);
@@ -7323,7 +7357,15 @@ function toggleGroupMembers(groupId) {
   
   if (!el) {
     console.warn('Элемент group-members-' + groupId + ' не найден');
-    return;
+    // Пробуем найти по селектору внутри группы
+    const groupDiv = document.querySelector(`[onclick*="toggleGroupMembers(${groupId})"]`);
+    if (groupDiv) {
+      const parent = groupDiv.closest('.admin-section, .mob-item');
+      if (parent) {
+        el = parent.querySelector(`[id*="group-members-${groupId}"]`);
+      }
+    }
+    if (!el) return;
   }
   
   const isHidden = el.style.display === 'none' || el.style.display === '';
@@ -9068,18 +9110,22 @@ function renderMobAdminSection(section) {
 
   const isOwner = currentUser && currentUser.role === 'owner';
 
-  if (section === 'dashboard' && isOwner) {
-    const rev = purchases.reduce((s, p) => s + p.price, 0);
-    box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:16px;">Дашборд</h2>
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-label">Программ</div><div class="stat-value">${programs.length}</div></div>
-        <div class="stat-card"><div class="stat-label">Участников</div><div class="stat-value">${users.length}</div></div>
-        <div class="stat-card"><div class="stat-label">Заявок</div><div class="stat-value">${leads.length}</div></div>
-        <div class="stat-card"><div class="stat-label">Выручка</div><div class="stat-value">${(rev / 1000).toFixed(0)}к ₽</div></div>
-      </div>
-    `;
-  } else if (section === 'programs') {
+  } else if (section === 'dashboard' && isOwner) {
+  // ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ СТАТИСТИКУ
+  if (typeof loadAdminStats === 'function') {
+    loadAdminStats();
+  }
+  const rev = purchases.reduce((s, p) => s + p.price, 0);
+  box.innerHTML = `
+    <h2 style="font-size:22px;font-weight:500;margin-bottom:16px;">Дашборд</h2>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Программ</div><div class="stat-value">${programs.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Участников</div><div class="stat-value">${users.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Заявок</div><div class="stat-value">${leads.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Выручка</div><div class="stat-value">${(rev / 1000).toFixed(0)}к ₽</div></div>
+    </div>
+  `;
+} else if (section === 'programs') {
     box.innerHTML = `
       <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Программы</h2>
       <button class="btn btn-primary" style="width:100%;margin-bottom:14px;" onclick="openAddProgram()">+ Добавить программу</button>
