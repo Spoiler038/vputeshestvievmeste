@@ -798,8 +798,24 @@ html.modal-open {overflow: hidden !important;}
 .admin-mobile-bar.show { display: flex; }
 .admin-mobile-bar .mob-item { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; background: var(--bg); border-radius: 30px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; border: 1px solid transparent; }
 .admin-mobile-bar .mob-item.active, .admin-mobile-bar .mob-item:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
-.mobile-admin-toggle { display: none !important; background: var(--accent2); color: white; border: none; border-radius: 30px; padding: 6px 8px; font-size: 12px; font-weight: 500; cursor: pointer; align-items: center; gap: 6px; white-space: nowrap; }
-
+.mobile-admin-toggle {
+  display: none !important;
+  background: var(--accent2);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+/* ✅ КОГДА КНОПКА ВИДНА (ДЛЯ АДМИНОВ) */
+.mobile-admin-toggle.visible {
+  display: inline-flex !important;
+}
 /* ===== TOAST УВЕДОМЛЕНИЯ ===== */
 #toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 300; background: var(--text); color: white; padding: 14px 28px; border-radius: 50px; font-size: 14px; font-weight: 500; box-shadow: 0 8px 32px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; white-space: nowrap; max-width: 90vw; text-align: center; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -914,7 +930,6 @@ html.modal-open {overflow: hidden !important;}
     grid-template-columns: 1fr; 
     min-height: auto; }
   #admin-btn { display: none !important; }
-  .mobile-admin-toggle { display: inline-flex !important; }
   .admin-sidebar { display: none; }
   .admin-main { 
     padding: 20px; 
@@ -1024,6 +1039,45 @@ html.modal-open {overflow: hidden !important;}
   .program-hero { height: 200px; }
   .program-hero span { font-size: 48px !important; }
   .includes-grid { grid-template-columns: 1fr; }
+
+#group-members-1 table,
+  #group-members-2 table,
+  #group-members-3 table,
+  #group-members-4 table,
+  #group-members-5 table,
+  #group-members-6 table,
+  #group-members-7 table,
+  #group-members-8 table,
+  #group-members-9 table,
+  #group-members-10 table,
+  #group-members-11 table,
+  #group-members-12 table,
+  #group-members-13 table,
+  #group-members-14 table,
+  #group-members-15 table,
+  #group-members-16 table,
+  #group-members-17 table,
+  #group-members-18 table,
+  #group-members-19 table,
+  #group-members-20 table,
+  [id^="group-members-"] table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  [id^="group-members-"] table td,
+  [id^="group-members-"] table th {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+   .mobile-admin-toggle {
+    display: none !important;
+  }
+  .mobile-admin-toggle.visible {
+    display: inline-flex !important;
+  }
+  
 }
 
 /* ===== ОТКЛЮЧАЕМ ЭФФЕКТЫ "BOUNCE" В PWA ===== */
@@ -1065,41 +1119,7 @@ input[type=number] {
   #user-trips-modal .btn-danger svg {
     width: 14px;
     height: 14px;
-  }
-  
-  @media (max-width: 768px) {
-  #group-members-1 table,
-  #group-members-2 table,
-  #group-members-3 table,
-  #group-members-4 table,
-  #group-members-5 table,
-  #group-members-6 table,
-  #group-members-7 table,
-  #group-members-8 table,
-  #group-members-9 table,
-  #group-members-10 table,
-  #group-members-11 table,
-  #group-members-12 table,
-  #group-members-13 table,
-  #group-members-14 table,
-  #group-members-15 table,
-  #group-members-16 table,
-  #group-members-17 table,
-  #group-members-18 table,
-  #group-members-19 table,
-  #group-members-20 table,
-  [id^="group-members-"] table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-  }
-  [id^="group-members-"] table td,
-  [id^="group-members-"] table th {
-    padding: 6px 10px;
-    font-size: 11px;
-  }
-}
+  }  
 </style>
 </head>
 <body>
@@ -1121,7 +1141,7 @@ input[type=number] {
         <div class="user-avatar" id="user-avatar-small" onclick="document.getElementById('avatar-upload-small').click()"><span id="avatar-letter-small">М</span><input type="file" id="avatar-upload-small" accept="image/*" style="display:none"></div>
         <div class="user-info"><span id="username-display" class="username">Марина</span><button class="btn btn-outline btn-sm" onclick="showPage('dashboard')">ПРОФИЛЬ</button></div>
         <button class="btn btn-primary btn-sm hidden" id="admin-btn" onclick="showPage('admin')">⚙ ПАНЕЛЬ</button>
-        <button class="mobile-admin-toggle hidden" id="mobile-admin-toggle" onclick="toggleMobileAdminPanel()">⚙ ПАНЕЛЬ</button>
+        <button class="mobile-admin-toggle" id="mobile-admin-toggle" onclick="toggleMobileAdminPanel()" style="display:none;">⚙ ПАНЕЛЬ</button>
       </div>
     </div>
   </div>
@@ -3300,10 +3320,12 @@ function updateNavForUser() {
   const mobileToggle = document.getElementById('mobile-admin-toggle');
 
   if (currentUser) {
+    // Показываем меню пользователя
     guestMenu.classList.add('hidden');
     userMenu.classList.remove('hidden');
     document.getElementById('username-display').textContent = currentUser.name.split(' ')[0];
 
+    // Обновляем аватар
     const avatarLetter = document.getElementById('avatar-letter-small');
     if (currentUser.avatar) {
       avatarLetter.innerHTML = `<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">`;
@@ -3311,15 +3333,32 @@ function updateNavForUser() {
       avatarLetter.innerHTML = currentUser.name[0];
     }
 
-    // ✅ Показываем админ-кнопки ТОЛЬКО для владельца или админа
+    // ✅ Проверяем роль
     const isAdmin = currentUser.role === 'owner' || currentUser.role === 'admin';
     
-    // Основная кнопка в навигации
-    adminBtn.classList.toggle('hidden', !isAdmin);
+    // Управляем кнопкой на ПК
+    if (adminBtn) {
+      if (isAdmin) {
+        adminBtn.classList.remove('hidden');
+        adminBtn.style.display = 'inline-flex';
+      } else {
+        adminBtn.classList.add('hidden');
+        adminBtn.style.display = 'none';
+      }
+    }
     
-    // Мобильная кнопка
+    // ✅ Управляем мобильной кнопкой
     if (mobileToggle) {
-      mobileToggle.classList.toggle('hidden', !isAdmin);
+      if (isAdmin) {
+        mobileToggle.classList.remove('hidden');
+        mobileToggle.style.display = 'inline-flex';
+        mobileToggle.classList.add('visible');
+      } else {
+        mobileToggle.classList.add('hidden');
+        mobileToggle.style.display = 'none';
+        mobileToggle.classList.remove('visible');
+      }
+      
       // Если пользователь не админ и панель открыта — закрываем
       if (!isAdmin && isMobPanelOpen) {
         closeMobAdmin();
@@ -3333,12 +3372,24 @@ function updateNavForUser() {
     }
 
   } else {
+    // Пользователь не авторизован
     guestMenu.classList.remove('hidden');
     userMenu.classList.add('hidden');
+    
+    // Скрываем обе админ-кнопки
+    if (adminBtn) {
+      adminBtn.classList.add('hidden');
+      adminBtn.style.display = 'none';
+    }
+    if (mobileToggle) {
+      mobileToggle.classList.add('hidden');
+      mobileToggle.style.display = 'none';
+      mobileToggle.classList.remove('visible');
+    }
+    
     if (isMobPanelOpen) closeMobAdmin();
   }
 }
-
 function logout() {
   clearLoginFields();
   currentUser = null;
