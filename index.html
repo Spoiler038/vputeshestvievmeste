@@ -9109,7 +9109,7 @@ function renderMobAdminSection(section) {
 
   const isOwner = currentUser && currentUser.role === 'owner';
 
-  } else if (section === 'dashboard' && isOwner) {
+  } if (section === 'dashboard' && isOwner) {
   // ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ СТАТИСТИКУ
   if (typeof loadAdminStats === 'function') {
     loadAdminStats();
