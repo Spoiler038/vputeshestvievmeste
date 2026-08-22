@@ -5079,48 +5079,49 @@ async function doLogin() {
   }
 
   errEl.style.display = 'none';
+
   const btn = document.querySelector('#auth-login .auth-btn');
   btn.disabled = true;
   btn.textContent = '⏳ Вход...';
 
   try {
     const deviceId = getDeviceId();
-    const passwordHash = await sha256(password);
-
-    // === 1. БЫСТРАЯ ПРОВЕРКА ПО ХЕШУ В localStorage ===
-    const storedHash = localStorage.getItem('vputi_password_hash');
-    const storedUser = localStorage.getItem('vputi_user_data');
     
-    if (storedHash && storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        // Проверяем, что логин совпадает
-        if (userData.username === loginOrEmail || userData.email === loginOrEmail) {
-          // Проверяем хеш
-          if (storedHash === passwordHash) {
-            // ✅ БЫСТРЫЙ ВХОД! (без запроса к Sheets)
-            const user = users.find(u => u.id === userData.id);
-            if (user) {
-              currentUser = user;
-              // Обновляем device_id если изменился
-              if (user.device_id !== deviceId) {
-                user.device_id = deviceId;
-                saveState('users', users);
-              }
-              closeAuth();
-              updateNavForUser();
-              showToast(`Добро пожаловать, ${user.name.split(' ')[0]}! 👋`);
-              document.getElementById('login-username').value = '';
-              document.getElementById('login-password').value = '';
-              btn.disabled = false;
-              btn.textContent = 'Войти';
-              return;
-            }
-          }
-        }
-      } catch(e) {
-        // Если данные повреждены — игнорируем и идём в Sheets
-        console.warn('Stored session corrupted, fallback to Sheets');
+    // ✅ ВЫЧИСЛЯЕМ ХЕШ ПАРОЛЯ ДЛЯ СРАВНЕНИЯ
+    const passwordHash = await sha256(password);
+    console.log('🔑 Хеш введенного пароля:', passwordHash);
+
+    // === 1. СНАЧАЛА ПРОВЕРЯЕМ ЛОКАЛЬНО ===
+    const localUser = users.find(u => 
+      (u.username === loginOrEmail || u.email === loginOrEmail)
+    );
+
+    if (localUser) {
+      console.log('👤 Найден локальный пользователь:', localUser.username);
+      console.log('📝 Хеш в БД:', localUser.password);
+      console.log('🔑 Хеш введенного:', passwordHash);
+      
+      // ✅ СРАВНИВАЕМ ХЕШИ (SHA-256)
+      const isMatch = localUser.password === passwordHash;
+      
+      if (isMatch) {
+        localUser.device_id = deviceId;
+        saveState('users', users);
+        currentUser = localUser;
+        closeAuth();
+        updateNavForUser();
+        showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋`);
+        document.getElementById('login-username').value = '';
+        document.getElementById('login-password').value = '';
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+        return;
+      } else {
+        errEl.style.display = 'block';
+        errEl.textContent = 'Неверный пароль';
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+        return;
       }
     }
 
@@ -5142,8 +5143,7 @@ async function doLogin() {
     if (result && result.ok && result.user) {
       const user = result.user;
       
-      // ✅ СОХРАНЯЕМ ХЕШ И ДАННЫЕ ПОЛЬЗОВАТЕЛЯ ДЛЯ БЫСТРОГО ВХОДА
-      // (БЕЗ СРОКА ДЕЙСТВИЯ — УДАЛЯЕТСЯ ТОЛЬКО ПРИ ВЫХОДЕ)
+      // ✅ СОХРАНЯЕМ ХЕШ ДЛЯ БЫСТРОГО ВХОДА
       localStorage.setItem('vputi_password_hash', passwordHash);
       localStorage.setItem('vputi_user_data', JSON.stringify({
         id: user.id,
@@ -5156,19 +5156,10 @@ async function doLogin() {
       
       let existingUser = users.find(u => u.id === user.id);
       if (existingUser) {
-        // Обновляем только необходимые поля
-        existingUser.name = user.name || existingUser.name;
-        existingUser.email = user.email || existingUser.email;
-        existingUser.role = user.role || existingUser.role;
-        existingUser.avatar = user.avatar || existingUser.avatar;
-        existingUser.bio = user.bio || existingUser.bio;
-        existingUser.phone = user.phone || existingUser.phone;
-        existingUser.device_id = deviceId;
-        existingUser.discount = user.discount || existingUser.discount;
+        Object.assign(existingUser, user);
         saveState('users', users);
         currentUser = existingUser;
       } else {
-        user.device_id = deviceId;
         users.push(user);
         saveState('users', users);
         currentUser = user;
@@ -5187,34 +5178,26 @@ async function doLogin() {
   } catch(e) {
     console.error('Login error:', e);
     
-    // === 3. ОФЛАЙН-РЕЖИМ: пробуем войти по хешу ===
-    const storedHash = localStorage.getItem('vputi_password_hash');
-    const storedUser = localStorage.getItem('vputi_user_data');
+    // === 3. ОФЛАЙН-РЕЖИМ ===
+    const localUser = users.find(u => 
+      (u.username === loginOrEmail || u.email === loginOrEmail)
+    );
     
-    if (storedHash && storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        const passwordHash = await sha256(password);
-        
-        if (storedHash === passwordHash && 
-            (userData.username === loginOrEmail || userData.email === loginOrEmail)) {
-          const user = users.find(u => u.id === userData.id);
-          if (user) {
-            // Обновляем device_id
-            user.device_id = deviceId;
-            saveState('users', users);
-            currentUser = user;
-            closeAuth();
-            updateNavForUser();
-            showToast(`Добро пожаловать, ${user.name.split(' ')[0]}! 👋 (офлайн-режим)`);
-            document.getElementById('login-username').value = '';
-            document.getElementById('login-password').value = '';
-            btn.disabled = false;
-            btn.textContent = 'Войти';
-            return;
-          }
-        }
-      } catch(e) {}
+    if (localUser) {
+      const passwordHash = await sha256(password);
+      const isMatch = localUser.password === passwordHash;
+      
+      if (isMatch) {
+        currentUser = localUser;
+        closeAuth();
+        updateNavForUser();
+        showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋 (офлайн-режим)`);
+        document.getElementById('login-username').value = '';
+        document.getElementById('login-password').value = '';
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+        return;
+      }
     }
     
     errEl.style.display = 'block';
@@ -5248,12 +5231,14 @@ async function sha256(message) {
 
 // Обновленная функция проверки пароля
 async function checkPassword(plainPassword, hashedPassword) {
+  // Если пароль уже хеширован и совпадает
   if (plainPassword === hashedPassword) return true;
-  if (plainPassword === hashPasswordLocally(hashedPassword)) return true;
   
   // Проверка SHA-256 (для паролей из Google Sheets)
   try {
     const shaHash = await sha256(plainPassword);
+    console.log('🔑 Проверка SHA-256:', shaHash);
+    console.log('📝 Сравнение с:', hashedPassword);
     if (shaHash === hashedPassword) return true;
   } catch(e) {}
   
