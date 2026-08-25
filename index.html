@@ -1166,7 +1166,7 @@ input[type=number] {
     height: 14px;
   }  
 
-  /* В конце тега <style> добавьте: */
+  /* ===== ГРУППЫ — ОТОБРАЖЕНИЕ УЧАСТНИКОВ ===== */
 #groups-list .admin-section,
 [id^="group-members-"] {
     overflow-x: auto !important;
@@ -1175,30 +1175,67 @@ input[type=number] {
     width: 100%;
 }
 
-[id^="group-members-"] table {
-    display: block !important;
-    overflow-x: auto !important;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-    min-width: 600px;
-    width: 100%;
-}
-
-[id^="group-members-"] table td,
-[id^="group-members-"] table th {
-    padding: 8px 14px !important;
-    font-size: 12px !important;
-    white-space: nowrap;
-}
-
-/* Ограничиваем скролл только таблицей, а не всей карточкой */
+/* Стиль для контейнера участников внутри карточки группы */
 [id^="group-members-"] {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
+/* Стиль для таблицы участников */
+[id^="group-members-"] table {
+    display: table !important;
+    overflow-x: auto !important;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    min-width: 100%;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+/* Заголовки таблицы участников */
+[id^="group-members-"] table th {
+    padding: 8px 14px !important;
+    text-align: left !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: var(--text-muted) !important;
+    background: var(--bg) !important;
+    border-bottom: 1px solid var(--border) !important;
+    white-space: nowrap !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 2 !important;
+}
+
+/* Ячейки таблицы участников */
+[id^="group-members-"] table td {
+    padding: 9px 14px !important;
+    font-size: 12px !important;
+    border-top: 1px solid var(--border) !important;
+    white-space: nowrap !important;
+    vertical-align: middle !important;
+}
+
+/* Кнопка удаления в таблице */
+[id^="group-members-"] table .btn-danger {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    background: #C0392B !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+}
+
+/* Стилизация скроллбара для таблиц групп */
 [id^="group-members-"]::-webkit-scrollbar {
     height: 6px;
+    width: 6px;
 }
 
 [id^="group-members-"]::-webkit-scrollbar-track {
@@ -1213,6 +1250,20 @@ input[type=number] {
 
 [id^="group-members-"]::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
+}
+
+/* Мобильная версия */
+@media (max-width: 768px) {
+    [id^="group-members-"] table {
+        font-size: 11px !important;
+        min-width: 500px !important;
+    }
+    
+    [id^="group-members-"] table th,
+    [id^="group-members-"] table td {
+        padding: 6px 10px !important;
+        font-size: 11px !important;
+    }
 }
 </style>
 </head>
@@ -7782,164 +7833,189 @@ function setGroupFilter(btn, status) {
 }
 
 function loadAdminGroups() {
-  const container = document.getElementById('groups-list');
-  if (!container) return;
+    const container = document.getElementById('groups-list');
+    if (!container) return;
 
-  let filteredGroups = groups;
-  if (activeGroupFilter) {
-    filteredGroups = groups.filter(g => g.status === activeGroupFilter);
-  }
+    let filteredGroups = groups;
+    if (activeGroupFilter) {
+        filteredGroups = groups.filter(g => g.status === activeGroupFilter);
+    }
 
-  if (filteredGroups.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted);"><div style="font-size:48px;margin-bottom:14px;">👥</div><p>В данном статусе групп пока нет.</p></div>';
-    return;
-  }
+    if (filteredGroups.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted);"><div style="font-size:48px;margin-bottom:14px;">👥</div><p>В данном статусе групп пока нет.</p></div>';
+        return;
+    }
 
-  container.innerHTML = filteredGroups.map(g => {
-    const prog = programs.find(p => p.id === g.programId);
-    const filled = (g.members || []).length;
-    const max = g.maxPeople || (prog ? prog.maxPeople : 10);
-    const pct = max > 0 ? Math.min(100, Math.round(filled / max * 100)) : 0;
-    const statusColor = { набор: 'tag-green', укомплектована: 'tag-orange', завершена: 'tag-green', 'в пути': 'tag-orange', отменена: 'tag-orange' }[g.status] || 'tag-green';
-    const totalPaid = (g.members || []).reduce((s, m) => s + (parseFloat(m.amount) || 0), 0);
-    const hasMembers = (g.members || []).length > 0;
-    const groupId = g.id;
+    container.innerHTML = filteredGroups.map(g => {
+        const prog = programs.find(p => p.id === g.programId);
+        const filled = (g.members || []).length;
+        const max = g.maxPeople || (prog ? prog.maxPeople : 10);
+        const pct = max > 0 ? Math.min(100, Math.round(filled / max * 100)) : 0;
+        const statusColor = { набор: 'tag-green', укомплектована: 'tag-orange', завершена: 'tag-green', 'в пути': 'tag-orange', отменена: 'tag-orange' }[g.status] || 'tag-green';
+        const totalPaid = (g.members || []).reduce((s, m) => s + (parseFloat(m.amount) || 0), 0);
+        const hasMembers = (g.members || []).length > 0;
+        const groupId = g.id;
+        
+        // ✅ Формируем HTML таблицы с данными из g.members
+        let membersHTML = '';
+        if (hasMembers) {
+            membersHTML = `
+                <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">
+                    <thead>
+                        <tr style="background:var(--bg);">
+                            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Участник</th>
+                            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Контакт</th>
+                            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Сумма</th>
+                            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Оплата</th>
+                            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Заметка</th>
+                            <th style="padding:8px 14px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${(g.members || []).map((m, mi) => `
+                            <tr style="border-top:1px solid var(--border);">
+                                <td style="padding:9px 14px;font-weight:600;">${m.name}</td>
+                                <td style="padding:9px 14px;color:var(--accent);font-size:12px;">${m.contact || '—'}</td>
+                                <td style="padding:9px 14px;font-weight:600;color:var(--accent2);">${m.amount ? Number(m.amount).toLocaleString('ru') + ' ₽' : '—'}</td>
+                                <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;">${m.payMethod || '—'}</td>
+                                <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.note || ''}</td>
+                                <td style="padding:9px 14px;">
+                                    <button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();removeMember(${groupId}, ${mi})">✕</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else {
+            membersHTML = `
+                <div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">
+                    👥 В группе пока нет участников
+                </div>
+            `;
+        }
 
-    return `
-    <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:16px;overflow:hidden;">
-      <!-- Основная строка группы (кликабельная) -->
-      <div style="padding:20px 22px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;cursor:pointer;" onclick="toggleGroupMembers(${groupId})">
-        <div style="flex:1;min-width:200px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
-            <strong style="font-size:17px;font-family:var(--font-family);">${g.name}</strong>
-            <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${groupId})" style="cursor:pointer;user-select:none;" title="Нажмите для смены статуса">${g.status} ✎</span>
-          </div>
-          <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">🗺 ${prog ? prog.name : (g.programName || '—')}</div>
-          ${g.startDate ? `<div style="font-size:13px;color:var(--text-muted);padding:4px 0;">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
-        </div>
-        <div style="text-align:center;min-width:100px;">
-          <div style="font-size:28px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${filled}/${max}</div>
-          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">участников</div>
-          <div style="background:var(--bg2);border-radius:4px;height:6px;margin-top:6px;overflow:hidden;">
-            <div style="background:${pct >= 100 ? 'var(--accent2)' : 'var(--accent)'};height:100%;width:${pct}%;border-radius:4px;transition:width 0.4s;"></div>
-          </div>
-        </div>
-        <div style="text-align:center;min-width:100px;">
-          <div style="font-size:22px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${totalPaid.toLocaleString('ru')} ₽</div>
-          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">сумма</div>
-        </div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;" onclick="event.stopPropagation();">
-          <button class="btn btn-outline btn-sm" onclick="openAddMember(${groupId})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
-          <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="openEditGroup(${groupId})">✏️ Изменить</button>
-          <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;" onclick="deleteGroup(${groupId})">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 6h18"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              <line x1="10" y1="11" x2="10" y2="17"/>
-              <line x1="14" y1="11" x2="14" y2="17"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-      
-      <!-- Список участников (раскрывается) -->
-      <div id="group-members-${groupId}" style="display:none;border-top:1px solid var(--border);overflow-x:auto; -webkit-overflow-scrolling: touch;">
-        ${hasMembers ? `
-        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">
-          <thead><tr style="background:var(--bg);">
-            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Участник</th>
-            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Контакт</th>
-            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Сумма</th>
-            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Оплата</th>
-            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Заметка</th>
-            <th style="padding:8px 14px;"></th>
-          </tr></thead>
-          <tbody>
-            ${(g.members || []).map((m, mi) => `
-            <tr style="border-top:1px solid var(--border);">
-              <td style="padding:9px 14px;font-weight:600;">${m.name}</td>
-              <td style="padding:9px 14px;color:var(--accent);font-size:12px;">${m.contact || '—'}</td>
-              <td style="padding:9px 14px;font-weight:600;color:var(--accent2);">${m.amount ? Number(m.amount).toLocaleString('ru') + ' ₽' : '—'}</td>
-              <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;">${m.payMethod || '—'}</td>
-              <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.note || ''}</td>
-              <td style="padding:9px 14px;"><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();removeMember(${groupId}, ${mi})">✕</button></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-        ` : `
-        <div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">
-          👥 В группе пока нет участников
-        </div>
-        `}
-      </div>
-    </div>`;
-  }).join('');
+        return `
+            <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:16px;overflow:hidden;">
+                <!-- Основная строка группы (кликабельная) -->
+                <div style="padding:20px 22px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;cursor:pointer;" onclick="toggleGroupMembers(${groupId})">
+                    <div style="flex:1;min-width:200px;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+                            <strong style="font-size:17px;font-family:var(--font-family);">${g.name}</strong>
+                            <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${groupId})" style="cursor:pointer;user-select:none;" title="Нажмите для смены статуса">${g.status} ✎</span>
+                        </div>
+                        <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">🗺 ${prog ? prog.name : (g.programName || '—')}</div>
+                        ${g.startDate ? `<div style="font-size:13px;color:var(--text-muted);padding:4px 0;">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
+                    </div>
+                    <div style="text-align:center;min-width:100px;">
+                        <div style="font-size:28px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${filled}/${max}</div>
+                        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">участников</div>
+                        <div style="background:var(--bg2);border-radius:4px;height:6px;margin-top:6px;overflow:hidden;">
+                            <div style="background:${pct >= 100 ? 'var(--accent2)' : 'var(--accent)'};height:100%;width:${pct}%;border-radius:4px;transition:width 0.4s;"></div>
+                        </div>
+                    </div>
+                    <div style="text-align:center;min-width:100px;">
+                        <div style="font-size:22px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${totalPaid.toLocaleString('ru')} ₽</div>
+                        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">сумма</div>
+                    </div>
+                    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;" onclick="event.stopPropagation();">
+                        <button class="btn btn-outline btn-sm" onclick="openAddMember(${groupId})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
+                        <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="openEditGroup(${groupId})">✏️ Изменить</button>
+                        <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;" onclick="deleteGroup(${groupId})">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 6h18"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                <line x1="10" y1="11" x2="10" y2="17"/>
+                                <line x1="14" y1="11" x2="14" y2="17"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <!-- Список участников (раскрывается) -->
+                <div id="group-members-${groupId}" style="display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;">
+                    ${membersHTML}
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 
 function toggleGroupMembers(groupId) {
-  let el = document.getElementById('group-members-' + groupId);
-  
-  if (!el) {
-    el = document.getElementById('mob-group-members-' + groupId);
-  }
-  
-  if (!el) {
-    const groupDiv = document.querySelector(`[onclick*="toggleGroupMembers(${groupId})"]`);
-    if (groupDiv) {
-      const parent = groupDiv.closest('.admin-section, .mob-item');
-      if (parent) {
-        el = parent.querySelector(`[id*="group-members-${groupId}"]`);
-      }
-    }
+    // Сначала ищем в основном DOM (для ПК)
+    let el = document.getElementById('group-members-' + groupId);
+    
+    // Если не найден, ищем в мобильном контейнере
     if (!el) {
-      // Создаем элемент, если его нет
-      const parent = document.querySelector(`[onclick*="toggleGroupMembers(${groupId})"]`)?.closest('div[style*="background:var(--surface)"]');
-      if (parent) {
-        const membersDiv = document.createElement('div');
-        membersDiv.id = 'group-members-' + groupId;
-        membersDiv.style.cssText = 'display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;';
-        membersDiv.innerHTML = `<div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">👥 Загрузка...</div>`;
-        parent.appendChild(membersDiv);
-        el = membersDiv;
-      }
+        el = document.getElementById('mob-group-members-' + groupId);
     }
-    if (!el) return;
-  }
-  
-  const isHidden = el.style.display === 'none' || el.style.display === '';
-  const isMobile = window.innerWidth <= 768;
-  
-  if (isHidden) {
-    el.style.display = 'block';
-    if (isMobile) {
-      el.style.transition = 'all 0.3s ease';
-      el.style.maxHeight = '0';
-      el.style.overflow = 'hidden';
-      setTimeout(() => {
-        el.style.maxHeight = el.scrollHeight + 'px';
-      }, 10);
-      setTimeout(() => {
-        el.style.maxHeight = 'none';
-        el.style.overflow = '';
-      }, 400);
+    
+    // Если все еще не найден, ищем внутри родительского элемента
+    if (!el) {
+        // Ищем родительскую карточку группы
+        const groupCard = document.querySelector(`[onclick*="toggleGroupMembers(${groupId})"]`)?.closest('[style*="background:var(--surface)"]');
+        if (groupCard) {
+            // Ищем элемент с участниками внутри карточки
+            el = groupCard.querySelector(`[id*="group-members-${groupId}"]`);
+            
+            // Если не найден по id, ищем по селектору
+            if (!el) {
+                const membersDiv = groupCard.querySelector('[style*="border-top:1px solid var(--border)"]');
+                if (membersDiv) {
+                    el = membersDiv;
+                }
+            }
+            
+            // Если все еще не найден, создаем его
+            if (!el) {
+                const membersDiv = document.createElement('div');
+                membersDiv.id = 'group-members-' + groupId;
+                membersDiv.style.cssText = 'display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;';
+                membersDiv.innerHTML = `<div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">👥 Загрузка...</div>`;
+                groupCard.appendChild(membersDiv);
+                el = membersDiv;
+            }
+        }
     }
-  } else {
-    if (isMobile) {
-      el.style.maxHeight = el.scrollHeight + 'px';
-      el.style.overflow = 'hidden';
-      setTimeout(() => {
-        el.style.maxHeight = '0';
-      }, 10);
-      setTimeout(() => {
-        el.style.display = 'none';
-        el.style.maxHeight = 'none';
-        el.style.overflow = '';
-      }, 400);
+    
+    if (!el) {
+        console.warn('Элемент group-members-' + groupId + ' не найден');
+        return;
+    }
+    
+    const isHidden = el.style.display === 'none' || el.style.display === '';
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isHidden) {
+        el.style.display = 'block';
+        if (isMobile) {
+            el.style.transition = 'all 0.3s ease';
+            el.style.maxHeight = '0';
+            el.style.overflow = 'hidden';
+            setTimeout(() => {
+                el.style.maxHeight = el.scrollHeight + 'px';
+            }, 10);
+            setTimeout(() => {
+                el.style.maxHeight = 'none';
+                el.style.overflow = '';
+            }, 400);
+        }
     } else {
-      el.style.display = 'none';
+        if (isMobile) {
+            el.style.maxHeight = el.scrollHeight + 'px';
+            el.style.overflow = 'hidden';
+            setTimeout(() => {
+                el.style.maxHeight = '0';
+            }, 10);
+            setTimeout(() => {
+                el.style.display = 'none';
+                el.style.maxHeight = 'none';
+                el.style.overflow = '';
+            }, 400);
+        } else {
+            el.style.display = 'none';
+        }
     }
-  }
 }
 
 // ✅ ДОБАВЛЯЕМ ОБРАБОТЧИК ДЛЯ КЛИКОВ НА МОБИЛЬНЫХ
