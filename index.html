@@ -9666,102 +9666,188 @@ function switchMobSection(section) {
     if (ov) ov.scrollTop = 0;
 }
 
-function renderMobAdminSection(section) {
+async function renderMobAdminSection(section) {
   const box = document.getElementById('mob-admin-content');
   if (!box) return;
 
   const isOwner = currentUser && currentUser.role === 'owner';
 
+  // ✅ СЕКЦИЯ ДАШБОРД (только для владельца)
   if (section === 'dashboard' && isOwner) {
-    // ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ СТАТИСТИКУ
-    if (typeof loadAdminStats === 'function') {
-      loadAdminStats();
+    // ✅ Загружаем свежие данные с кэшированием
+    try {
+      // Загружаем purchases через кэш
+      const purchasesData = await loadDataWithCache('purchases', false);
+      if (purchasesData) {
+        purchases = purchasesData.map(normalizePurchase);
+        saveState('purchases', purchases);
+      }
+      
+      // Загружаем users через кэш
+      const usersData = await loadDataWithCache('users', false);
+      if (usersData) {
+        users = usersData.map(normalizeUser);
+        saveState('users', users);
+      }
+      
+      // Загружаем programs через кэш
+      const programsData = await loadDataWithCache('programs', false);
+      if (programsData) {
+        programs = programsData.map(normalizeProgram);
+        saveState('programs', programs);
+      }
+      
+      // Загружаем leads через кэш
+      const leadsData = await loadDataWithCache('leads', false);
+      if (leadsData) {
+        leads = leadsData;
+        saveState('leads', leads);
+      }
+    } catch(e) {
+      console.warn('⚠️ Ошибка загрузки данных для дашборда:', e);
     }
-    // ✅ Формируем график выручки для мобильной версии
-const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
-const byMonth = Array(12).fill(0);
-purchases.forEach(p => {
-    const m = new Date(p.date).getMonth();
-    byMonth[m] += p.price;
-});
-const maxVal = Math.max(...byMonth) || 1;
 
-const revenueChartHTML = months.map((m, i) => {
-    const h = Math.round((byMonth[i] / maxVal) * 110) + 4;
-    const k = byMonth[i] > 0 ? (byMonth[i] / 1000).toFixed(0) + 'к' : '—';
-    return `<div class="rev-bar-wrap" onclick="showRevenueDetails(${i})" style="cursor:pointer;">
+    // ✅ Формируем график выручки для мобильной версии
+    const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+    const byMonth = Array(12).fill(0);
+    purchases.forEach(p => {
+      const m = new Date(p.date).getMonth();
+      byMonth[m] += p.price;
+    });
+    const maxVal = Math.max(...byMonth) || 1;
+
+    const revenueChartHTML = months.map((m, i) => {
+      const h = Math.round((byMonth[i] / maxVal) * 110) + 4;
+      const k = byMonth[i] > 0 ? (byMonth[i] / 1000).toFixed(0) + 'к' : '—';
+      return `<div class="rev-bar-wrap" onclick="showRevenueDetails(${i})" style="cursor:pointer;">
         <div class="rev-bar" style="height:${h}px;background:${byMonth[i] > 0 ? 'var(--accent)' : 'var(--accent-light)'};border-radius:4px 4px 0 0;margin-bottom:5px;transition:all 0.3s;"></div>
         <div class="rev-month" style="font-size:11px;color:var(--text-muted);">${m}</div>
         <div class="rev-amount" style="font-size:11px;font-weight:600;color:var(--accent2);margin-top:2px;">${k}</div>
-    </div>`;
-}).join('');
+      </div>`;
+    }).join('');
+
     const rev = purchases.reduce((s, p) => s + p.price, 0);
+
     box.innerHTML = `
-  <h2 style="font-size:22px;font-weight:500;margin-bottom:16px;">Дашборд</h2>
-  <div class="stats-grid">
-    <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
-         onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchMobSection('programs')">
-      <div class="stat-label">Программ</div>
-      <div class="stat-value">${programs.length}</div>
-    </div>
-    <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
-         onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchMobSection('users')">
-      <div class="stat-label">Участников</div>
-      <div class="stat-value">${users.length}</div>
-    </div>
-    <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
-         onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchMobSection('leads')">
-      <div class="stat-label">Заявок</div>
-      <div class="stat-value">${leads.length}</div>
-    </div>
-    <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
-         onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);showRevenueDetails(new Date().getMonth())">
-      <div class="stat-label">Выручка</div>
-      <div class="stat-value">${(rev / 1000).toFixed(0)}к ₽</div>
-    </div>
-  </div>
-  <!-- ✅ График выручки для мобильной версии -->
-  <div style="background:var(--surface);border-radius:var(--radius);padding:20px;border:1px solid var(--border);margin-top:20px;">
-    <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:16px;">Выручка по месяцам</h3>
-    <div class="revenue-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(60px, 1fr));gap:8px;align-items:flex-end;">
-      ${revenueChartHTML}
-    </div>
-  </div>
-`;
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:16px;">📊 Дашборд</h2>
+      <div class="stats-grid">
+        <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
+             onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchMobSection('programs')">
+          <div class="stat-label">Программ</div>
+          <div class="stat-value">${programs.length}</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
+             onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchMobSection('users')">
+          <div class="stat-label">Участников</div>
+          <div class="stat-value">${users.length}</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
+             onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchMobSection('leads')">
+          <div class="stat-label">Заявок</div>
+          <div class="stat-value">${leads.length}</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
+             onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);showRevenueDetails(new Date().getMonth())">
+          <div class="stat-label">Выручка</div>
+          <div class="stat-value">${(rev / 1000).toFixed(0)}к ₽</div>
+        </div>
+      </div>
+      <!-- ✅ График выручки для мобильной версии -->
+      <div style="background:var(--surface);border-radius:var(--radius);padding:20px;border:1px solid var(--border);margin-top:20px;">
+        <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:16px;">Выручка по месяцам</h3>
+        <div class="revenue-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(60px, 1fr));gap:8px;align-items:flex-end;">
+          ${revenueChartHTML}
+        </div>
+      </div>
+    `;
+
+  // ✅ СЕКЦИЯ ПРОГРАММЫ
   } else if (section === 'programs') {
+    // Загружаем программы через кэш
+    try {
+      const programsData = await loadDataWithCache('programs', false);
+      if (programsData) {
+        programs = programsData.map(normalizeProgram);
+        saveState('programs', programs);
+      }
+    } catch(e) {
+      console.warn('⚠️ Ошибка загрузки программ:', e);
+    }
+
     box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Программы</h2>
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">🗺 Программы</h2>
       <button class="btn btn-primary" style="width:100%;margin-bottom:14px;" onclick="openAddProgram()">+ Добавить программу</button>
       ${programs.map(p => `
-  <div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;display:flex;gap:10px;align-items:center;">
-    <div style="width:42px;height:42px;border-radius:8px;overflow:hidden;background:var(--accent-light);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-      ${p.photo ? '<img src="' + p.photo + '" style="width:100%;height:100%;object-fit:cover;">' : '<span>🏔</span>'}
-    </div>
-    <div style="flex:1;min-width:0;">
-      <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</div>
-      <div style="font-size:11px;color:var(--text-muted);">${p.season} · ${p.days} дн · ${p.price.toLocaleString('ru')} ₽</div>
-    </div>
-    <div style="display:flex;gap:5px;flex-shrink:0;">
-      <button class="btn btn-edit" style="padding:5px 9px;font-size:11px;" onclick="openEditProgram(${p.id})">✏️</button>
-      <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(${p.id})">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18"/>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <line x1="10" y1="11" x2="10" y2="17"/>
-          <line x1="14" y1="11" x2="14" y2="17"/>
-        </svg>
-      </button>
-    </div>
-  </div>
-`).join('')}
+        <div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;display:flex;gap:10px;align-items:center;">
+          <div style="width:42px;height:42px;border-radius:8px;overflow:hidden;background:var(--accent-light);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+            ${p.photo ? '<img src="' + p.photo + '" style="width:100%;height:100%;object-fit:cover;">' : '<span>🏔</span>'}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${p.season} · ${p.days} дн · ${p.price.toLocaleString('ru')} ₽</div>
+          </div>
+          <div style="display:flex;gap:5px;flex-shrink:0;">
+            <button class="btn btn-edit" style="padding:5px 9px;font-size:11px;" onclick="openEditProgram(${p.id})">✏️</button>
+            <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(${p.id})">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/>
+                <line x1="14" y1="11" x2="14" y2="17"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `).join('')}
     `;
+
+  // ✅ СЕКЦИЯ УЧАСТНИКИ
   } else if (section === 'users') {
-    // Принудительно загружаем пользователей перед отображением
-    if (typeof loadAdminUsers === 'function') {
-      loadAdminUsers(currentUser && currentUser.role === 'owner');
+    // Принудительно загружаем пользователей через кэш
+    try {
+      const usersData = await loadDataWithCache('users', false);
+      if (usersData) {
+        const remoteUsers = usersData.map(normalizeUser);
+        const remoteOwner = remoteUsers.find(u => u.role === 'owner');
+        let mergedUsers = [];
+        
+        if (remoteOwner) {
+          mergedUsers = remoteUsers;
+        } else {
+          const localOwner = users.find(u => u.role === 'owner');
+          if (localOwner) {
+            mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
+          } else {
+            mergedUsers = remoteUsers;
+          }
+        }
+        
+        const uniqueUsers = [];
+        const seenIds = new Set();
+        mergedUsers.forEach(u => {
+          if (!seenIds.has(u.id)) {
+            seenIds.add(u.id);
+            uniqueUsers.push(u);
+          }
+        });
+        
+        users = uniqueUsers;
+        saveState('users', users);
+        
+        if (currentUser) {
+          const updatedCurrentUser = users.find(u => u.id === currentUser.id);
+          if (updatedCurrentUser) {
+            currentUser = updatedCurrentUser;
+            updateNavForUser();
+          }
+        }
+      }
+    } catch(e) {
+      console.warn('⚠️ Ошибка загрузки участников:', e);
     }
+
     box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Участники</h2>
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">👥 Участники</h2>
       <div id="mob-users-list">
         ${users.map(function(u) {
           const count = purchases.filter(function(p){ return p.userId===u.id; }).length;
@@ -9788,9 +9874,21 @@ const revenueChartHTML = months.map((m, i) => {
         }).join('')}
       </div>
     `;
+
+  // ✅ СЕКЦИЯ ЗАЯВКИ
   } else if (section === 'leads') {
+    try {
+      const leadsData = await loadDataWithCache('leads', false);
+      if (leadsData) {
+        leads = leadsData;
+        saveState('leads', leads);
+      }
+    } catch(e) {
+      console.warn('⚠️ Ошибка загрузки заявок:', e);
+    }
+
     box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Заявки (${leads.length})</h2>
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">📩 Заявки (${leads.length})</h2>
       ${leads.length === 0
         ? '<p style="color:var(--text-muted);">Пока нет заявок.</p>'
         : leads.slice().reverse().map(function(l) {
@@ -9819,9 +9917,16 @@ const revenueChartHTML = months.map((m, i) => {
             `;
           }).join('')}
     `;
+
+  // ✅ СЕКЦИЯ ГРУППЫ
   } else if (section === 'groups') {
+    // Загружаем группы
+    if (typeof loadAdminGroups === 'function') {
+      loadAdminGroups();
+    }
+
     box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Группы</h2>
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">👥 Группы</h2>
       ${groups.length === 0 ? '<p style="color:var(--text-muted);">Групп пока нет.</p>' :
         groups.map(function(g) {
           const prog = programs.find(p => p.id === g.programId);
@@ -9848,9 +9953,15 @@ const revenueChartHTML = months.map((m, i) => {
         }).join('')}
       <button class="btn btn-primary" style="margin-top:12px;width:100%;" onclick="openAddGroup()">+ Создать группу</button>
     `;
+
+  // ✅ СЕКЦИЯ НАСТРОЙКИ
   } else if (section === 'settings') {
+    if (typeof loadSettingsAdmin === 'function') {
+      loadSettingsAdmin();
+    }
+
     box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Настройки</h2>
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">⚙️ Настройки</h2>
       <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
         <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:7px;">🔑 Код приглашения</label>
         <input type="text" class="form-input" id="mob-invite" value="${inviteCodeSetting}" style="margin-bottom:8px;">
@@ -9866,10 +9977,16 @@ const revenueChartHTML = months.map((m, i) => {
         <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%;" onclick="saveHeroStats('mobile')">Сохранить статистику</button>
       </div>
     `;
+
+  // ✅ СЕКЦИЯ ОСНОВАТЕЛЬ
   } else if (section === 'founder') {
+    if (typeof loadFounderAdmin === 'function') {
+      loadFounderAdmin();
+    }
+    
     const f = founderContent;
     box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Об основателе</h2>
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">👤 Об основателе</h2>
       <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);">
         <div class="form-group"><label>Имя</label><input class="form-input" id="mob-f-name" value="${f.name.split('\n').join(' ')}"></div>
         <div class="form-group"><label>Лет в пути</label><input class="form-input" id="mob-f-years" value="${f.years}"></div>
@@ -9878,9 +9995,15 @@ const revenueChartHTML = months.map((m, i) => {
         <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="saveMobFounder()">Сохранить</button>
       </div>
     `;
+
+  // ✅ СЕКЦИЯ КОНТАКТЫ
   } else if (section === 'contacts') {
+    if (typeof loadContactsAdmin === 'function') {
+      loadContactsAdmin();
+    }
+
     box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Контакты</h2>
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">📞 Контакты</h2>
       <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);">
         <div class="form-group"><label>Телефон</label><input class="form-input" id="mob-c-phone" value="${contactsContent.phone}"></div>
         <div class="form-group"><label>Email</label><input class="form-input" id="mob-c-email" value="${contactsContent.email}"></div>
@@ -9888,10 +10011,16 @@ const revenueChartHTML = months.map((m, i) => {
         <button class="btn btn-primary" style="width:100%;" onclick="saveMobContacts()">Сохранить</button>
       </div>
     `;
+
+  // ✅ СЕКЦИЯ КАК МЫ ЕЗДИМ
   } else if (section === 'howto') {
+    if (typeof loadHowAdmin === 'function') {
+      loadHowAdmin();
+    }
+    
     const cards = ALL_TRANSPORTS.filter(function(t) { return enabledTransports.includes(t.val); });
     box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:6px;">Как мы ездим</h2>
+      <h2 style="font-size:22px;font-weight:500;margin-bottom:6px;">🚂 Как мы ездим</h2>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Активные виды транспорта</p>
       ${cards.length === 0 ? '<p style="color:var(--text-muted);">Нет активных видов транспорта.</p>' :
         cards.map(function(t) {
@@ -9910,7 +10039,7 @@ const revenueChartHTML = months.map((m, i) => {
     `;
   }
 }
-
+  
 // Сохранение настроек из мобильной панели
 function saveMobInvite() {
   const v = (document.getElementById('mob-invite') || { value: '' }).value.trim();
