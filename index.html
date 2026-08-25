@@ -1165,6 +1165,55 @@ input[type=number] {
     width: 14px;
     height: 14px;
   }  
+
+  /* В конце тега <style> добавьте: */
+#groups-list .admin-section,
+[id^="group-members-"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    display: block !important;
+    width: 100%;
+}
+
+[id^="group-members-"] table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    min-width: 600px;
+    width: 100%;
+}
+
+[id^="group-members-"] table td,
+[id^="group-members-"] table th {
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+    white-space: nowrap;
+}
+
+/* Ограничиваем скролл только таблицей, а не всей карточкой */
+[id^="group-members-"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+[id^="group-members-"]::-webkit-scrollbar {
+    height: 6px;
+}
+
+[id^="group-members-"]::-webkit-scrollbar-track {
+    background: var(--bg);
+    border-radius: 4px;
+}
+
+[id^="group-members-"]::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+[id^="group-members-"]::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
 </style>
 </head>
 <body>
@@ -2986,6 +3035,109 @@ let groups = loadState('groups', []);
 let inviteCodeSetting = loadState('inviteCode', 'VPUTI2026');
 let heroStats = loadState('heroStats', { trips: '47', people: '380+', dirs: '12' });
 
+// Глобальный кэш данных
+const dataCache = {
+    programs: { data: null, timestamp: 0, version: null },
+    users: { data: null, timestamp: 0, version: null },
+    leads: { data: null, timestamp: 0, version: null },
+    groups: { data: null, timestamp: 0, version: null },
+    purchases: { data: null, timestamp: 0, version: null },
+    gallery: { data: null, timestamp: 0, version: null }
+};
+
+// Время жизни кэша (в миллисекундах) - 30 секунд
+const CACHE_TTL = 30000;
+
+// Флаг, чтобы избежать одновременных запросов
+let isDataLoading = false;
+
+  async function loadDataWithCache(sheetName, forceRefresh = false) {
+    // Проверяем кэш
+    const cache = dataCache[sheetName];
+    const now = Date.now();
+    
+    // Если данные есть в кэше и они не устарели, и не требуется принудительное обновление
+    if (!forceRefresh && cache.data && (now - cache.timestamp) < CACHE_TTL) {
+        console.log(`📦 Данные ${sheetName} из кэша (${Math.round((now - cache.timestamp)/1000)}с)`);
+        return cache.data;
+    }
+    
+    // Если уже идет загрузка - ждем
+    if (isDataLoading) {
+        console.log(`⏳ Загрузка ${sheetName} уже выполняется, ждем...`);
+        // Ждем завершения текущей загрузки (максимум 5 секунд)
+        let attempts = 0;
+        while (isDataLoading && attempts < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        // Проверяем кэш еще раз
+        if (cache.data && (now - cache.timestamp) < CACHE_TTL) {
+            return cache.data;
+        }
+        // Если кэш все еще пуст, продолжаем загрузку
+    }
+    
+    isDataLoading = true;
+    
+    try {
+        console.log(`📥 Загрузка данных ${sheetName} с сервера...`);
+        
+        // Проверяем версию
+        const localVersion = localStorage.getItem('vputi_data_version') || '0';
+        const versionResult = await gasGet({ action: 'checkVersion', version: localVersion });
+        
+        // Если версия не изменилась и не требуется принудительное обновление
+        if (!forceRefresh && versionResult && versionResult.ok && !versionResult.needsUpdate) {
+            // Версия актуальна, но данных в кэше нет - загружаем только нужный лист
+            const result = await gasGet({ action: 'read', sheet: sheetName });
+            if (result && result.ok && result.data) {
+                cache.data = result.data;
+                cache.timestamp = Date.now();
+                cache.version = localVersion;
+                console.log(`✅ Загружено ${result.data.length} записей из ${sheetName}`);
+                return cache.data;
+            }
+        }
+        
+        // Версия устарела или нужно обновить все данные
+        if (forceRefresh || (versionResult && versionResult.needsUpdate)) {
+            const fullResult = await gasGet({ action: 'getFullData' });
+            if (fullResult && fullResult.ok && fullResult.data) {
+                // Обновляем все кэши
+                Object.keys(fullResult.data).forEach(key => {
+                    if (dataCache[key]) {
+                        dataCache[key].data = fullResult.data[key];
+                        dataCache[key].timestamp = Date.now();
+                    }
+                });
+                if (fullResult.version) {
+                    localStorage.setItem('vputi_data_version', fullResult.version);
+                }
+                console.log('✅ Все данные обновлены');
+                return dataCache[sheetName]?.data || null;
+            }
+        }
+        
+        // Если что-то пошло не так, пробуем загрузить только нужный лист
+        const result = await gasGet({ action: 'read', sheet: sheetName });
+        if (result && result.ok && result.data) {
+            cache.data = result.data;
+            cache.timestamp = Date.now();
+            return cache.data;
+        }
+        
+        return null;
+    } catch(e) {
+        console.warn(`⚠️ Ошибка загрузки ${sheetName}:`, e);
+        return cache.data || null; // Возвращаем кэш, даже если он устарел
+    } finally {
+        isDataLoading = false;
+    }
+}
+
+  
+
 // ============================================================
 // === ВИДЫ ТРАНСПОРТА =========================================
 // ============================================================
@@ -3379,6 +3531,16 @@ function updateNavForUser() {
 
     // ✅ Проверяем роль
     const isAdmin = currentUser.role === 'owner' || currentUser.role === 'admin';
+
+    if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
+    // Небольшая задержка для загрузки данных
+    setTimeout(() => {
+      if (currentPage === 'admin' || document.getElementById('page-admin')?.classList.contains('hidden') === false) {
+        loadAdminStats();
+        loadRevenueChart();
+      }
+    }, 500);
+  }
     
     // Управляем кнопкой на ПК
     if (adminBtn) {
@@ -5875,27 +6037,79 @@ function savePrefTags() {
 
 // === ПЕРЕКЛЮЧЕНИЕ РАЗДЕЛОВ АДМИНКИ ===
 function switchAdmin(section) {
-  const isOwner = currentUser && currentUser.role === 'owner';
-  if (section === 'dashboard' && !isOwner) {
-    showToast('Доступ запрещён');
-    return;
-  }
+    const isAdmin = currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin');
+    
+    if (section === 'dashboard' && currentUser?.role !== 'owner') {
+        showToast('Только для владельца');
+        return;
+    }
 
-  const sections = ['dashboard', 'programs', 'users', 'leads', 'groups', 'settings', 'founder', 'howto', 'contacts'];
-  document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.admin-nav-item').forEach((n, i) => {
-    n.classList.toggle('active', sections[i] === section);
-  });
+    const sections = ['dashboard', 'programs', 'users', 'leads', 'groups', 'settings', 'founder', 'howto', 'contacts'];
+    
+    document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.admin-nav-item').forEach((n, i) => {
+        n.classList.toggle('active', sections[i] === section);
+    });
 
-  const el = document.getElementById('admin-' + section);
-  if (el) el.classList.add('active');
+    const el = document.getElementById('admin-' + section);
+    if (el) el.classList.add('active');
 
-  // Загружаем данные для каждого раздела
-  if (section === 'groups') loadAdminGroups();
-  if (section === 'settings') loadSettingsAdmin();
-  if (section === 'founder') loadFounderAdmin();
-  if (section === 'howto') loadHowAdmin();
-  if (section === 'contacts') loadContactsAdmin();
+    // ✅ Загружаем данные с кэшем
+    switch(section) {
+        case 'dashboard':
+            if (currentUser?.role === 'owner') {
+                loadAdminStats();
+                loadRevenueChart();
+            }
+            break;
+            
+        case 'programs':
+            // Проверяем кэш перед загрузкой
+            if (!dataCache.programs.data) {
+                loadAdminPrograms();
+            } else {
+                // Просто отображаем кэшированные данные
+                renderProgramsTable(dataCache.programs.data);
+            }
+            break;
+            
+        case 'users':
+            // Проверяем кэш перед загрузкой
+            if (!dataCache.users.data) {
+                loadAdminUsers(currentUser?.role === 'owner');
+            } else {
+                renderUsersTable(currentUser?.role === 'owner');
+            }
+            break;
+            
+        case 'leads':
+            if (!dataCache.leads.data) {
+                loadAdminLeads();
+            } else {
+                renderLeadsTable(dataCache.leads.data);
+            }
+            break;
+            
+        case 'groups':
+            loadAdminGroups();
+            break;
+            
+        case 'settings':
+            loadSettingsAdmin();
+            break;
+            
+        case 'founder':
+            loadFounderAdmin();
+            break;
+            
+        case 'howto':
+            loadHowAdmin();
+            break;
+            
+        case 'contacts':
+            loadContactsAdmin();
+            break;
+    }
 }
 
 function loadAdmin() {
@@ -5933,18 +6147,69 @@ function loadAdmin() {
 }
 
 // === ДАШБОРД ===
-function loadAdminStats() {
-  purchases = loadState('purchases', purchases);
-  
-  const totalRevenue = purchases.reduce((s, p) => s + p.price, 0);
-  document.getElementById('stats-grid').innerHTML = `
-    <div class="stat-card"><div class="stat-label">Программ</div><div class="stat-value">${programs.length}</div></div>
-    <div class="stat-card"><div class="stat-label">Пользователей</div><div class="stat-value">${users.length}</div></div>
-    <div class="stat-card"><div class="stat-label">Заявок</div><div class="stat-value">${leads.length}</div></div>
-    <div class="stat-card"><div class="stat-label">Выручка</div><div class="stat-value">${(totalRevenue / 1000).toFixed(0)}к ₽</div></div>
-  `;
+function loadAdminStats(forceRefresh = false) {
+    // Загружаем данные с кэшем
+    loadDataWithCache('purchases', forceRefresh)
+        .then(purchasesData => {
+            if (purchasesData) {
+                purchases = purchasesData.map(normalizePurchase);
+                saveState('purchases', purchases);
+            }
+            
+            // Также обновляем пользователей и программы из кэша
+            if (dataCache.users.data) {
+                users = dataCache.users.data.map(normalizeUser);
+                saveState('users', users);
+            }
+            
+            if (dataCache.programs.data) {
+                programs = dataCache.programs.data.map(normalizeProgram);
+                saveState('programs', programs);
+            }
+            
+            const totalRevenue = purchases.reduce((s, p) => s + p.price, 0);
+            renderStatsCards(totalRevenue);
+        })
+        .catch(() => {
+            // Если ошибка - используем локальные данные
+            const totalRevenue = purchases.reduce((s, p) => s + p.price, 0);
+            renderStatsCards(totalRevenue);
+        });
 }
 
+function renderStatsCards(totalRevenue) {
+    document.getElementById('stats-grid').innerHTML = `
+        <div class="stat-card" style="cursor:pointer;transition:transform 0.2s, box-shadow 0.2s;" 
+             onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchAdmin('programs')"
+             onmouseenter="this.style.boxShadow='var(--shadow-lg)'" 
+             onmouseleave="this.style.boxShadow='none'">
+            <div class="stat-label">Программ</div>
+            <div class="stat-value">${programs.length}</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;transition:transform 0.2s, box-shadow 0.2s;"
+             onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchAdmin('users')"
+             onmouseenter="this.style.boxShadow='var(--shadow-lg)'" 
+             onmouseleave="this.style.boxShadow='none'">
+            <div class="stat-label">Участников</div>
+            <div class="stat-value">${users.length}</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;transition:transform 0.2s, box-shadow 0.2s;"
+             onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchAdmin('leads')"
+             onmouseenter="this.style.boxShadow='var(--shadow-lg)'" 
+             onmouseleave="this.style.boxShadow='none'">
+            <div class="stat-label">Заявок</div>
+            <div class="stat-value">${leads.length}</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;transition:transform 0.2s, box-shadow 0.2s;"
+             onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);showRevenueDetails(new Date().getMonth())"
+             onmouseenter="this.style.boxShadow='var(--shadow-lg)'" 
+             onmouseleave="this.style.boxShadow='none'">
+            <div class="stat-label">Выручка</div>
+            <div class="stat-value">${(totalRevenue / 1000).toFixed(0)}к ₽</div>
+        </div>
+    `;
+}
+  
 function loadRevenueChart() {
   const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
   const byMonth = Array(12).fill(0);
@@ -6027,97 +6292,103 @@ function loadAdminPrograms() {
 `).join('');
 }
   
-function loadAdminUsers(isOwner) {
-  const GAS_URL_VALID = GAS_URL && GAS_URL.startsWith('https://script.google.com/macros/s/') && GAS_URL.includes('/exec');
-  
-  const localUsers = loadState('users', []);
-  renderUsersTable(isOwner);
-  
-  if (!GAS_URL_VALID) {
-    console.log('GAS URL не настроен, работаем с локальными данными');
-    showToast('📌 Офлайн-режим');
-    return;
-  }
-  
-  console.log('🔄 Загрузка участников с сервера...');
-  
-  const localVersion = localStorage.getItem('vputi_data_version') || '0';
-  
-  gasGet({ action: 'checkVersion', version: localVersion })
-    .then(versionResult => {
-      if (versionResult && versionResult.ok && versionResult.needsUpdate) {
-        return gasGet({ action: 'getFullData' });
-      }
-      return null;
-    })
-    .then(fullResult => {
-      if (fullResult && fullResult.ok && fullResult.data) {
-        if (fullResult.version) {
-          localStorage.setItem('vputi_data_version', fullResult.version);
-        }
-        
-        if (fullResult.data.users && fullResult.data.users.length > 0) {
-          const remoteUsers = fullResult.data.users.map(normalizeUser);
-          const remoteOwner = remoteUsers.find(u => u.role === 'owner');
-          let mergedUsers = [];
-          
-          if (remoteOwner) {
-            mergedUsers = remoteUsers;
-          } else {
-            const localOwner = localUsers.find(u => u.role === 'owner');
-            if (localOwner) {
-              mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
-              syncOwnerToSheets(localOwner);
-            } else {
-              mergedUsers = remoteUsers;
+function loadAdminUsers(isOwner, forceRefresh = false) {
+    // Проверяем кэш
+    if (!forceRefresh && dataCache.users.data && (Date.now() - dataCache.users.timestamp) < CACHE_TTL) {
+        console.log('📦 Участники из кэша');
+        renderUsersTable(isOwner);
+        return;
+    }
+    
+    // Если есть forceRefresh - сбрасываем кэш
+    if (forceRefresh) {
+        dataCache.users.data = null;
+        dataCache.users.timestamp = 0;
+    }
+    
+    const GAS_URL_VALID = GAS_URL && GAS_URL.startsWith('https://script.google.com/macros/s/') && GAS_URL.includes('/exec');
+    
+    // Сначала показываем локальные данные
+    renderUsersTable(isOwner);
+    
+    if (!GAS_URL_VALID) {
+        console.log('GAS URL не настроен, работаем с локальными данными');
+        return;
+    }
+    
+    // Используем универсальную функцию загрузки
+    loadDataWithCache('users', forceRefresh)
+        .then(usersData => {
+            if (usersData && Array.isArray(usersData)) {
+                const remoteUsers = usersData.map(normalizeUser);
+                const remoteOwner = remoteUsers.find(u => u.role === 'owner');
+                let mergedUsers = [];
+                
+                if (remoteOwner) {
+                    mergedUsers = remoteUsers;
+                } else {
+                    const localOwner = users.find(u => u.role === 'owner');
+                    if (localOwner) {
+                        mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
+                    } else {
+                        mergedUsers = remoteUsers;
+                    }
+                }
+                
+                // Удаляем дубликаты
+                const uniqueUsers = [];
+                const seenIds = new Set();
+                mergedUsers.forEach(u => {
+                    if (!seenIds.has(u.id)) {
+                        seenIds.add(u.id);
+                        uniqueUsers.push(u);
+                    }
+                });
+                
+                users = uniqueUsers;
+                saveState('users', users);
+                
+                if (currentUser) {
+                    const updatedCurrentUser = users.find(u => u.id === currentUser.id);
+                    if (updatedCurrentUser) {
+                        currentUser = updatedCurrentUser;
+                        updateNavForUser();
+                    }
+                }
+                
+                renderUsersTable(isOwner);
+                
+                if (currentUser && currentUser.role === 'owner') {
+                    loadAdminStats();
+                }
+                
+                // Обновляем мобильную панель
+                if (isMobPanelOpen) {
+                    const activeMobSection = document.querySelector('.mob-item.active')?.dataset?.section;
+                    if (activeMobSection === 'dashboard') {
+                        renderMobAdminSection('dashboard');
+                    }
+                }
+                
+                showToast('✅ Загружено ' + users.length + ' участников');
             }
-          }
-          
-          const uniqueUsers = [];
-          const seenIds = new Set();
-          mergedUsers.forEach(u => {
-            if (!seenIds.has(u.id)) {
-              seenIds.add(u.id);
-              uniqueUsers.push(u);
-            }
-          });
-          
-          users = uniqueUsers;
-          saveState('users', users);
-          
-          if (currentUser) {
-            const updatedCurrentUser = users.find(u => u.id === currentUser.id);
-            if (updatedCurrentUser) {
-              currentUser = updatedCurrentUser;
-              updateNavForUser();
-            }
-          }
-          
-          renderUsersTable(isOwner);
-          
-          // ✅ ОБНОВЛЯЕМ ДАШБОРД
-          if (currentUser && currentUser.role === 'owner') {
-            loadAdminStats();
-          }
-          
-          showToast('✅ Загружено ' + users.length + ' участников');
-          return;
-        }
-      }
-      
-      renderUsersTable(isOwner);
-      if (fullResult && fullResult.timeout) {
-        showToast('⏱️ Таймаут, данные из кэша');
-      } else {
-        showToast('✅ Данные актуальны');
-      }
-    })
-    .catch(err => {
-      console.warn('Load users error:', err);
-      renderUsersTable(isOwner);
-      showToast('📌 Офлайн-режим (локальные данные)');
-    });
+        })
+        .catch(err => {
+            console.warn('Load users error:', err);
+            renderUsersTable(isOwner);
+          showToast('📌 Офлайн-режим (локальные данные)');
+        });
 }
+
+  // Вызывайте эту функцию, когда данные изменяются (добавление/удаление/изменение)
+function invalidateCache(sheetName) {
+    if (dataCache[sheetName]) {
+        dataCache[sheetName].data = null;
+        dataCache[sheetName].timestamp = 0;
+        console.log(`🔄 Кэш ${sheetName} сброшен`);
+    }
+}
+      
 
 // ✅ ФУНКЦИЯ ДЛЯ СИНХРОНИЗАЦИИ ВЛАДЕЛЬЦА С ТАБЛИЦЕЙ
 async function syncOwnerToSheets(owner) {
@@ -6152,38 +6423,57 @@ async function syncOwnerToSheets(owner) {
   }
 }
   
+// ============================================================
+// === ОТОБРАЖЕНИЕ ТАБЛИЦЫ УЧАСТНИКОВ ===
+// ============================================================
+
 function renderUsersTable(isOwner) {
   const tbody = document.getElementById('users-tbody');
   if (!tbody) return;
   
   purchases = loadState('purchases', []);
   
-  // ✅ ЕСЛИ USERS ПУСТОЙ — ПОКАЗЫВАЕМ СООБЩЕНИЕ
+  // Если пользователей нет - показываем сообщение
   if (!users || users.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">👥 Нет участников. Добавьте первого!</td></tr>`;
     return;
   }
   
-  // ✅ СОРТИРУЕМ: ВЛАДЕЛЕЦ ВСЕГДА ПЕРВЫЙ
+  // Сортируем: владелец всегда первый
   const sortedUsers = [...users].sort((a, b) => {
     if (a.role === 'owner') return -1;
     if (b.role === 'owner') return 1;
     return 0;
   });
   
+  // Проверяем, есть ли у пользователя права администратора
+  const isAdmin = currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin');
+  
   tbody.innerHTML = sortedUsers.map(u => {
     const count = purchases ? purchases.filter(p => p.userId === u.id).length : 0;
     const isOwnerUser = u.role === 'owner';
+    const isAdminUser = u.role === 'admin';
     
-    return `<tr style="cursor:pointer;" onclick="${isOwnerUser ? '' : `openUserEditModal(${u.id})`}" title="${isOwnerUser ? 'Владелец клуба' : 'Нажмите для просмотра и редактирования'}">
+    // Определяем стиль строки
+    let rowClickHandler = '';
+    let rowTitle = '';
+    if (!isOwnerUser) {
+      rowClickHandler = `openUserEditModal(${u.id})`;
+      rowTitle = 'title="Нажмите для просмотра и редактирования"';
+    } else {
+      rowTitle = 'title="Владелец клуба"';
+    }
+    
+    return `<tr style="cursor:${isOwnerUser ? 'default' : 'pointer'};" onclick="${rowClickHandler}" ${rowTitle}>
       <td style="vertical-align:middle;white-space:nowrap;">
         <strong>${u.name || 'Без имени'}</strong>
         ${isOwnerUser ? '<span style="font-size:10px;color:var(--accent2);margin-left:6px;">⭐</span>' : ''}
+        ${isAdminUser && !isOwnerUser ? '<span style="font-size:10px;color:var(--accent);margin-left:6px;">🛡️</span>' : ''}
       </td>
       <td style="vertical-align:middle;color:var(--text-muted);word-break:break-all;max-width:160px;">${u.username || '—'}</td>
       <td style="vertical-align:middle;color:var(--accent);font-size:12px;word-break:break-all;max-width:180px;">${u.email || '—'}</td>
       <td style="vertical-align:middle;white-space:nowrap;min-width:100px;" onclick="event.stopPropagation();">
-        ${isOwner ? 
+        ${isAdmin ? 
           (isOwnerUser ? 
             `<span class="tag tag-orange">⭐ Владелец</span>` :
             `<select class="filter-select" style="padding:4px 8px;font-size:12px;height:28px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);min-width:100px;" onchange="changeUserRole(${u.id}, this.value)">
@@ -6192,7 +6482,7 @@ function renderUsersTable(isOwner) {
               <option value="user" ${u.role === 'user' ? 'selected' : ''}>Участник</option>
             </select>`
           ) :
-          `<span class="tag ${u.role === 'owner' ? 'tag-orange' : 'tag-green'}">${u.role === 'owner' ? '⭐ Владелец' : u.role === 'admin' ? 'Админ' : 'Участник'}</span>`
+          `<span class="tag ${u.role === 'owner' ? 'tag-orange' : u.role === 'admin' ? 'tag-orange' : 'tag-green'}">${u.role === 'owner' ? '⭐ Владелец' : u.role === 'admin' ? 'Админ' : 'Участник'}</span>`
         }
       </td>
       <td style="vertical-align:middle;text-align:center;cursor:pointer;white-space:nowrap;min-width:60px;" onclick="event.stopPropagation();openUserTripsModal(${u.id})" title="Нажмите для просмотра поездок">
@@ -7530,24 +7820,31 @@ function loadAdminGroups() {
 }
 
 
-// Переключение видимости списка участников в группе
 function toggleGroupMembers(groupId) {
-  // Сначала ищем в основном DOM (для ПК)
   let el = document.getElementById('group-members-' + groupId);
   
-  // Если не найден, ищем в мобильном контейнере
   if (!el) {
     el = document.getElementById('mob-group-members-' + groupId);
   }
   
   if (!el) {
-    console.warn('Элемент group-members-' + groupId + ' не найден');
-    // Пробуем найти по селектору внутри группы
     const groupDiv = document.querySelector(`[onclick*="toggleGroupMembers(${groupId})"]`);
     if (groupDiv) {
       const parent = groupDiv.closest('.admin-section, .mob-item');
       if (parent) {
         el = parent.querySelector(`[id*="group-members-${groupId}"]`);
+      }
+    }
+    if (!el) {
+      // Создаем элемент, если его нет
+      const parent = document.querySelector(`[onclick*="toggleGroupMembers(${groupId})"]`)?.closest('div[style*="background:var(--surface)"]');
+      if (parent) {
+        const membersDiv = document.createElement('div');
+        membersDiv.id = 'group-members-' + groupId;
+        membersDiv.style.cssText = 'display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;';
+        membersDiv.innerHTML = `<div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">👥 Загрузка...</div>`;
+        parent.appendChild(membersDiv);
+        el = membersDiv;
       }
     }
     if (!el) return;
