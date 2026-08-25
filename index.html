@@ -1304,6 +1304,15 @@ input[type=number] {
   <div class="mob-item" data-section="contacts">📞 Контакты</div>
   </div>
 <div id="mob-admin-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:98;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+  <div id="mob-progress-bar" style="display:none;background:var(--surface);border-radius:var(--radius-sm);padding:16px;border:1px solid var(--border);margin:10px 16px 10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:13px;color:var(--text-muted);">Загрузка данных...</span>
+      <span style="font-size:13px;font-weight:600;color:var(--accent);" id="mob-progress-percent">0%</span>
+    </div>
+    <div style="background:var(--bg2);border-radius:4px;height:6px;overflow:hidden;">
+      <div id="mob-progress-fill" style="background:var(--accent);height:100%;width:0%;border-radius:4px;transition:width 0.3s ease-out;"></div>
+    </div>
+  </div>
   <div id="mob-admin-content" style="padding:10px 16px 80px;"></div>
 </div>
 
@@ -8024,39 +8033,51 @@ function bumpDataVersion() {
 }
   
 function toggleGroupMembers(groupId) {
-    // Сначала ищем в основном DOM
+    // Пытаемся найти элемент разными способами
     let el = document.getElementById('group-members-' + groupId);
     
-    // Если не найден, ищем в мобильном контейнере
+    // Если не найден по ID, ищем в родительской карточке
     if (!el) {
-        el = document.getElementById('mob-group-members-' + groupId);
-    }
-    
-    // Если все еще не найден, ищем внутри родительского элемента
-    if (!el) {
-        const groupCard = document.querySelector(`[onclick*="toggleGroupMembers(${groupId})"]`)?.closest('[style*="background:var(--surface)"]');
-        if (groupCard) {
-            el = groupCard.querySelector(`[id*="group-members-${groupId}"]`);
-            if (!el) {
-                const membersDiv = groupCard.querySelector('[style*="border-top:1px solid var(--border)"]');
+        // Ищем все карточки групп
+        const cards = document.querySelectorAll('[style*="background:var(--surface)"]');
+        for (const card of cards) {
+            // Проверяем, содержит ли карточка нужную группу
+            const header = card.querySelector('[onclick*="toggleGroupMembers(' + groupId + ')"]');
+            if (header) {
+                const membersDiv = card.querySelector('[id*="group-members-' + groupId + '"]');
                 if (membersDiv) {
                     el = membersDiv;
+                    break;
                 }
+                // Если div с участниками не найден, создаем его
+                const newDiv = document.createElement('div');
+                newDiv.id = 'group-members-' + groupId;
+                newDiv.style.cssText = 'display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;';
+                newDiv.innerHTML = `<div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">👥 Загрузка...</div>`;
+                card.appendChild(newDiv);
+                el = newDiv;
+                break;
             }
-            if (!el) {
-                const membersDiv = document.createElement('div');
-                membersDiv.id = 'group-members-' + groupId;
-                membersDiv.style.cssText = 'display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;';
-                membersDiv.innerHTML = `<div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">👥 Загрузка...</div>`;
-                groupCard.appendChild(membersDiv);
-                el = membersDiv;
-            }
+        }
+    }
+    
+    // Если все еще не найден, пробуем найти через data-атрибут
+    if (!el) {
+        const dataEl = document.querySelector('[data-group-id="' + groupId + '"]');
+        if (dataEl) {
+            el = dataEl;
         }
     }
     
     if (!el) {
         console.warn('Элемент group-members-' + groupId + ' не найден');
-        return;
+        // Создаем элемент в конце body для отладки
+        const fallback = document.createElement('div');
+        fallback.id = 'group-members-' + groupId;
+        fallback.style.cssText = 'display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;';
+        fallback.innerHTML = `<div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">👥 Группа найдена, но данные не загружены</div>`;
+        document.body.appendChild(fallback);
+        el = fallback;
     }
     
     const isHidden = el.style.display === 'none' || el.style.display === '';
@@ -9098,13 +9119,10 @@ function gasPost(body) {
             resolve(data);
         };
 
-        // ✅ ИСПРАВЛЕНО: используем encodeURIComponent для безопасной передачи
+        // Используем encodeURIComponent для безопасной передачи
         const jsonStr = JSON.stringify(body);
         const encoded = encodeURIComponent(jsonStr);
         
-        console.log('📤 Отправка данных:', body);
-        console.log('📤 Закодировано:', encoded.substring(0, 100) + '...');
-
         const queryParams = new URLSearchParams({
             method: 'post',
             payload: encoded,
@@ -9136,7 +9154,7 @@ function gasGet(params) {
       if (!isResolved) {
         isResolved = true;
         try { delete window[cbId]; } catch(e) {}
-        const s = document.getElementById('_gs_' + cbId);
+        const s = document.querySelector('script[id*="' + cbId + '"]');
         if (s && s.parentNode) s.parentNode.removeChild(s);
         // Не reject, а resolve с пометкой timeout
         resolve({ ok: false, timeout: true, error: 'Таймаут загрузки данных' });
@@ -9148,15 +9166,25 @@ function gasGet(params) {
       isResolved = true;
       clearTimeout(timer);
       try { delete window[cbId]; } catch(e) {}
-      const s = document.getElementById('_gs_' + cbId);
+      const s = document.querySelector('script[id*="' + cbId + '"]');
       if (s && s.parentNode) s.parentNode.removeChild(s);
       resolve(data);
     };
 
-    const qs = new URLSearchParams({ ...params, callback: cbId, _t: Date.now() });
+    // Формируем параметры запроса
+    const queryParams = new URLSearchParams();
+    Object.keys(params).forEach(key => {
+      if (params[key] !== undefined && params[key] !== null) {
+        queryParams.append(key, params[key]);
+      }
+    });
+    queryParams.append('callback', cbId);
+    queryParams.append('_t', Date.now());
+
+    // Правильный URL для JSONP
     const script = document.createElement('script');
-    script.id = '_gs_' + cbId;
-    script.src = GAS_URL + '?' + qs.toString();
+    script.id = 'script_' + cbId;
+    script.src = GAS_URL + '?' + queryParams.toString();
     script.onerror = () => {
       if (isResolved) return;
       isResolved = true;
@@ -9168,7 +9196,6 @@ function gasGet(params) {
     document.head.appendChild(script);
   });
 }
-
 // Сохранение настройки в Google Sheets
 async function saveSettingToSheets(key, value) {
   if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return false;
@@ -10371,20 +10398,37 @@ document.addEventListener('touchstart', function(e) {
     }
 }, { passive: false });
 
-  // Также добавляем обработчик кликов для мобильных
+ // Добавьте этот код после инициализации
 document.addEventListener('click', function(e) {
-  const target = e.target.closest('[onclick*="toggleGroupMembers"]');
-  if (target) {
-    const onclickAttr = target.getAttribute('onclick');
-    if (onclickAttr) {
-      const match = onclickAttr.match(/toggleGroupMembers\((\d+)\)/);
-      if (match) {
-        e.preventDefault();
-        toggleGroupMembers(parseInt(match[1]));
-      }
+    // Обработка для мобильных устройств
+    const target = e.target.closest('[onclick*="toggleGroupMembers"]');
+    if (target) {
+        const onclickAttr = target.getAttribute('onclick');
+        if (onclickAttr) {
+            const match = onclickAttr.match(/toggleGroupMembers\((\d+)\)/);
+            if (match) {
+                e.preventDefault();
+                // Небольшая задержка для PWA
+                setTimeout(() => {
+                    toggleGroupMembers(parseInt(match[1]));
+                }, 50);
+                return;
+            }
+        }
     }
-  }
-});
+    
+    // Альтернативный обработчик для мобильных групп
+    const groupHeader = e.target.closest('[data-group-header]');
+    if (groupHeader) {
+        const groupId = groupHeader.dataset.groupId;
+        if (groupId) {
+            e.preventDefault();
+            setTimeout(() => {
+                toggleGroupMembers(parseInt(groupId));
+            }, 50);
+        }
+    }
+}, { passive: false });
 </script>
 </body>
 </html>
