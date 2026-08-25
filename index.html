@@ -3001,6 +3001,16 @@ setTimeout(function() {
 body.modal-open {
   overflow: hidden !important;
 }
+
+
+  /* ===== ПРОГРЕСС-БАР ДЛЯ МОБИЛЬНОГО ДАШБОРДА ===== */
+#mob-progress-fill {
+    transition: width 0.3s ease-out;
+}
+
+#mob-progress-percent {
+    font-variant-numeric: tabular-nums;
+}
 </style>
 
 <script>
@@ -3133,6 +3143,16 @@ let isDataLoading = false;
     
     try {
         console.log(`📥 Загрузка данных ${sheetName} с сервера...`);
+      updateMobProgress(10);
+      // После получения данных:
+if (result && result.ok && result.data) {
+    cache.data = result.data;
+    cache.timestamp = Date.now();
+    cache.version = localVersion;
+    updateMobProgress(100);
+    console.log(`✅ Загружено ${result.data.length} записей из ${sheetName}`);
+    return cache.data;
+}
         
         // Проверяем версию
         const localVersion = localStorage.getItem('vputi_data_version') || '0';
@@ -7868,7 +7888,7 @@ function loadAdminGroups() {
                             <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Сумма</th>
                             <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Оплата</th>
                             <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Заметка</th>
-                            <th style="padding:8px 14px;"></th>
+                            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Действия</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -7942,7 +7962,7 @@ function loadAdminGroups() {
 
 
 function toggleGroupMembers(groupId) {
-    // Сначала ищем в основном DOM (для ПК)
+    // Сначала ищем в основном DOM
     let el = document.getElementById('group-members-' + groupId);
     
     // Если не найден, ищем в мобильном контейнере
@@ -7952,21 +7972,15 @@ function toggleGroupMembers(groupId) {
     
     // Если все еще не найден, ищем внутри родительского элемента
     if (!el) {
-        // Ищем родительскую карточку группы
         const groupCard = document.querySelector(`[onclick*="toggleGroupMembers(${groupId})"]`)?.closest('[style*="background:var(--surface)"]');
         if (groupCard) {
-            // Ищем элемент с участниками внутри карточки
             el = groupCard.querySelector(`[id*="group-members-${groupId}"]`);
-            
-            // Если не найден по id, ищем по селектору
             if (!el) {
                 const membersDiv = groupCard.querySelector('[style*="border-top:1px solid var(--border)"]');
                 if (membersDiv) {
                     el = membersDiv;
                 }
             }
-            
-            // Если все еще не найден, создаем его
             if (!el) {
                 const membersDiv = document.createElement('div');
                 membersDiv.id = 'group-members-' + groupId;
@@ -8017,36 +8031,6 @@ function toggleGroupMembers(groupId) {
         }
     }
 }
-
-// ✅ ДОБАВЛЯЕМ ОБРАБОТЧИК ДЛЯ КЛИКОВ НА МОБИЛЬНЫХ
-document.addEventListener('touchstart', function(e) {
-  const target = e.target.closest('[onclick*="toggleGroupMembers"]');
-  if (target) {
-    const onclickAttr = target.getAttribute('onclick');
-    if (onclickAttr) {
-      const match = onclickAttr.match(/toggleGroupMembers\((\d+)\)/);
-      if (match) {
-        e.preventDefault();
-        toggleGroupMembers(parseInt(match[1]));
-      }
-    }
-  }
-}, { passive: false });
-
-// Также добавляем обработчик кликов для мобильных
-document.addEventListener('click', function(e) {
-  const target = e.target.closest('[onclick*="toggleGroupMembers"]');
-  if (target) {
-    const onclickAttr = target.getAttribute('onclick');
-    if (onclickAttr) {
-      const match = onclickAttr.match(/toggleGroupMembers\((\d+)\)/);
-      if (match) {
-        e.preventDefault();
-        toggleGroupMembers(parseInt(match[1]));
-      }
-    }
-  }
-});
 
   
 function openEditGroup(id) {
@@ -9804,6 +9788,22 @@ async function renderMobAdminSection(section) {
 
     const rev = purchases.reduce((s, p) => s + p.price, 0);
 
+    // ✅ Прогресс-бар для загрузки данных
+let progressHTML = '';
+if (isLoading || !dataCache.purchases.data) {
+    progressHTML = `
+        <div style="background:var(--surface);border-radius:var(--radius-sm);padding:16px;border:1px solid var(--border);margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:13px;color:var(--text-muted);">Загрузка данных...</span>
+                <span style="font-size:13px;font-weight:600;color:var(--accent);" id="mob-progress-percent">0%</span>
+            </div>
+            <div style="background:var(--bg2);border-radius:4px;height:6px;overflow:hidden;">
+                <div id="mob-progress-fill" style="background:var(--accent);height:100%;width:0%;border-radius:4px;transition:width 0.3s ease-out;"></div>
+            </div>
+        </div>
+    `;
+}
+
     box.innerHTML = `
       <h2 style="font-size:22px;font-weight:500;margin-bottom:16px;">📊 Дашборд</h2>
       <div class="stats-grid">
@@ -10115,6 +10115,18 @@ async function renderMobAdminSection(section) {
     `;
   }
 }
+
+  // Добавьте эту функцию глобально
+function updateMobProgress(percent) {
+    const fill = document.getElementById('mob-progress-fill');
+    const text = document.getElementById('mob-progress-percent');
+    if (fill) {
+        fill.style.width = Math.min(percent, 100) + '%';
+    }
+    if (text) {
+        text.textContent = Math.min(percent, 100) + '%';
+    }
+}
   
 // Сохранение настроек из мобильной панели
 function saveMobInvite() {
@@ -10290,6 +10302,39 @@ function init() {
 
 // Запуск
 init();
+
+  // Добавьте в инициализацию
+document.addEventListener('touchstart', function(e) {
+    const target = e.target.closest('[onclick*="toggleGroupMembers"]');
+    if (target) {
+        const onclickAttr = target.getAttribute('onclick');
+        if (onclickAttr) {
+            const match = onclickAttr.match(/toggleGroupMembers\((\d+)\)/);
+            if (match) {
+                e.preventDefault();
+                // Небольшая задержка для PWA
+                setTimeout(() => {
+                    toggleGroupMembers(parseInt(match[1]));
+                }, 50);
+            }
+        }
+    }
+}, { passive: false });
+
+  // Также добавляем обработчик кликов для мобильных
+document.addEventListener('click', function(e) {
+  const target = e.target.closest('[onclick*="toggleGroupMembers"]');
+  if (target) {
+    const onclickAttr = target.getAttribute('onclick');
+    if (onclickAttr) {
+      const match = onclickAttr.match(/toggleGroupMembers\((\d+)\)/);
+      if (match) {
+        e.preventDefault();
+        toggleGroupMembers(parseInt(match[1]));
+      }
+    }
+  }
+});
 </script>
 </body>
 </html>
