@@ -1847,6 +1847,15 @@ input[type=number] {
       <div class="admin-section active" id="admin-dashboard">
         <div class="admin-page-title">Дашборд</div>
         <div class="admin-page-sub">Сводная статистика по сайту</div>
+        <div id="pc-progress-bar" style="display:none; background:var(--surface);border-radius:var(--radius-sm);padding:16px;border:1px solid var(--border);margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:13px;color:var(--text-muted);">Загрузка данных...</span>
+        <span style="font-size:13px;font-weight:600;color:var(--accent);" id="pc-progress-percent">0%</span>
+    </div>
+    <div style="background:var(--bg2);border-radius:4px;height:6px;overflow:hidden;">
+        <div id="pc-progress-fill" style="background:var(--accent);height:100%;width:0%;border-radius:4px;transition:width 0.3s ease-out;"></div>
+    </div>
+</div>
         <div class="stats-grid" id="stats-grid"></div>
         <div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:28px;">
           <h3 style="font-family:var(--font-family);font-size:22px;font-weight:500;margin-bottom:22px;">Выручка по месяцам</h3>
@@ -3036,16 +3045,49 @@ let isLoading = false;
 let dataVersion = 0;
 
 
-   // Добавьте эту функцию глобально
+  // ===== ПРОГРЕСС-БАР ДЛЯ ЗАГРУЗКИ ДАННЫХ =====
+function updateProgress(percent) {
+    // Мобильная версия
+    const mobFill = document.getElementById('mob-progress-fill');
+    const mobText = document.getElementById('mob-progress-percent');
+    if (mobFill) {
+        mobFill.style.width = Math.min(percent, 100) + '%';
+    }
+    if (mobText) {
+        mobText.textContent = Math.min(percent, 100) + '%';
+    }
+    
+    // ПК версия
+    const pcFill = document.getElementById('pc-progress-fill');
+    const pcText = document.getElementById('pc-progress-percent');
+    if (pcFill) {
+        pcFill.style.width = Math.min(percent, 100) + '%';
+    }
+    if (pcText) {
+        pcText.textContent = Math.min(percent, 100) + '%';
+    }
+    
+    // Показываем/скрываем прогресс-бар
+    if (percent > 0 && percent < 100) {
+        const pcBar = document.getElementById('pc-progress-bar');
+        if (pcBar) pcBar.style.display = 'block';
+        const mobBar = document.getElementById('mob-progress-bar');
+        if (mobBar) mobBar.style.display = 'block';
+    } else if (percent >= 100) {
+        const pcBar = document.getElementById('pc-progress-bar');
+        if (pcBar) {
+            setTimeout(() => { pcBar.style.display = 'none'; }, 500);
+        }
+        const mobBar = document.getElementById('mob-progress-bar');
+        if (mobBar) {
+            setTimeout(() => { mobBar.style.display = 'none'; }, 500);
+        }
+    }
+}
+
+// Переименуем старую функцию для обратной совместимости
 function updateMobProgress(percent) {
-    const fill = document.getElementById('mob-progress-fill');
-    const text = document.getElementById('mob-progress-percent');
-    if (fill) {
-        fill.style.width = Math.min(percent, 100) + '%';
-    }
-    if (text) {
-        text.textContent = Math.min(percent, 100) + '%';
-    }
+    updateProgress(percent);
 }
 // ============================================================
 // === БАЗА ДАННЫХ (localStorage) ==============================
@@ -7963,7 +8005,7 @@ function loadAdminGroups() {
                         </button>
                     </div>
                 </div>
-                <!-- Список участников (раскрывается) -->
+                <!-- Список участников (раскрывается) - ИСПРАВЛЕНО: display:none -->
                 <div id="group-members-${groupId}" style="display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;">
                     ${membersHTML}
                 </div>
@@ -7972,7 +8014,15 @@ function loadAdminGroups() {
     }).join('');
 }
 
-
+function bumpDataVersion() {
+    // Увеличиваем версию данных для инвалидации кэша
+    const currentVersion = localStorage.getItem('vputi_data_version') || '0';
+    const newVersion = String(parseInt(currentVersion) + 1);
+    localStorage.setItem('vputi_data_version', newVersion);
+    console.log('📦 Версия данных обновлена:', newVersion);
+    return newVersion;
+}
+  
 function toggleGroupMembers(groupId) {
     // Сначала ищем в основном DOM
     let el = document.getElementById('group-members-' + groupId);
