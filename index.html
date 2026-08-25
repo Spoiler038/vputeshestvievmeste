@@ -1077,6 +1077,51 @@ html.modal-open {overflow: hidden !important;}
   .mobile-admin-toggle.visible {
     display: inline-flex !important;
   }
+
+   #groups-list .admin-section,
+  [id^="group-members-"],
+  #group-members-1,
+  #group-members-2,
+  #group-members-3,
+  #group-members-4,
+  #group-members-5,
+  #group-members-6,
+  #group-members-7,
+  #group-members-8,
+  #group-members-9,
+  #group-members-10,
+  #group-members-11,
+  #group-members-12,
+  #group-members-13,
+  #group-members-14,
+  #group-members-15,
+  #group-members-16,
+  #group-members-17,
+  #group-members-18,
+  #group-members-19,
+  #group-members-20,
+  [id^="group-members-"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    display: block !important;
+    width: 100%;
+  }
+  
+  [id^="group-members-"] table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    min-width: 500px;
+    width: 100%;
+  }
+  
+  [id^="group-members-"] table td,
+  [id^="group-members-"] table th {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    white-space: nowrap;
+  }
   
 }
 
@@ -7318,7 +7363,7 @@ function loadAdminGroups() {
       </div>
       
       <!-- Список участников (раскрывается) -->
-      <div id="group-members-${groupId}" style="display:none;border-top:1px solid var(--border);overflow-x:auto;">
+      <div id="group-members-${groupId}" style="display:none;border-top:1px solid var(--border);overflow-x:auto; -webkit-overflow-scrolling: touch;">
         ${hasMembers ? `
         <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">
           <thead><tr style="background:var(--bg);">
@@ -7351,7 +7396,7 @@ function loadAdminGroups() {
   }).join('');
 }
 
-// Переключение видимости списка участников в группе
+
 // Переключение видимости списка участников в группе
 function toggleGroupMembers(groupId) {
   // Сначала ищем в основном DOM (для ПК)
