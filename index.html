@@ -5113,166 +5113,199 @@ async function doRegister() {
 
 // === ВХОД ===
 async function doLogin() {
-  const loginOrEmail = document.getElementById('login-username').value.trim();
-  const password = document.getElementById('login-password').value;
-  const errEl = document.getElementById('login-error');
+    const loginOrEmail = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
 
-  if (!loginOrEmail || !password) {
-    errEl.style.display = 'block';
-    errEl.textContent = 'Введите логин/email и пароль';
-    return;
-  }
+    if (!loginOrEmail || !password) {
+        errEl.style.display = 'block';
+        errEl.textContent = 'Введите логин/email и пароль';
+        return;
+    }
 
-  errEl.style.display = 'none';
+    errEl.style.display = 'none';
 
-  const btn = document.querySelector('#auth-login .auth-btn');
-  btn.disabled = true;
-  btn.textContent = '⏳ Вход...';
+    const btn = document.querySelector('#auth-login .auth-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Вход...';
 
-  try {
-    const deviceId = getDeviceId();
+    try {
+        const deviceId = getDeviceId();
 
-    // === 1. ПРОВЕРЯЕМ ЛОКАЛЬНО с использованием checkPassword ===
-    const localUser = users.find(u => 
-      (u.username === loginOrEmail || u.email === loginOrEmail)
-    );
+        // === 1. ПРОВЕРЯЕМ ЛОКАЛЬНО ===
+        const localUser = users.find(u => 
+            (u.username?.toLowerCase() === loginOrEmail.toLowerCase()) || 
+            (u.email?.toLowerCase() === loginOrEmail.toLowerCase())
+        );
 
-    if (localUser) {
-      console.log('👤 Найден локальный пользователь:', localUser.username);
-      console.log('📝 Пароль в БД:', localUser.password);
-      
-      // ✅ ИСПРАВЛЕНО: используем checkPassword для универсальной проверки
-      const isPasswordValid = await checkPassword(password, localUser.password);
-      
-      console.log('🔍 Результат проверки пароля:', isPasswordValid);
-      
-      if (isPasswordValid) {
-        // Если пароль был открытым — мигрируем на хеш
-        const passwordHash = await sha256(password);
-        if (localUser.password !== passwordHash) {
-          localUser.password = passwordHash;
-          console.log('🔄 Пароль мигрирован на SHA-256 для:', localUser.username);
-          saveState('users', users);
+        if (localUser) {
+            console.log('👤 Найден локальный пользователь:', localUser.username);
+            console.log('📝 Пароль в БД:', localUser.password);
+            
+            // ✅ ИСПРАВЛЕНО: проверка с учетом возможного открытого пароля
+            let isPasswordValid = false;
+            
+            // Проверка открытого пароля
+            if (localUser.password === password) {
+                isPasswordValid = true;
+                console.log('✅ Пароль совпадает (открытый)');
+            }
+            
+            // Проверка SHA-256
+            if (!isPasswordValid) {
+                const passwordHash = await sha256(password);
+                console.log('🔑 SHA-256 хеш пароля:', passwordHash);
+                console.log('📝 Сравниваем с:', localUser.password);
+                if (passwordHash === localUser.password) {
+                    isPasswordValid = true;
+                    console.log('✅ Пароль совпадает (SHA-256)');
+                }
+            }
+            
+            console.log('🔍 Результат проверки пароля:', isPasswordValid);
+            
+            if (isPasswordValid) {
+                // Если пароль был открытым — мигрируем на хеш
+                const passwordHash = await sha256(password);
+                if (localUser.password !== passwordHash) {
+                    localUser.password = passwordHash;
+                    console.log('🔄 Пароль мигрирован на SHA-256 для:', localUser.username);
+                    saveState('users', users);
+                    // Синхронизация с Google Sheets
+                    syncUserToSheets(localUser);
+                }
+                
+                localUser.device_id = deviceId;
+                saveState('users', users);
+                currentUser = localUser;
+                closeAuth();
+                updateNavForUser();
+                showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋`);
+                document.getElementById('login-username').value = '';
+                document.getElementById('login-password').value = '';
+                btn.disabled = false;
+                btn.textContent = 'Войти';
+                return;
+            } else {
+                errEl.style.display = 'block';
+                errEl.textContent = '❌ Неверный пароль';
+                btn.disabled = false;
+                btn.textContent = 'Войти';
+                return;
+            }
+        }
+
+        // === 2. ПРОВЕРЯЕМ В GOOGLE SHEETS ===
+        showToast('🔄 Синхронизация...');
+        
+        const payload = {
+            action: 'login',
+            data: {
+                username: loginOrEmail,
+                email: loginOrEmail,
+                password: password,
+                device_id: deviceId
+            }
+        };
+
+        const result = await gasPost(payload);
+
+        if (result && result.ok && result.user) {
+            const user = result.user;
+            
+            // Сохраняем хеш для быстрого входа
+            const passwordHash = await sha256(password);
+            localStorage.setItem('vputi_password_hash', passwordHash);
+            localStorage.setItem('vputi_user_data', JSON.stringify({
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                avatar: user.avatar || ''
+            }));
+            
+            let existingUser = users.find(u => u.id === user.id);
+            if (existingUser) {
+                existingUser.name = user.name || existingUser.name;
+                existingUser.email = user.email || existingUser.email;
+                existingUser.role = user.role || existingUser.role;
+                existingUser.avatar = user.avatar || existingUser.avatar;
+                existingUser.bio = user.bio || existingUser.bio;
+                existingUser.phone = user.phone || existingUser.phone;
+                existingUser.device_id = deviceId;
+                existingUser.discount = user.discount || existingUser.discount;
+                existingUser.password = passwordHash; // Сохраняем хеш
+                saveState('users', users);
+                currentUser = existingUser;
+            } else {
+                user.device_id = deviceId;
+                user.password = passwordHash;
+                users.push(user);
+                saveState('users', users);
+                currentUser = user;
+            }
+            
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            closeAuth();
+            updateNavForUser();
+            showToast(`Добро пожаловать, ${currentUser.name.split(' ')[0]}! 👋`);
+        } else {
+            errEl.style.display = 'block';
+            errEl.textContent = result?.error || '❌ Неверный логин/email или пароль';
+            showToast('Ошибка входа: ' + (result?.error || 'проверьте данные'));
+        }
+    } catch(e) {
+        console.error('Login error:', e);
+        
+        // === 3. ОФЛАЙН-РЕЖИМ ===
+        const localUser = users.find(u => 
+            (u.username?.toLowerCase() === loginOrEmail.toLowerCase()) || 
+            (u.email?.toLowerCase() === loginOrEmail.toLowerCase())
+        );
+        
+        if (localUser) {
+            // Проверка открытого пароля
+            if (localUser.password === password) {
+                const passwordHash = await sha256(password);
+                if (localUser.password !== passwordHash) {
+                    localUser.password = passwordHash;
+                    saveState('users', users);
+                }
+                currentUser = localUser;
+                closeAuth();
+                updateNavForUser();
+                showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋 (офлайн-режим)`);
+                document.getElementById('login-username').value = '';
+                document.getElementById('login-password').value = '';
+                btn.disabled = false;
+                btn.textContent = 'Войти';
+                return;
+            }
+            
+            // Проверка SHA-256
+            const passwordHash = await sha256(password);
+            if (passwordHash === localUser.password) {
+                currentUser = localUser;
+                closeAuth();
+                updateNavForUser();
+                showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋 (офлайн-режим)`);
+                document.getElementById('login-username').value = '';
+                document.getElementById('login-password').value = '';
+                btn.disabled = false;
+                btn.textContent = 'Войти';
+                return;
+            }
         }
         
-        localUser.device_id = deviceId;
-        saveState('users', users);
-        currentUser = localUser;
-        closeAuth();
-        updateNavForUser();
-        showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋`);
-        document.getElementById('login-username').value = '';
-        document.getElementById('login-password').value = '';
-        btn.disabled = false;
-        btn.textContent = 'Войти';
-        return;
-      } else {
         errEl.style.display = 'block';
-        errEl.textContent = 'Неверный пароль';
+        errEl.textContent = '❌ Ошибка соединения. Попробуйте позже.';
+        showToast('❌ Ошибка соединения с сервером');
+    } finally {
         btn.disabled = false;
         btn.textContent = 'Войти';
-        return;
-      }
     }
-
-    // === 2. ПРОВЕРЯЕМ В GOOGLE SHEETS ===
-    showToast('Синхронизация...');
-    
-    const payload = {
-      action: 'login',
-      data: {
-        username: loginOrEmail,
-        email: loginOrEmail,
-        password: password,
-        device_id: deviceId
-      }
-    };
-
-    const result = await gasPost(payload);
-
-    if (result && result.ok && result.user) {
-      const user = result.user;
-      
-      // Сохраняем хеш для быстрого входа
-      const passwordHash = await sha256(password);
-      localStorage.setItem('vputi_password_hash', passwordHash);
-      localStorage.setItem('vputi_user_data', JSON.stringify({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        avatar: user.avatar || ''
-      }));
-      
-      let existingUser = users.find(u => u.id === user.id);
-      if (existingUser) {
-        existingUser.name = user.name || existingUser.name;
-        existingUser.email = user.email || existingUser.email;
-        existingUser.role = user.role || existingUser.role;
-        existingUser.avatar = user.avatar || existingUser.avatar;
-        existingUser.bio = user.bio || existingUser.bio;
-        existingUser.phone = user.phone || existingUser.phone;
-        existingUser.device_id = deviceId;
-        existingUser.discount = user.discount || existingUser.discount;
-        // ✅ Сохраняем хеш пароля
-        existingUser.password = passwordHash;
-        saveState('users', users);
-        currentUser = existingUser;
-      } else {
-        user.device_id = deviceId;
-        user.password = passwordHash;
-        users.push(user);
-        saveState('users', users);
-        currentUser = user;
-      }
-      
-      document.getElementById('login-username').value = '';
-      document.getElementById('login-password').value = '';
-      closeAuth();
-      updateNavForUser();
-      showToast(`Добро пожаловать, ${currentUser.name.split(' ')[0]}! 👋`);
-    } else {
-      errEl.style.display = 'block';
-      errEl.textContent = result?.error || 'Неверный логин/email или пароль';
-      showToast('Ошибка входа: ' + (result?.error || 'проверьте данные'));
-    }
-  } catch(e) {
-    console.error('Login error:', e);
-    
-    // === 3. ОФЛАЙН-РЕЖИМ ===
-    const localUser = users.find(u => 
-      (u.username === loginOrEmail || u.email === loginOrEmail)
-    );
-    
-    if (localUser) {
-      const isPasswordValid = await checkPassword(password, localUser.password);
-      
-      if (isPasswordValid) {
-        const passwordHash = await sha256(password);
-        if (localUser.password !== passwordHash) {
-          localUser.password = passwordHash;
-          saveState('users', users);
-        }
-        currentUser = localUser;
-        closeAuth();
-        updateNavForUser();
-        showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋 (офлайн-режим)`);
-        document.getElementById('login-username').value = '';
-        document.getElementById('login-password').value = '';
-        btn.disabled = false;
-        btn.textContent = 'Войти';
-        return;
-      }
-    }
-    
-    errEl.style.display = 'block';
-    errEl.textContent = 'Ошибка соединения. Попробуйте позже.';
-    showToast('Ошибка соединения с сервером');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Войти';
-  }
 }
   
 // === ЛОКАЛЬНОЕ ХЕШИРОВАНИЕ ПАРОЛЯ ===
@@ -5431,22 +5464,29 @@ function confirmResetPassword() {
         return;
     }
 
-    // ✅ Обновляем пароль (хешируем SHA-256)
-    const passwordHash = sha256(newPassword);
-    user.password = passwordHash;
+    // ✅ Сохраняем НОВЫЙ пароль в ОТКРЫТОМ виде (для обратной совместимости)
+    // Позже при входе он будет автоматически захеширован
+    user.password = newPassword; // Временно сохраняем как открытый
     
     // Обновляем текущего пользователя, если это он
     if (currentUser && currentUser.id === user.id) {
-        currentUser.password = passwordHash;
+        currentUser.password = newPassword;
     }
     
+    // Сохраняем локально
     saveState('users', users);
 
+    // ✅ Показываем сообщение пользователю
+    showToast('🔄 Пароль изменен, синхронизация с сервером...');
+
     // ✅ Синхронизация с Google Sheets
-    syncUserToSheets(user);
+    syncUserToSheets(user).then(() => {
+        showToast('✅ Пароль успешно изменён!');
+    }).catch(() => {
+        showToast('⚠️ Пароль изменен локально, синхронизация позже');
+    });
 
     closeModal('reset-password-modal');
-    showToast('✅ Пароль успешно изменён!');
     
     // Очищаем данные
     resetTempCode = null;
@@ -5463,26 +5503,41 @@ function confirmResetPassword() {
     if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
     
     try {
+        // ✅ Убеждаемся, что все данные корректно сериализуются
+        const userData = {
+            id: user.id,
+            username: user.username || '',
+            password: user.password || '', // Хеш пароля как строка
+            role: user.role || 'user',
+            name: user.name || '',
+            email: user.email || '',
+            bio: user.bio || '',
+            joinedDate: user.joinedDate || new Date().toISOString().slice(0, 10),
+            avatar: user.avatar || '',
+            discount: user.discount || 0,
+            consentDate: user.consentDate || '',
+            device_id: user.device_id || '',
+            phone: user.phone || '',
+            active: user.active !== false
+        };
+
+        // ✅ Проверяем, что пароль - это строка, а не объект
+        if (typeof userData.password !== 'string') {
+            console.warn('⚠️ Пароль не является строкой, преобразуем:', userData.password);
+            userData.password = String(userData.password || '');
+        }
+
+        console.log('📤 Отправка данных в Google Sheets:', {
+            ...userData,
+            password: userData.password ? userData.password.substring(0, 20) + '...' : 'empty'
+        });
+
         const payload = {
             action: 'upsert',
             sheet: 'users',
-            data: {
-                id: user.id,
-                username: user.username || '',
-                password: user.password || '',
-                role: user.role || 'user',
-                name: user.name || '',
-                email: user.email || '',
-                bio: user.bio || '',
-                joinedDate: user.joinedDate || new Date().toISOString().slice(0, 10),
-                avatar: user.avatar || '',
-                discount: user.discount || 0,
-                consentDate: user.consentDate || '',
-                device_id: user.device_id || '',
-                phone: user.phone || '',
-                active: user.active !== false
-            }
+            data: userData
         };
+
         const result = await gasPost(payload);
         console.log('✅ Пользователь синхронизирован с таблицей:', result);
         return result;
@@ -8551,51 +8606,53 @@ function hasUserTraveled(userId, programId) {
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxlfOq6IFgKP4pIWpPu-hX9gVYB8be9fQD9Yn6Pt_ysSDlDRYVX0u9mxKXg1jm39GFf/exec';
 let sheetsInitialized = false;
 
-// POST через JSONP (для обхода CORS) с увеличенным таймаутом
 function gasPost(body) {
-  return new Promise((resolve, reject) => {
-    const callbackName = '_gasPostCb_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
-    const timeout = setTimeout(() => {
-      delete window[callbackName];
-      const script = document.querySelector('script[data-postcb="' + callbackName + '"]');
-      if (script) script.remove();
-      // Возвращаем успех, чтобы не ломать приложение
-      resolve({ ok: true, timeout: true, message: 'Таймаут, данные сохранены локально' });
-    }, 30000); // Увеличили таймаут до 30 секунд
+    return new Promise((resolve, reject) => {
+        const callbackName = '_gasPostCb_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+        const timeout = setTimeout(() => {
+            delete window[callbackName];
+            const script = document.querySelector('script[data-postcb="' + callbackName + '"]');
+            if (script) script.remove();
+            resolve({ ok: true, timeout: true, message: 'Таймаут, данные сохранены локально' });
+        }, 30000);
 
-    window[callbackName] = function(data) {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      const script = document.querySelector('script[data-postcb="' + callbackName + '"]');
-      if (script) script.remove();
-      resolve(data);
-    };
+        window[callbackName] = function(data) {
+            clearTimeout(timeout);
+            delete window[callbackName];
+            const script = document.querySelector('script[data-postcb="' + callbackName + '"]');
+            if (script) script.remove();
+            resolve(data);
+        };
 
-    let encoded;
-    try {
-      encoded = btoa(unescape(encodeURIComponent(JSON.stringify(body))));
-    } catch(e) {
-      encoded = btoa(JSON.stringify(body));
-    }
+        // ✅ ИСПРАВЛЕНО: безопасное кодирование данных
+        let encoded;
+        try {
+            // Используем encodeURIComponent для безопасной передачи
+            const jsonStr = JSON.stringify(body);
+            encoded = encodeURIComponent(jsonStr);
+        } catch(e) {
+            console.error('Encoding error:', e);
+            encoded = encodeURIComponent(JSON.stringify(body));
+        }
 
-    const queryParams = new URLSearchParams({
-      method: 'post',
-      payload: encoded,
-      callback: callbackName,
-      t: Date.now()
+        const queryParams = new URLSearchParams({
+            method: 'post',
+            payload: encoded,
+            callback: callbackName,
+            t: Date.now()
+        });
+
+        const script = document.createElement('script');
+        script.src = GAS_URL + '?' + queryParams.toString();
+        script.setAttribute('data-postcb', callbackName);
+        script.onerror = () => {
+            clearTimeout(timeout);
+            delete window[callbackName];
+            script.remove();
+            resolve({ ok: true, error: 'Network error, data saved locally' });
+        };
+        document.head.appendChild(script);
     });
-
-    const script = document.createElement('script');
-    script.src = GAS_URL + '?' + queryParams.toString();
-    script.setAttribute('data-postcb', callbackName);
-    script.onerror = () => {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      script.remove();
-      resolve({ ok: true, error: 'Network error, data saved locally' });
-    };
-    document.head.appendChild(script);
-  });
 }
 
 // GET через JSONP (для чтения данных) с улучшенной обработкой таймаута
