@@ -5851,6 +5851,7 @@ async function saveProgram() {
 
     saveState('programs', programs);
     await syncProgramToSheets(data);
+    invalidateCache('programs'); // ✅ Сбрасываем кэш программ
 
     closeModal('program-modal');
     renderPrograms(programs);
@@ -5877,6 +5878,7 @@ async function deleteProgram(id) {
   programs = programs.filter(p => p.id !== id);
   saveState('programs', programs);
   await deleteProgramFromSheets(id);
+  invalidateCache('programs');
 
   renderPrograms(programs);
   renderFeaturedCarousel();
@@ -6291,6 +6293,37 @@ function loadAdminPrograms() {
   </tr>
 `).join('');
 }
+
+  function renderProgramsTable(programsData) {
+    if (!programsData) return;
+    document.getElementById('programs-tbody').innerHTML = programsData.map(p => `
+    <tr>
+        <td style="width:50px;vertical-align:middle;">
+            <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;background:var(--accent-light);display:flex;align-items:center;justify-content:center;">
+                ${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;">` : `<span>🏔</span>`}
+            </div>
+        </td>
+        <td style="vertical-align:middle;"><strong>${p.name}</strong></td>
+        <td style="vertical-align:middle;"><span class="tag tag-green">${p.season}</span></td>
+        <td style="vertical-align:middle;">${p.transport}</td>
+        <td style="vertical-align:middle;text-align:center;">${p.days}</td>
+        <td style="vertical-align:middle;font-weight:600;text-align:right;padding-right:16px;">${p.price.toLocaleString('ru')} ₽</td>
+        <td style="vertical-align:middle;padding:8px 12px;">
+            <div style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;white-space:nowrap;">
+                <button class="btn btn-edit" style="padding:4px 10px;font-size:11px;line-height:1.4;height:28px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:none;border-radius:6px;cursor:pointer;background:var(--accent2);color:white;" onclick="event.stopPropagation();openEditProgram(${p.id})">Изменить</button>
+                <button class="btn btn-danger" style="padding:4px 8px;font-size:11px;line-height:1.4;height:28px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:none;border-radius:6px;cursor:pointer;background:#C0392B;color:white;" onclick="event.stopPropagation();deleteProgram(${p.id})">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                </button>
+            </div>
+        </td>
+    </tr>
+`).join('');
+}
   
 function loadAdminUsers(isOwner, forceRefresh = false) {
     // Проверяем кэш
@@ -6670,6 +6703,29 @@ function loadAdminLeads() {
     </tr>`;
   }).join('');
 }
+
+  function renderLeadsTable(leadsData) {
+    if (!leadsData) return;
+    document.getElementById('leads-tbody').innerHTML = leadsData.map(l => {
+        let formattedDate = l.date || '';
+        if (formattedDate && formattedDate.includes('-')) {
+            const parts = formattedDate.split('-');
+            formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+        }
+        return `
+        <tr style="cursor:pointer;" onclick="openLeadModal(${l.id})" title="Нажмите для действий">
+            <td style="vertical-align:middle;"><strong>${l.name}</strong></td>
+            <td style="vertical-align:middle;color:var(--accent);">${l.contact}</td>
+            <td style="vertical-align:middle;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.message || '—'}</td>
+            <td style="vertical-align:middle;color:var(--text-muted);white-space:nowrap;">${formattedDate}</td>
+            <td style="vertical-align:middle;">
+                <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;height:28px;border-radius:6px;" onclick="event.stopPropagation();openLeadModal(${l.id})">Открыть →</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+  
  // === МОДАЛКА ЗАЯВКИ ===
 function openLeadModal(leadId) {
   const lead = leads.find(l => l.id === leadId);
@@ -6972,6 +7028,7 @@ function syncAllDataFromSheets(silent = false) {
         if (result.data.programs && result.data.programs.length > 0) {
           programs = result.data.programs.map(normalizeProgram);
           saveState('programs', programs);
+          invalidateCache('programs');
         }
         
         // Обновляем пользователей (сохраняем владельца)
@@ -9572,16 +9629,41 @@ function closeMobAdmin() {
 }
 
 function switchMobSection(section) {
-  if (section === 'dashboard' && currentUser.role !== 'owner') {
-    showToast('Только для владельца');
-    return;
-  }
+    if (section === 'dashboard' && currentUser.role !== 'owner') {
+        showToast('Только для владельца');
+        return;
+    }
 
-  document.querySelectorAll('.mob-item').forEach(el => el.classList.toggle('active', el.dataset.section === section));
-  renderMobAdminSection(section);
+    document.querySelectorAll('.mob-item').forEach(el => el.classList.toggle('active', el.dataset.section === section));
+    renderMobAdminSection(section);
+    
+    // ✅ Загружаем данные для выбранного раздела
+    if (section === 'programs') {
+        if (!dataCache.programs.data) {
+            loadAdminPrograms();
+        }
+    } else if (section === 'users') {
+        if (!dataCache.users.data) {
+            loadAdminUsers(currentUser?.role === 'owner');
+        }
+    } else if (section === 'leads') {
+        if (!dataCache.leads.data) {
+            loadAdminLeads();
+        }
+    } else if (section === 'groups') {
+        loadAdminGroups();
+    } else if (section === 'settings') {
+        loadSettingsAdmin();
+    } else if (section === 'founder') {
+        loadFounderAdmin();
+    } else if (section === 'howto') {
+        loadHowAdmin();
+    } else if (section === 'contacts') {
+        loadContactsAdmin();
+    }
 
-  const ov = document.getElementById('mob-admin-overlay');
-  if (ov) ov.scrollTop = 0;
+    const ov = document.getElementById('mob-admin-overlay');
+    if (ov) ov.scrollTop = 0;
 }
 
 function renderMobAdminSection(section) {
@@ -9595,16 +9677,57 @@ function renderMobAdminSection(section) {
     if (typeof loadAdminStats === 'function') {
       loadAdminStats();
     }
+    // ✅ Формируем график выручки для мобильной версии
+const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+const byMonth = Array(12).fill(0);
+purchases.forEach(p => {
+    const m = new Date(p.date).getMonth();
+    byMonth[m] += p.price;
+});
+const maxVal = Math.max(...byMonth) || 1;
+
+const revenueChartHTML = months.map((m, i) => {
+    const h = Math.round((byMonth[i] / maxVal) * 110) + 4;
+    const k = byMonth[i] > 0 ? (byMonth[i] / 1000).toFixed(0) + 'к' : '—';
+    return `<div class="rev-bar-wrap" onclick="showRevenueDetails(${i})" style="cursor:pointer;">
+        <div class="rev-bar" style="height:${h}px;background:${byMonth[i] > 0 ? 'var(--accent)' : 'var(--accent-light)'};border-radius:4px 4px 0 0;margin-bottom:5px;transition:all 0.3s;"></div>
+        <div class="rev-month" style="font-size:11px;color:var(--text-muted);">${m}</div>
+        <div class="rev-amount" style="font-size:11px;font-weight:600;color:var(--accent2);margin-top:2px;">${k}</div>
+    </div>`;
+}).join('');
     const rev = purchases.reduce((s, p) => s + p.price, 0);
     box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:16px;">Дашборд</h2>
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-label">Программ</div><div class="stat-value">${programs.length}</div></div>
-        <div class="stat-card"><div class="stat-label">Участников</div><div class="stat-value">${users.length}</div></div>
-        <div class="stat-card"><div class="stat-label">Заявок</div><div class="stat-value">${leads.length}</div></div>
-        <div class="stat-card"><div class="stat-label">Выручка</div><div class="stat-value">${(rev / 1000).toFixed(0)}к ₽</div></div>
-      </div>
-    `;
+  <h2 style="font-size:22px;font-weight:500;margin-bottom:16px;">Дашборд</h2>
+  <div class="stats-grid">
+    <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
+         onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchMobSection('programs')">
+      <div class="stat-label">Программ</div>
+      <div class="stat-value">${programs.length}</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
+         onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchMobSection('users')">
+      <div class="stat-label">Участников</div>
+      <div class="stat-value">${users.length}</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
+         onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);switchMobSection('leads')">
+      <div class="stat-label">Заявок</div>
+      <div class="stat-value">${leads.length}</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer;transition:transform 0.2s;" 
+         onclick="this.style.transform='scale(0.95)';setTimeout(()=>this.style.transform='scale(1)',150);showRevenueDetails(new Date().getMonth())">
+      <div class="stat-label">Выручка</div>
+      <div class="stat-value">${(rev / 1000).toFixed(0)}к ₽</div>
+    </div>
+  </div>
+  <!-- ✅ График выручки для мобильной версии -->
+  <div style="background:var(--surface);border-radius:var(--radius);padding:20px;border:1px solid var(--border);margin-top:20px;">
+    <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:16px;">Выручка по месяцам</h3>
+    <div class="revenue-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(60px, 1fr));gap:8px;align-items:flex-end;">
+      ${revenueChartHTML}
+    </div>
+  </div>
+`;
   } else if (section === 'programs') {
     box.innerHTML = `
       <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">Программы</h2>
