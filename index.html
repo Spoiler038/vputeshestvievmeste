@@ -5142,7 +5142,6 @@ async function doLogin() {
             console.log('👤 Найден локальный пользователь:', localUser.username);
             console.log('📝 Пароль в БД:', localUser.password);
             
-            // ✅ ИСПРАВЛЕНО: проверка с учетом возможного открытого пароля
             let isPasswordValid = false;
             
             // Проверка открытого пароля
@@ -5171,8 +5170,14 @@ async function doLogin() {
                     localUser.password = passwordHash;
                     console.log('🔄 Пароль мигрирован на SHA-256 для:', localUser.username);
                     saveState('users', users);
-                    // Синхронизация с Google Sheets
-                    syncUserToSheets(localUser);
+                    
+                    // ✅ СИНХРОНИЗИРУЕМ ТОЛЬКО ЕСЛИ ЕСТЬ ИНТЕРНЕТ
+                    // Но не блокируем вход, если синхронизация не удалась
+                    try {
+                        await syncUserToSheets(localUser);
+                    } catch(e) {
+                        console.warn('⚠️ Синхронизация не удалась, но вход выполнен');
+                    }
                 }
                 
                 localUser.device_id = deviceId;
@@ -5213,7 +5218,6 @@ async function doLogin() {
         if (result && result.ok && result.user) {
             const user = result.user;
             
-            // Сохраняем хеш для быстрого входа
             const passwordHash = await sha256(password);
             localStorage.setItem('vputi_password_hash', passwordHash);
             localStorage.setItem('vputi_user_data', JSON.stringify({
@@ -5235,7 +5239,7 @@ async function doLogin() {
                 existingUser.phone = user.phone || existingUser.phone;
                 existingUser.device_id = deviceId;
                 existingUser.discount = user.discount || existingUser.discount;
-                existingUser.password = passwordHash; // Сохраняем хеш
+                existingUser.password = passwordHash;
                 saveState('users', users);
                 currentUser = existingUser;
             } else {
@@ -5503,11 +5507,11 @@ function confirmResetPassword() {
     if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
     
     try {
-        // ✅ Убеждаемся, что все данные корректно сериализуются
+        // ✅ Убеждаемся, что пароль - строка
         const userData = {
             id: user.id,
             username: user.username || '',
-            password: user.password || '', // Хеш пароля как строка
+            password: String(user.password || ''), // Приводим к строке
             role: user.role || 'user',
             name: user.name || '',
             email: user.email || '',
@@ -5521,12 +5525,6 @@ function confirmResetPassword() {
             active: user.active !== false
         };
 
-        // ✅ Проверяем, что пароль - это строка, а не объект
-        if (typeof userData.password !== 'string') {
-            console.warn('⚠️ Пароль не является строкой, преобразуем:', userData.password);
-            userData.password = String(userData.password || '');
-        }
-
         console.log('📤 Отправка данных в Google Sheets:', {
             ...userData,
             password: userData.password ? userData.password.substring(0, 20) + '...' : 'empty'
@@ -5539,7 +5537,7 @@ function confirmResetPassword() {
         };
 
         const result = await gasPost(payload);
-        console.log('✅ Пользователь синхронизирован с таблицей:', result);
+        console.log('✅ Результат синхронизации:', result);
         return result;
     } catch(e) {
         console.warn('⚠️ Ошибка синхронизации пользователя:', e);
@@ -8624,16 +8622,12 @@ function gasPost(body) {
             resolve(data);
         };
 
-        // ✅ ИСПРАВЛЕНО: безопасное кодирование данных
-        let encoded;
-        try {
-            // Используем encodeURIComponent для безопасной передачи
-            const jsonStr = JSON.stringify(body);
-            encoded = encodeURIComponent(jsonStr);
-        } catch(e) {
-            console.error('Encoding error:', e);
-            encoded = encodeURIComponent(JSON.stringify(body));
-        }
+        // ✅ ИСПРАВЛЕНО: используем encodeURIComponent для безопасной передачи
+        const jsonStr = JSON.stringify(body);
+        const encoded = encodeURIComponent(jsonStr);
+        
+        console.log('📤 Отправка данных:', body);
+        console.log('📤 Закодировано:', encoded.substring(0, 100) + '...');
 
         const queryParams = new URLSearchParams({
             method: 'post',
@@ -8654,7 +8648,7 @@ function gasPost(body) {
         document.head.appendChild(script);
     });
 }
-
+  
 // GET через JSONP (для чтения данных) с улучшенной обработкой таймаута
 function gasGet(params) {
   return new Promise((resolve, reject) => {
