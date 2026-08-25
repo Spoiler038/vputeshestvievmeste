@@ -3031,6 +3031,22 @@ function saveState(key, val) {
   } catch {}
 }
 
+// ✅ ДОБАВЛЯЕМ ОБЪЯВЛЕНИЕ isLoading
+let isLoading = false;
+let dataVersion = 0;
+
+
+   // Добавьте эту функцию глобально
+function updateMobProgress(percent) {
+    const fill = document.getElementById('mob-progress-fill');
+    const text = document.getElementById('mob-progress-percent');
+    if (fill) {
+        fill.style.width = Math.min(percent, 100) + '%';
+    }
+    if (text) {
+        text.textContent = Math.min(percent, 100) + '%';
+    }
+}
 // ============================================================
 // === БАЗА ДАННЫХ (localStorage) ==============================
 // ============================================================
@@ -3112,99 +3128,95 @@ const CACHE_TTL = 30000;
 // Флаг, чтобы избежать одновременных запросов
 let isDataLoading = false;
 
-  async function loadDataWithCache(sheetName, forceRefresh = false) {
-    // Проверяем кэш
-    const cache = dataCache[sheetName];
-    const now = Date.now();
-    
-    // Если данные есть в кэше и они не устарели, и не требуется принудительное обновление
-    if (!forceRefresh && cache.data && (now - cache.timestamp) < CACHE_TTL) {
-        console.log(`📦 Данные ${sheetName} из кэша (${Math.round((now - cache.timestamp)/1000)}с)`);
-        return cache.data;
-    }
-    
-    // Если уже идет загрузка - ждем
-    if (isDataLoading) {
-        console.log(`⏳ Загрузка ${sheetName} уже выполняется, ждем...`);
-        // Ждем завершения текущей загрузки (максимум 5 секунд)
-        let attempts = 0;
-        while (isDataLoading && attempts < 50) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-        }
-        // Проверяем кэш еще раз
-        if (cache.data && (now - cache.timestamp) < CACHE_TTL) {
-            return cache.data;
-        }
-        // Если кэш все еще пуст, продолжаем загрузку
-    }
-    
-    isDataLoading = true;
-    
-    try {
-        console.log(`📥 Загрузка данных ${sheetName} с сервера...`);
-      updateMobProgress(10);
-      // После получения данных:
-if (result && result.ok && result.data) {
-    cache.data = result.data;
-    cache.timestamp = Date.now();
-    cache.version = localVersion;
-    updateMobProgress(100);
-    console.log(`✅ Загружено ${result.data.length} записей из ${sheetName}`);
+  // Обновленная функция loadDataWithCache с управлением isLoading
+async function loadDataWithCache(sheetName, forceRefresh = false) {
+  // Проверяем кэш
+  const cache = dataCache[sheetName];
+  const now = Date.now();
+  
+  // Если данные есть в кэше и они не устарели, и не требуется принудительное обновление
+  if (!forceRefresh && cache.data && (now - cache.timestamp) < CACHE_TTL) {
+    console.log(`📦 Данные ${sheetName} из кэша (${Math.round((now - cache.timestamp)/1000)}с)`);
     return cache.data;
-}
-        
-        // Проверяем версию
-        const localVersion = localStorage.getItem('vputi_data_version') || '0';
-        const versionResult = await gasGet({ action: 'checkVersion', version: localVersion });
-        
-        // Если версия не изменилась и не требуется принудительное обновление
-        if (!forceRefresh && versionResult && versionResult.ok && !versionResult.needsUpdate) {
-            // Версия актуальна, но данных в кэше нет - загружаем только нужный лист
-            const result = await gasGet({ action: 'read', sheet: sheetName });
-            if (result && result.ok && result.data) {
-                cache.data = result.data;
-                cache.timestamp = Date.now();
-                cache.version = localVersion;
-                console.log(`✅ Загружено ${result.data.length} записей из ${sheetName}`);
-                return cache.data;
-            }
-        }
-        
-        // Версия устарела или нужно обновить все данные
-        if (forceRefresh || (versionResult && versionResult.needsUpdate)) {
-            const fullResult = await gasGet({ action: 'getFullData' });
-            if (fullResult && fullResult.ok && fullResult.data) {
-                // Обновляем все кэши
-                Object.keys(fullResult.data).forEach(key => {
-                    if (dataCache[key]) {
-                        dataCache[key].data = fullResult.data[key];
-                        dataCache[key].timestamp = Date.now();
-                    }
-                });
-                if (fullResult.version) {
-                    localStorage.setItem('vputi_data_version', fullResult.version);
-                }
-                console.log('✅ Все данные обновлены');
-                return dataCache[sheetName]?.data || null;
-            }
-        }
-        
-        // Если что-то пошло не так, пробуем загрузить только нужный лист
-        const result = await gasGet({ action: 'read', sheet: sheetName });
-        if (result && result.ok && result.data) {
-            cache.data = result.data;
-            cache.timestamp = Date.now();
-            return cache.data;
-        }
-        
-        return null;
-    } catch(e) {
-        console.warn(`⚠️ Ошибка загрузки ${sheetName}:`, e);
-        return cache.data || null; // Возвращаем кэш, даже если он устарел
-    } finally {
-        isDataLoading = false;
+  }
+  
+  // Если уже идет загрузка - ждем
+  if (isLoading) {
+    console.log(`⏳ Загрузка ${sheetName} уже выполняется, ждем...`);
+    // Ждем завершения текущей загрузки (максимум 5 секунд)
+    let attempts = 0;
+    while (isLoading && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
     }
+    // Проверяем кэш еще раз
+    if (cache.data && (now - cache.timestamp) < CACHE_TTL) {
+      return cache.data;
+    }
+    // Если кэш все еще пуст, продолжаем загрузку
+  }
+  
+  isLoading = true;
+  updateMobProgress(10);
+  
+  try {
+    console.log(`📥 Загрузка данных ${sheetName} с сервера...`);
+    
+    // Проверяем версию
+    const localVersion = localStorage.getItem('vputi_data_version') || '0';
+    const versionResult = await gasGet({ action: 'checkVersion', version: localVersion });
+    
+    // Если версия не изменилась и не требуется принудительное обновление
+    if (!forceRefresh && versionResult && versionResult.ok && !versionResult.needsUpdate) {
+      // Версия актуальна, но данных в кэше нет - загружаем только нужный лист
+      const result = await gasGet({ action: 'read', sheet: sheetName });
+      if (result && result.ok && result.data) {
+        cache.data = result.data;
+        cache.timestamp = Date.now();
+        cache.version = localVersion;
+        updateMobProgress(100);
+        console.log(`✅ Загружено ${result.data.length} записей из ${sheetName}`);
+        return cache.data;
+      }
+    }
+    
+    // Версия устарела или нужно обновить все данные
+    if (forceRefresh || (versionResult && versionResult.needsUpdate)) {
+      const fullResult = await gasGet({ action: 'getFullData' });
+      if (fullResult && fullResult.ok && fullResult.data) {
+        // Обновляем все кэши
+        Object.keys(fullResult.data).forEach(key => {
+          if (dataCache[key]) {
+            dataCache[key].data = fullResult.data[key];
+            dataCache[key].timestamp = Date.now();
+          }
+        });
+        if (fullResult.version) {
+          localStorage.setItem('vputi_data_version', fullResult.version);
+        }
+        updateMobProgress(100);
+        console.log('✅ Все данные обновлены');
+        return dataCache[sheetName]?.data || null;
+      }
+    }
+    
+    // Если что-то пошло не так, пробуем загрузить только нужный лист
+    const result = await gasGet({ action: 'read', sheet: sheetName });
+    if (result && result.ok && result.data) {
+      cache.data = result.data;
+      cache.timestamp = Date.now();
+      updateMobProgress(100);
+      return cache.data;
+    }
+    
+    return null;
+  } catch(e) {
+    console.warn(`⚠️ Ошибка загрузки ${sheetName}:`, e);
+    return cache.data || null; // Возвращаем кэш, даже если он устарел
+  } finally {
+    isLoading = false;
+    updateMobProgress(100);
+  }
 }
 
   
@@ -10114,18 +10126,6 @@ if (isLoading || !dataCache.purchases.data) {
       <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%;" onclick="closeMobAdmin();showPage('admin');setTimeout(function(){switchAdmin('howto');},300)">⚙ Открыть полные настройки</button>
     `;
   }
-}
-
-  // Добавьте эту функцию глобально
-function updateMobProgress(percent) {
-    const fill = document.getElementById('mob-progress-fill');
-    const text = document.getElementById('mob-progress-percent');
-    if (fill) {
-        fill.style.width = Math.min(percent, 100) + '%';
-    }
-    if (text) {
-        text.textContent = Math.min(percent, 100) + '%';
-    }
 }
   
 // Сохранение настроек из мобильной панели
