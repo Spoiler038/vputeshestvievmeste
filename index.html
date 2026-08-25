@@ -5331,88 +5331,168 @@ function openResetPasswordModal() {
 }
 
 function sendResetCode() {
-  const email = document.getElementById('reset-email').value.trim();
-  const errEl = document.getElementById('reset-error');
+    const emailInput = document.getElementById('reset-email');
+    const email = emailInput.value.trim();
+    const errEl = document.getElementById('reset-error');
 
-  if (!email) {
-    errEl.textContent = 'Введите email';
-    errEl.style.display = 'block';
-    return;
-  }
+    if (!email) {
+        errEl.textContent = 'Введите email';
+        errEl.style.display = 'block';
+        emailInput.focus();
+        return;
+    }
 
-  const user = users.find(u => u.email === email);
-  if (!user) {
-    errEl.textContent = 'Пользователь с таким email не найден';
-    errEl.style.display = 'block';
-    return;
-  }
+    // ✅ НОРМАЛИЗУЕМ email: убираем пробелы, приводим к нижнему регистру
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    console.log('🔍 Поиск пользователя по email:', normalizedEmail);
+    console.log('📋 Все пользователи:', users.map(u => ({ 
+        id: u.id, 
+        name: u.name, 
+        email: u.email,
+        emailNormalized: u.email?.toLowerCase().trim() 
+    })));
 
-  resetUserEmail = email;
-  resetTempCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // ✅ ИСПРАВЛЕНО: поиск с нормализацией
+    const user = users.find(u => {
+        if (!u.email) return false;
+        // Приводим email из БД к такому же формату
+        const dbEmail = u.email.toString().toLowerCase().trim();
+        return dbEmail === normalizedEmail;
+    });
 
-  // Показываем код в модалке (в реальном проекте отправляем на email)
-  errEl.style.display = 'none';
-  document.getElementById('reset-step-code').style.display = 'block';
-  document.getElementById('reset-send-btn').style.display = 'none';
-  document.getElementById('reset-confirm-btn').style.display = 'inline-flex';
+    console.log('📋 Найден пользователь:', user);
 
-  // Показываем код пользователю (для теста)
-  const codeHint = document.createElement('div');
-  codeHint.style.cssText = 'background:var(--accent-light);color:var(--accent);padding:12px;border-radius:var(--radius-sm);margin-bottom:14px;text-align:center;font-size:18px;font-weight:600;letter-spacing:4px;';
-  codeHint.textContent = 'Код: ' + resetTempCode;
-  
-  const content = document.getElementById('reset-password-content');
-  const existingHint = content.querySelector('.reset-code-hint');
-  if (existingHint) existingHint.remove();
-  codeHint.className = 'reset-code-hint';
-  content.insertBefore(codeHint, document.getElementById('reset-step-code'));
+    if (!user) {
+        errEl.textContent = '❌ Пользователь с таким email не найден. Проверьте правильность ввода.';
+        errEl.style.display = 'block';
+        return;
+    }
 
-  showToast('Код отправлен на email (для теста: ' + resetTempCode + ')');
+    // ✅ Сохраняем ОРИГИНАЛЬНЫЙ email из БД (для обратной совместимости)
+    resetUserEmail = user.email;
+    resetTempCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    errEl.style.display = 'none';
+    document.getElementById('reset-step-code').style.display = 'block';
+    document.getElementById('reset-send-btn').style.display = 'none';
+    document.getElementById('reset-confirm-btn').style.display = 'inline-flex';
+
+    // Показываем код пользователю (для теста)
+    const content = document.getElementById('reset-password-content');
+    let codeHint = content.querySelector('.reset-code-hint');
+    if (!codeHint) {
+        codeHint = document.createElement('div');
+        codeHint.className = 'reset-code-hint';
+        content.insertBefore(codeHint, document.getElementById('reset-step-code'));
+    }
+    codeHint.style.cssText = 'background:var(--accent-light);color:var(--accent);padding:12px;border-radius:var(--radius-sm);margin-bottom:14px;text-align:center;font-size:18px;font-weight:600;letter-spacing:4px;';
+    codeHint.textContent = '🔑 Код: ' + resetTempCode;
+
+    showToast('📧 Код отправлен на email (для теста: ' + resetTempCode + ')');
 }
 
 function confirmResetPassword() {
-  const code = document.getElementById('reset-code').value.trim();
-  const newPassword = document.getElementById('reset-new-password').value;
-  const confirmPassword = document.getElementById('reset-confirm-password').value;
-  const errEl = document.getElementById('reset-error');
+    const code = document.getElementById('reset-code').value.trim();
+    const newPassword = document.getElementById('reset-new-password').value;
+    const confirmPassword = document.getElementById('reset-confirm-password').value;
+    const errEl = document.getElementById('reset-error');
 
-  if (code !== resetTempCode) {
-    errEl.textContent = 'Неверный код';
-    errEl.style.display = 'block';
-    return;
-  }
+    // Валидация кода
+    if (code !== resetTempCode) {
+        errEl.textContent = '❌ Неверный код';
+        errEl.style.display = 'block';
+        return;
+    }
 
-  if (!newPassword || newPassword.length < 4) {
-    errEl.textContent = 'Пароль должен быть не менее 4 символов';
-    errEl.style.display = 'block';
-    return;
-  }
+    // Валидация пароля
+    if (!newPassword || newPassword.length < 4) {
+        errEl.textContent = '❌ Пароль должен быть не менее 4 символов';
+        errEl.style.display = 'block';
+        return;
+    }
 
-  if (newPassword !== confirmPassword) {
-    errEl.textContent = 'Пароли не совпадают';
-    errEl.style.display = 'block';
-    return;
-  }
+    if (newPassword !== confirmPassword) {
+        errEl.textContent = '❌ Пароли не совпадают';
+        errEl.style.display = 'block';
+        return;
+    }
 
-  const user = users.find(u => u.email === resetUserEmail);
-  if (!user) {
-    errEl.textContent = 'Пользователь не найден';
-    errEl.style.display = 'block';
-    return;
-  }
+    // ✅ ИСПРАВЛЕНО: поиск с нормализацией
+    const normalizedEmail = resetUserEmail?.toString().toLowerCase().trim();
+    const user = users.find(u => {
+        if (!u.email) return false;
+        return u.email.toString().toLowerCase().trim() === normalizedEmail;
+    });
 
-  user.password = newPassword;
-  if (currentUser && currentUser.id === user.id) {
-    currentUser.password = newPassword;
-  }
-  saveState('users', users);
+    if (!user) {
+        errEl.textContent = '❌ Пользователь не найден';
+        errEl.style.display = 'block';
+        return;
+    }
 
-  closeModal('reset-password-modal');
-  showToast('Пароль успешно изменён!');
-  resetTempCode = null;
-  resetUserEmail = null;
+    // ✅ Обновляем пароль (хешируем SHA-256)
+    const passwordHash = sha256(newPassword);
+    user.password = passwordHash;
+    
+    // Обновляем текущего пользователя, если это он
+    if (currentUser && currentUser.id === user.id) {
+        currentUser.password = passwordHash;
+    }
+    
+    saveState('users', users);
+
+    // ✅ Синхронизация с Google Sheets
+    syncUserToSheets(user);
+
+    closeModal('reset-password-modal');
+    showToast('✅ Пароль успешно изменён!');
+    
+    // Очищаем данные
+    resetTempCode = null;
+    resetUserEmail = null;
+    
+    // Очищаем поля
+    document.getElementById('reset-email').value = '';
+    document.getElementById('reset-code').value = '';
+    document.getElementById('reset-new-password').value = '';
+    document.getElementById('reset-confirm-password').value = '';
 }
-  // ============================================================
+
+  async function syncUserToSheets(user) {
+    if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
+    
+    try {
+        const payload = {
+            action: 'upsert',
+            sheet: 'users',
+            data: {
+                id: user.id,
+                username: user.username || '',
+                password: user.password || '',
+                role: user.role || 'user',
+                name: user.name || '',
+                email: user.email || '',
+                bio: user.bio || '',
+                joinedDate: user.joinedDate || new Date().toISOString().slice(0, 10),
+                avatar: user.avatar || '',
+                discount: user.discount || 0,
+                consentDate: user.consentDate || '',
+                device_id: user.device_id || '',
+                phone: user.phone || '',
+                active: user.active !== false
+            }
+        };
+        const result = await gasPost(payload);
+        console.log('✅ Пользователь синхронизирован с таблицей:', result);
+        return result;
+    } catch(e) {
+        console.warn('⚠️ Ошибка синхронизации пользователя:', e);
+        return null;
+    }
+}
+  
+// ============================================================
 // === CRUD ПРОГРАММ ===========================================
 // ============================================================
 
