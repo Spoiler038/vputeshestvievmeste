@@ -5131,10 +5131,8 @@ async function doLogin() {
 
   try {
     const deviceId = getDeviceId();
-    const passwordHash = await sha256(password);
-    console.log('🔑 Хеш введенного пароля:', passwordHash);
 
-    // === 1. СНАЧАЛА ПРОВЕРЯЕМ ЛОКАЛЬНО ===
+    // === 1. ПРОВЕРЯЕМ ЛОКАЛЬНО с использованием checkPassword ===
     const localUser = users.find(u => 
       (u.username === loginOrEmail || u.email === loginOrEmail)
     );
@@ -5143,18 +5141,17 @@ async function doLogin() {
       console.log('👤 Найден локальный пользователь:', localUser.username);
       console.log('📝 Пароль в БД:', localUser.password);
       
-      // ✅ УНИВЕРСАЛЬНАЯ ПРОВЕРКА: открытый пароль ИЛИ хеш
-      const isPlainMatch = localUser.password === password;
-      const isHashMatch = localUser.password === passwordHash;
+      // ✅ ИСПРАВЛЕНО: используем checkPassword для универсальной проверки
+      const isPasswordValid = await checkPassword(password, localUser.password);
       
-      console.log('🔍 isPlainMatch:', isPlainMatch);
-      console.log('🔍 isHashMatch:', isHashMatch);
+      console.log('🔍 Результат проверки пароля:', isPasswordValid);
       
-      if (isPlainMatch || isHashMatch) {
-        // ✅ Если пароль был открытым — автоматически мигрируем на хеш
-        if (isPlainMatch && !isHashMatch) {
+      if (isPasswordValid) {
+        // Если пароль был открытым — мигрируем на хеш
+        const passwordHash = await sha256(password);
+        if (localUser.password !== passwordHash) {
           localUser.password = passwordHash;
-          console.log('🔄 Пароль мигрирован на хеш для:', localUser.username);
+          console.log('🔄 Пароль мигрирован на SHA-256 для:', localUser.username);
           saveState('users', users);
         }
         
@@ -5196,7 +5193,8 @@ async function doLogin() {
     if (result && result.ok && result.user) {
       const user = result.user;
       
-      // ✅ Сохраняем хеш для быстрого входа (для всех пользователей)
+      // Сохраняем хеш для быстрого входа
+      const passwordHash = await sha256(password);
       localStorage.setItem('vputi_password_hash', passwordHash);
       localStorage.setItem('vputi_user_data', JSON.stringify({
         id: user.id,
@@ -5209,7 +5207,6 @@ async function doLogin() {
       
       let existingUser = users.find(u => u.id === user.id);
       if (existingUser) {
-        // Обновляем данные пользователя (кроме пароля, он уже хеширован в Sheets)
         existingUser.name = user.name || existingUser.name;
         existingUser.email = user.email || existingUser.email;
         existingUser.role = user.role || existingUser.role;
@@ -5218,11 +5215,13 @@ async function doLogin() {
         existingUser.phone = user.phone || existingUser.phone;
         existingUser.device_id = deviceId;
         existingUser.discount = user.discount || existingUser.discount;
-        // ✅ НЕ ТРОГАЕМ ПАРОЛЬ — он уже хеширован в Sheets
+        // ✅ Сохраняем хеш пароля
+        existingUser.password = passwordHash;
         saveState('users', users);
         currentUser = existingUser;
       } else {
         user.device_id = deviceId;
+        user.password = passwordHash;
         users.push(user);
         saveState('users', users);
         currentUser = user;
@@ -5247,12 +5246,11 @@ async function doLogin() {
     );
     
     if (localUser) {
-      const passwordHash = await sha256(password);
-      const isPlainMatch = localUser.password === password;
-      const isHashMatch = localUser.password === passwordHash;
+      const isPasswordValid = await checkPassword(password, localUser.password);
       
-      if (isPlainMatch || isHashMatch) {
-        if (isPlainMatch && !isHashMatch) {
+      if (isPasswordValid) {
+        const passwordHash = await sha256(password);
+        if (localUser.password !== passwordHash) {
           localUser.password = passwordHash;
           saveState('users', users);
         }
@@ -5299,16 +5297,18 @@ async function sha256(message) {
 
 // Обновленная функция проверки пароля
 async function checkPassword(plainPassword, hashedPassword) {
-  // Если пароль уже хеширован и совпадает
+  // Если пароль совпадает с открытым (для обратной совместимости)
   if (plainPassword === hashedPassword) return true;
   
-  // Проверка SHA-256 (для паролей из Google Sheets)
+  // Проверка SHA-256
   try {
     const shaHash = await sha256(plainPassword);
-    console.log('🔑 Проверка SHA-256:', shaHash);
-    console.log('📝 Сравнение с:', hashedPassword);
+    console.log('🔑 SHA-256 хеш пароля:', shaHash);
+    console.log('📝 Сравниваем с:', hashedPassword);
     if (shaHash === hashedPassword) return true;
-  } catch(e) {}
+  } catch(e) {
+    console.warn('SHA-256 check error:', e);
+  }
   
   return false;
 }
