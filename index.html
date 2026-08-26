@@ -6720,8 +6720,8 @@ function renderUsersTable(isOwner) {
           <button class="btn btn-outline btn-sm" style="padding:2px 4px;font-size:12px;line-height:1;height:24px;width:24px;min-width:24px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:4px;border:1.5px solid var(--border);background:transparent;cursor:pointer;color:var(--text-muted);" onclick="adjustDiscount(${u.id}, 1)">+</button>
         </div>
       </td>
-      <td style="vertical-align:middle;padding:6px 8px;white-space:nowrap;" onclick="event.stopPropagation();">
-        <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;white-space:nowrap;">
+      <td style="vertical-align:middle;white-space:nowrap;" onclick="event.stopPropagation();">
+        <div style="display:flex;gap:8px;flex-wrap:nowrap;align-items:center;white-space:nowrap;">
           <button class="btn btn-outline btn-sm" style="padding:3px 6px;font-size:10px;line-height:1.4;height:26px;width:26px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:4px;border:1.5px solid var(--border);background:transparent;cursor:pointer;" onclick="showUserStats(${u.id})">📊</button>
           ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:3px 6px;font-size:10px;line-height:1.4;height:26px;width:26px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:none;border-radius:4px;cursor:pointer;background:#C0392B;color:white;" onclick="deleteUser(${u.id})">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
