@@ -6770,7 +6770,7 @@ function renderUsersTable(isOwner) {
       <td style="vertical-align:middle;color:var(--text-muted);word-break:break-all;max-width:160px;">${u.username || '—'}</td>
       <td style="vertical-align:middle;color:var(--accent);font-size:12px;white-space:nowrap;">
     ${u.phone ? `<a href="tel:${formatPhoneForLink(u.phone)}" style="color:var(--accent);text-decoration:none;">${formatPhoneForDisplay(u.phone)}</a>` : '—'}
-</td>>
+</td>
       <td style="vertical-align:middle;color:var(--accent);font-size:12px;word-break:break-all;max-width:180px;">${u.email || '—'}</td>
       <td style="vertical-align:middle;white-space:nowrap;min-width:100px;" onclick="event.stopPropagation();">
         ${isAdmin ? 
@@ -7170,8 +7170,14 @@ function confirmCreateUser(leadId) {
   const password = (document.getElementById('new-user-password').value || '').trim();
   const email = (document.getElementById('new-user-email').value || '').trim();
 
-  if (!username) { showToast('Укажите логин'); return; }
-  if (!password) { showToast('Укажите пароль'); return; }
+  if (!username) { 
+    showToast('Укажите логин'); 
+    return; 
+  }
+  if (!password) { 
+    showToast('Укажите пароль'); 
+    return; 
+  }
 
   if (users.find(u => u.username === username)) {
     showToast('Логин уже занят — выберите другой');
@@ -7204,18 +7210,18 @@ function confirmCreateUser(leadId) {
 
   const newUser = {
     id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
-    username: username,
-    password: password,
+    username: String(username || ''),
+    password: String(password || ''),
     role: 'user',
-    name: lead.name,
-    email: userEmail,
+    name: String(lead.name || ''),
+    email: String(userEmail || ''),
     bio: '',
     joinedDate: new Date().toISOString().slice(0, 10),
     avatar: '',
     discount: 0,
     consentDate: new Date().toISOString(),
     device_id: getDeviceId(),
-    phone: userPhone,
+    phone: String(userPhone || ''),
     active: true,
     _plainPassword: password
   };
@@ -8754,8 +8760,7 @@ function addMemberToGroup() {
 
     if (isManual) {
         const name = (document.getElementById('gm-man-name').value || '').trim();
-        // ✅ Сохраняем телефон в БД без + (только цифры)
-        const phone = normalizePhone(document.getElementById('gm-man-phone').value.trim());
+        const phone = normalizePhone(document.getElementById('gm-man-phone').value || '');
         const email = (document.getElementById('gm-man-email').value || '').trim();
         const amount = document.getElementById('gm-man-amount').value;
         const payMethod = document.getElementById('gm-man-method').value;
