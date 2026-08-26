@@ -1210,6 +1210,31 @@ input[type=number] {
         padding: 6px 10px !important;
         font-size: 11px !important;
     }
+  /* Мобильная версия групп */
+#groups-list-mobile [data-group-header] {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#groups-list-mobile [data-group-header]:active {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+}
+
+#groups-list-mobile .tag {
+    font-size: 9px;
+    padding: 2px 8px;
+}
+
+/* Анимация раскрытия на мобильных */
+#groups-list-mobile [id^="group-members-"] {
+    transition: max-height 0.3s ease-out;
+    overflow: hidden;
+}
+
+#groups-list-mobile [id^="group-members-"].show-members {
+    max-height: none;
+}
 }
   .photo-upload-area .upload-icon svg {
     width: 48px;
@@ -3131,7 +3156,7 @@ const dataCache = {
 };
 
 // Время жизни кэша (в миллисекундах) - 30 секунд
-const CACHE_TTL = 30000;
+const CACHE_TTL = 10*60*10000;
 
 // Флаг, чтобы избежать одновременных запросов
 let isDataLoading = false;
@@ -8074,7 +8099,7 @@ function toggleGroupMembers(groupId) {
     
     // Если не найден по ID, ищем в родительской карточке
     if (!el) {
-        // Ищем все карточки групп
+        // Ищем все карточки групп (включая мобильные)
         const cards = document.querySelectorAll('[data-group-header]');
         for (const card of cards) {
             if (card.dataset.groupId == groupId) {
@@ -8087,7 +8112,7 @@ function toggleGroupMembers(groupId) {
                 const newDiv = document.createElement('div');
                 newDiv.id = 'group-members-' + groupId;
                 newDiv.style.cssText = 'display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;';
-                newDiv.innerHTML = `<div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">👥 Загрузка...</div>`;
+                newDiv.innerHTML = `<div style="padding:12px 16px;color:var(--text-muted);text-align:center;font-size:12px;">👥 Загрузка...</div>`;
                 card.appendChild(newDiv);
                 el = newDiv;
                 break;
@@ -10246,39 +10271,125 @@ if (isLoading || !dataCache.purchases.data) {
     `;
 
   // ✅ СЕКЦИЯ ГРУППЫ
-  } else if (section === 'groups') {
-    // Загружаем группы
+} else if (section === 'groups') {
+    // Загружаем группы с сохранением состояния
     if (typeof loadAdminGroups === 'function') {
-      loadAdminGroups();
+        // Сохраняем состояние открытых групп перед перерисовкой
+        const openStates = {};
+        groups.forEach(g => {
+            const el = document.getElementById('group-members-' + g.id);
+            if (el && el.style.display !== 'none') {
+                openStates[g.id] = true;
+            }
+        });
+        
+        // Загружаем группы заново
+        loadAdminGroups();
+        
+        // Восстанавливаем состояние открытых групп после рендеринга
+        setTimeout(() => {
+            Object.keys(openStates).forEach(id => {
+                const el = document.getElementById('group-members-' + id);
+                if (el) {
+                    el.style.display = 'block';
+                    el.classList.add('show-members');
+                    const g = groups.find(x => x.id === parseInt(id));
+                    if (g) g._isOpen = true;
+                }
+            });
+        }, 100);
     }
 
     box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">👥 Группы</h2>
-      ${groups.length === 0 ? '<p style="color:var(--text-muted);">Групп пока нет.</p>' :
-        groups.map(function(g) {
-          const prog = programs.find(p => p.id === g.programId);
-          const filled = (g.members || []).length;
-          const max = g.maxPeople || (prog ? prog.maxPeople : 10);
-          const statusColor = { набор: 'tag-green', укомплектована: 'tag-orange', завершена: 'tag-green', 'в пути': 'tag-orange', отменена: 'tag-orange' }[g.status] || 'tag-green';
-          return `
-            <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:9px;overflow:hidden;">
-              <div style="padding:13px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
-                  <strong style="font-size:15px;">${g.name}</strong>
-                  <span class="tag ${statusColor}" onclick="cycleGroupStatus(${g.id})" style="cursor:pointer;user-select:none;font-size:10px;">${g.status} ✎</span>
-                </div>
-                ${prog ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">🗺 ${prog.name}</div>` : ''}
-                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${filled}/${max} участников</div>
-              </div>
-              <div style="display:flex;gap:6px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);flex-wrap:wrap;">
-                <button class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;flex:1;min-width:60px;" onclick="openAddMember(${g.id})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
-                <button class="btn btn-edit" style="padding:4px 10px;font-size:12px;flex:1;min-width:60px;" onclick="openEditGroup(${g.id})">✏️ Изменить</button>
-                <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="deleteGroup(${g.id})">🗑</button>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      <button class="btn btn-primary" style="margin-top:12px;width:100%;" onclick="openAddGroup()">+ Создать группу</button>
+        <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">👥 Группы</h2>
+        <div style="margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;" id="mob-group-filters">
+            <button class="filter-tag active" data-status="" onclick="setGroupFilter(this,'');renderMobAdminSection('groups')">Все</button>
+            <button class="filter-tag" data-status="набор" onclick="setGroupFilter(this,'набор');renderMobAdminSection('groups')">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#4CAF50;margin-right:4px;"></span> Набор
+            </button>
+            <button class="filter-tag" data-status="укомплектована" onclick="setGroupFilter(this,'укомплектована');renderMobAdminSection('groups')">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#FFC107;margin-right:4px;"></span> Укомплектована
+            </button>
+            <button class="filter-tag" data-status="в пути" onclick="setGroupFilter(this,'в пути');renderMobAdminSection('groups')">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2196F3;margin-right:4px;"></span> В пути
+            </button>
+            <button class="filter-tag" data-status="завершена" onclick="setGroupFilter(this,'завершена');renderMobAdminSection('groups')">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#4CAF50;margin-right:4px;"></span> Завершена
+            </button>
+            <button class="filter-tag" data-status="отменена" onclick="setGroupFilter(this,'отменена');renderMobAdminSection('groups')">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F44336;margin-right:4px;"></span> Отменена
+            </button>
+        </div>
+        <div id="groups-list-mobile">
+            ${groups.length === 0 ? '<p style="color:var(--text-muted);text-align:center;padding:20px 0;">Групп пока нет.</p>' :
+            groups.filter(g => !activeGroupFilter || g.status === activeGroupFilter).map(function(g) {
+                const prog = programs.find(p => p.id === g.programId);
+                const filled = (g.members || []).length;
+                const max = g.maxPeople || (prog ? prog.maxPeople : 10);
+                const statusColor = { набор: 'tag-green', укомплектована: 'tag-orange', завершена: 'tag-green', 'в пути': 'tag-orange', отменена: 'tag-orange' }[g.status] || 'tag-green';
+                const isOpen = g._isOpen || false;
+                
+                // ✅ Генерируем HTML для участников
+                let membersHTML = '';
+                if (g.members && g.members.length > 0) {
+                    membersHTML = `
+                        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px;">
+                            <thead>
+                                <tr style="background:var(--bg);">
+                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Участник</th>
+                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Контакт</th>
+                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Сумма</th>
+                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${g.members.map((m, mi) => `
+                                    <tr style="border-top:1px solid var(--border);">
+                                        <td style="padding:6px 10px;font-weight:600;font-size:12px;">${m.name}</td>
+                                        <td style="padding:6px 10px;color:var(--accent);font-size:11px;">${m.contact || '—'}</td>
+                                        <td style="padding:6px 10px;font-weight:600;color:var(--accent2);font-size:12px;">${m.amount ? Number(m.amount).toLocaleString('ru') + ' ₽' : '—'}</td>
+                                        <td style="padding:6px 10px;">
+                                            <button class="btn btn-danger" style="padding:2px 6px;font-size:10px;height:24px;" onclick="event.stopPropagation();removeMember(${g.id}, ${mi})">✕</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } else {
+                    membersHTML = `<div style="padding:12px 16px;color:var(--text-muted);text-align:center;font-size:12px;">👥 Нет участников</div>`;
+                }
+                
+                return `
+                    <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">
+                        <!-- Заголовок группы (кликабельный) -->
+                        <div data-group-header data-group-id="${g.id}" style="padding:14px 16px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;cursor:pointer;" onclick="toggleGroupMembers(${g.id});">
+                            <div style="flex:1;min-width:140px;">
+                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+                                    <strong style="font-size:15px;font-family:var(--font-family);">${g.name}</strong>
+                                    <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${g.id})" style="cursor:pointer;font-size:9px;padding:2px 8px;">${g.status} ✎</span>
+                                </div>
+                                <div style="font-size:12px;color:var(--text-muted);">${prog ? prog.name : (g.programName || '—')}</div>
+                            </div>
+                            <div style="text-align:center;min-width:60px;">
+                                <div style="font-size:20px;font-weight:600;color:var(--accent2);">${filled}/${max}</div>
+                                <div style="font-size:10px;color:var(--text-muted);">участников</div>
+                            </div>
+                            <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                                <button class="btn btn-outline btn-sm" style="font-size:10px;padding:4px 8px;height:26px;" onclick="event.stopPropagation();openAddMember(${g.id})" ${filled >= max ? 'disabled' : ''}>+</button>
+                                <button class="btn btn-edit" style="font-size:10px;padding:4px 8px;height:26px;" onclick="event.stopPropagation();openEditGroup(${g.id})">✏️</button>
+                                <button class="btn btn-danger" style="font-size:10px;padding:4px 8px;height:26px;" onclick="event.stopPropagation();deleteGroup(${g.id})">🗑</button>
+                            </div>
+                        </div>
+                        <!-- Список участников (раскрывается) -->
+                        <div id="group-members-${g.id}" style="display:${isOpen ? 'block' : 'none'};border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;">
+                            ${membersHTML}
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px;width:100%;" onclick="openAddGroup()">+ Создать группу</button>
     `;
 
   // ✅ СЕКЦИЯ НАСТРОЙКИ
@@ -10579,12 +10690,13 @@ document.addEventListener('click', function(e) {
         }
     }
     
-    // Альтернативный обработчик для мобильных групп
+    // Альтернативный обработчик для мобильных групп (data-group-header)
     const groupHeader = e.target.closest('[data-group-header]');
     if (groupHeader) {
         const groupId = groupHeader.dataset.groupId;
         if (groupId) {
             e.preventDefault();
+            e.stopPropagation();
             setTimeout(() => {
                 toggleGroupMembers(parseInt(groupId));
             }, 50);
