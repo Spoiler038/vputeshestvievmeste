@@ -1885,6 +1885,7 @@ input[type=number] {
               <tr>
                 <th>Имя</th>
                 <th>Логин</th>
+                <th>Телефон</th>
                 <th>Email</th>  
                 <th>Роль</th>
                 <th>Туров</th>
@@ -6688,6 +6689,7 @@ function renderUsersTable(isOwner) {
         ${isAdminUser && !isOwnerUser ? '<span style="font-size:10px;color:var(--accent);margin-left:6px;">🛡️</span>' : ''}
       </td>
       <td style="vertical-align:middle;color:var(--text-muted);word-break:break-all;max-width:160px;">${u.username || '—'}</td>
+      <td style="vertical-align:middle;color:var(--accent);font-size:12px;white-space:nowrap;">${u.phone || '—'}</td>
       <td style="vertical-align:middle;color:var(--accent);font-size:12px;word-break:break-all;max-width:180px;">${u.email || '—'}</td>
       <td style="vertical-align:middle;white-space:nowrap;min-width:100px;" onclick="event.stopPropagation();">
         ${isAdmin ? 
@@ -8064,18 +8066,20 @@ function loadAdminGroups() {
                         <div style="font-size:22px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${totalPaid.toLocaleString('ru')} ₽</div>
                         <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">сумма</div>
                     </div>
-                    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;">
-                        <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openAddMember(${groupId})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
-                        <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="event.stopPropagation();openEditGroup(${groupId})">✏️ Изменить</button>
-                        <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;" onclick="event.stopPropagation();deleteGroup(${groupId})">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 6h18"/>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                <line x1="10" y1="11" x2="10" y2="17"/>
-                                <line x1="14" y1="11" x2="14" y2="17"/>
-                            </svg>
-                        </button>
-                    </div>
+                    <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:120px;">
+                      <div style="display:flex;gap:6px;">
+                      <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;flex:1;" onclick="event.stopPropagation();openEditGroup(${groupId})">✏️ Изменить</button>
+                      <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;flex:1;" onclick="event.stopPropagation();deleteGroup(${groupId})">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"/>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                </button>
+            </div>
+    <button class="btn btn-outline btn-sm" style="width:100%;font-size:12px;padding:6px 14px;" onclick="event.stopPropagation();openAddMember(${groupId})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
+</div>
                 </div>
                 <!-- Список участников (раскрывается) -->
                 <div id="group-members-${groupId}" style="display:${isOpen ? 'block' : 'none'};border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;">
@@ -8587,11 +8591,11 @@ function openAddMember(groupId) {
             </div>
 
             <div id="member-tab-manual" style="display:none;">
+                <div class="form-group">
+                    <label>ФИО</label>
+                    <input type="text" class="form-input" id="gm-man-name" placeholder="Иванов Иван Иванович">
+                </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div class="form-group">
-                        <label>ФИО</label>
-                        <input type="text" class="form-input" id="gm-man-name" placeholder="Иванов Иван Иванович">
-                    </div>
                     <div class="form-group">
                         <label>Телефон</label>
                         <input type="text" class="form-input" id="gm-man-phone" placeholder="+7 (900) 000-00-00">
@@ -8600,6 +8604,8 @@ function openAddMember(groupId) {
                         <label>Email</label>
                         <input type="email" class="form-input" id="gm-man-email" placeholder="ivan@mail.ru">
                     </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                     <div class="form-group">
                         <label>Сумма (₽)</label>
                         <input type="number" class="form-input" id="gm-man-amount" value="${defaultAmount}" placeholder="65000">
@@ -8663,8 +8669,8 @@ function addMemberToGroup() {
         if (!name) { showToast('Укажите ФИО участника'); return; }
         member = { 
             name, 
-            phone, 
-            email, 
+            phone: phone || '',
+            email: email || '',
             contact: email || phone || name,
             amount, 
             payMethod, 
@@ -10293,9 +10299,7 @@ if (isLoading || !dataCache.purchases.data) {
 
   // ✅ СЕКЦИЯ ГРУППЫ
 } else if (section === 'groups') {
-    // Загружаем группы с сохранением состояния
     if (typeof loadAdminGroups === 'function') {
-        // Сохраняем состояние открытых групп перед перерисовкой
         const openStates = {};
         groups.forEach(g => {
             const el = document.getElementById('group-members-' + g.id);
@@ -10304,10 +10308,8 @@ if (isLoading || !dataCache.purchases.data) {
             }
         });
         
-        // Загружаем группы заново
         loadAdminGroups();
         
-        // Восстанавливаем состояние открытых групп после рендеринга
         setTimeout(() => {
             Object.keys(openStates).forEach(id => {
                 const el = document.getElementById('group-members-' + id);
@@ -10350,7 +10352,6 @@ if (isLoading || !dataCache.purchases.data) {
                 const statusColor = { набор: 'tag-green', укомплектована: 'tag-orange', завершена: 'tag-green', 'в пути': 'tag-orange', отменена: 'tag-orange' }[g.status] || 'tag-green';
                 const isOpen = g._isOpen || false;
                 
-                // ✅ Генерируем HTML для участников
                 let membersHTML = '';
                 if (g.members && g.members.length > 0) {
                     membersHTML = `
@@ -10368,7 +10369,7 @@ if (isLoading || !dataCache.purchases.data) {
                                     <tr style="border-top:1px solid var(--border);">
                                         <td style="padding:6px 10px;font-weight:600;font-size:12px;">${m.name}</td>
                                         <td style="padding:6px 10px;color:var(--accent);font-size:11px;">
-                                             ${m.phone ? `<a href="tel:${m.phone.replace(/[^\d+]/g, '')}" style="color:var(--accent);text-decoration:none;">${m.phone}</a>` : '—'}
+                                            ${m.phone ? `<a href="tel:${m.phone.replace(/[^\d+]/g, '')}" style="color:var(--accent);text-decoration:none;">${m.phone}</a>` : '—'}
                                         </td>
                                         <td style="padding:6px 10px;color:var(--accent);font-size:11px;cursor:pointer;" onclick="event.stopPropagation();navigator.clipboard.writeText('${m.email || ''}');showToast('Email скопирован ✓');">
                                             ${m.email || '—'}
@@ -10387,28 +10388,26 @@ if (isLoading || !dataCache.purchases.data) {
                 
                 return `
                     <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">
-                        <!-- Заголовок группы (кликабельный) -->
-                        <div data-group-header data-group-id="${g.id}" style="padding:14px 16px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;cursor:pointer;" onclick="toggleGroupMembers(${g.id});">
-                            <div style="flex:1;min-width:140px;">
-                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
-                                    <strong style="font-size:15px;font-family:var(--font-family);">${g.name}</strong>
-                                    <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${g.id})" style="cursor:pointer;font-size:9px;padding:2px 8px;">${g.status} ✎</span>
+                        <div data-group-header data-group-id="${g.id}" style="padding:12px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;cursor:pointer;" onclick="toggleGroupMembers(${g.id});">
+                            <div style="flex:1;min-width:120px;">
+                                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">
+                                    <strong style="font-size:14px;font-family:var(--font-family);">${g.name}</strong>
+                                    <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${g.id})" style="cursor:pointer;font-size:8px;padding:1px 6px;">${g.status} ✎</span>
                                 </div>
-                                <div style="font-size:12px;color:var(--text-muted);">${prog ? prog.name : (g.programName || '—')}</div>
+                                <div style="font-size:11px;color:var(--text-muted);">${prog ? prog.name : (g.programName || '—')}</div>
                             </div>
-                            <div style="text-align:center;min-width:60px;">
-                                <div style="font-size:20px;font-weight:600;color:var(--accent2);">${filled}/${max}</div>
-                                <div style="font-size:10px;color:var(--text-muted);">участников</div>
+                            <div style="text-align:center;min-width:50px;padding:2px 6px;">
+                                <div style="font-size:18px;font-weight:600;color:var(--accent2);line-height:1.2;">${filled}/${max}</div>
+                                <div style="font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">участников</div>
                             </div>
-                            <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
-                                <button class="btn btn-edit" style="font-size:10px;padding:4px 8px;height:26px;" onclick="event.stopPropagation();openEditGroup(${g.id})">✏️</button>
-                                <button class="btn btn-danger" style="font-size:10px;padding:4px 8px;height:26px;" onclick="event.stopPropagation();deleteGroup(${g.id})">🗑</button>
-                            </div>
-                              <div style="display:flex;justify-content:flex-end;margin-top:4px;">
-                               <button class="btn btn-outline btn-sm" style="font-size:10px;padding:4px 10px;height:26px;" onclick="event.stopPropagation();openAddMember(${g.id})" ${filled >= max ? 'disabled' : ''}>+ Участник</button>
+                            <div style="display:flex;flex-direction:column;gap:4px;min-width:70px;flex:0 0 auto;">
+                                <div style="display:flex;gap:4px;">
+                                    <button class="btn btn-edit" style="font-size:9px;padding:3px 8px;height:24px;flex:1;min-width:0;" onclick="event.stopPropagation();openEditGroup(${g.id})">✏️</button>
+                                    <button class="btn btn-danger" style="font-size:9px;padding:3px 8px;height:24px;flex:1;min-width:0;" onclick="event.stopPropagation();deleteGroup(${g.id})">🗑</button>
+                                </div>
+                                <button class="btn btn-outline btn-sm" style="font-size:9px;padding:2px 8px;height:22px;width:100%;" onclick="event.stopPropagation();openAddMember(${g.id})" ${filled >= max ? 'disabled' : ''}>+ Участник</button>
                             </div>
                         </div>
-                        <!-- Список участников (раскрывается) -->
                         <div id="group-members-${g.id}" style="display:${isOpen ? 'block' : 'none'};border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;">
                             ${membersHTML}
                         </div>
