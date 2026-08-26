@@ -7929,7 +7929,7 @@ function loadAdminGroups() {
                                 <td style="padding:9px 14px;font-weight:600;color:var(--accent2);">${m.amount ? Number(m.amount).toLocaleString('ru') + ' ₽' : '—'}</td>
                                 <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;">${m.payMethod || '—'}</td>
                                 <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.note || ''}</td>
-                                <td style="padding:9px 14px;">
+                                <td style="padding:9px 36px;">
                                     <button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();removeMember(${groupId}, ${mi})">✕</button>
                                 </td>
                             </tr>
