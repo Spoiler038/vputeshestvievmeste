@@ -7929,6 +7929,10 @@ function setGroupFilter(btn, status) {
   loadAdminGroups();
 }
 
+// ============================================================
+// === АДМИНКА: ГРУППЫ (ИСПРАВЛЕННАЯ ВЕРСИЯ) ==================
+// ============================================================
+
 function loadAdminGroups() {
     const container = document.getElementById('groups-list');
     if (!container) return;
@@ -7952,6 +7956,7 @@ function loadAdminGroups() {
         const totalPaid = (g.members || []).reduce((s, m) => s + (parseFloat(m.amount) || 0), 0);
         const hasMembers = (g.members || []).length > 0;
         const groupId = g.id;
+        const isOpen = g._isOpen || false; // Сохраняем состояние открытия
         
         // ✅ Формируем HTML таблицы с данными из g.members
         let membersHTML = '';
@@ -7992,11 +7997,13 @@ function loadAdminGroups() {
             `;
         }
 
+        // ✅ Используем data-group-header и data-group-id для предотвращения всплытия
+        // ✅ Важно: onclick на кнопках имеет event.stopPropagation()
         return `
             <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:16px;overflow:hidden;">
                 <!-- Основная строка группы (кликабельная) -->
-                <div style="padding:20px 22px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;cursor:pointer;" onclick="toggleGroupMembers(${groupId})">
-                    <div style="flex:1;min-width:200px;">
+                <div data-group-header data-group-id="${groupId}" style="padding:20px 22px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;cursor:pointer;">
+                    <div style="flex:1;min-width:200px;" onclick="toggleGroupMembers(${groupId}); event.stopPropagation();">
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
                             <strong style="font-size:17px;font-family:var(--font-family);">${g.name}</strong>
                             <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${groupId})" style="cursor:pointer;user-select:none;" title="Нажмите для смены статуса">${g.status} ✎</span>
@@ -8004,21 +8011,21 @@ function loadAdminGroups() {
                         <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">🗺 ${prog ? prog.name : (g.programName || '—')}</div>
                         ${g.startDate ? `<div style="font-size:13px;color:var(--text-muted);padding:4px 0;">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
                     </div>
-                    <div style="text-align:center;min-width:100px;">
+                    <div style="text-align:center;min-width:100px;" onclick="toggleGroupMembers(${groupId}); event.stopPropagation();">
                         <div style="font-size:28px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${filled}/${max}</div>
                         <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">участников</div>
                         <div style="background:var(--bg2);border-radius:4px;height:6px;margin-top:6px;overflow:hidden;">
                             <div style="background:${pct >= 100 ? 'var(--accent2)' : 'var(--accent)'};height:100%;width:${pct}%;border-radius:4px;transition:width 0.4s;"></div>
                         </div>
                     </div>
-                    <div style="text-align:center;min-width:100px;">
+                    <div style="text-align:center;min-width:100px;" onclick="toggleGroupMembers(${groupId}); event.stopPropagation();">
                         <div style="font-size:22px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${totalPaid.toLocaleString('ru')} ₽</div>
                         <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">сумма</div>
                     </div>
-                    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;" onclick="event.stopPropagation();">
-                        <button class="btn btn-outline btn-sm" onclick="openAddMember(${groupId})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
-                        <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="openEditGroup(${groupId})">✏️ Изменить</button>
-                        <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;" onclick="deleteGroup(${groupId})">
+                    <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;">
+                        <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openAddMember(${groupId})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
+                        <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="event.stopPropagation();openEditGroup(${groupId})">✏️ Изменить</button>
+                        <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;" onclick="event.stopPropagation();deleteGroup(${groupId})">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M3 6h18"/>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -8028,14 +8035,15 @@ function loadAdminGroups() {
                         </button>
                     </div>
                 </div>
-                <!-- Список участников (раскрывается) - ИСПРАВЛЕНО: display:none -->
-                <div id="group-members-${groupId}" style="display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;">
+                <!-- Список участников (раскрывается) -->
+                <div id="group-members-${groupId}" style="display:${isOpen ? 'block' : 'none'};border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;">
                     ${membersHTML}
                 </div>
             </div>
         `;
     }).join('');
 }
+
 
 function bumpDataVersion() {
     // Увеличиваем версию данных для инвалидации кэша
@@ -8046,6 +8054,10 @@ function bumpDataVersion() {
     return newVersion;
 }
   
+// ============================================================
+// === УЛУЧШЕННАЯ ФУНКЦИЯ ToggleGroupMembers ==================
+// ============================================================
+
 function toggleGroupMembers(groupId) {
     // Пытаемся найти элемент разными способами
     let el = document.getElementById('group-members-' + groupId);
@@ -8053,11 +8065,9 @@ function toggleGroupMembers(groupId) {
     // Если не найден по ID, ищем в родительской карточке
     if (!el) {
         // Ищем все карточки групп
-        const cards = document.querySelectorAll('[style*="background:var(--surface)"]');
+        const cards = document.querySelectorAll('[data-group-header]');
         for (const card of cards) {
-            // Проверяем, содержит ли карточка нужную группу
-            const header = card.querySelector('[onclick*="toggleGroupMembers(' + groupId + ')"]');
-            if (header) {
+            if (card.dataset.groupId == groupId) {
                 const membersDiv = card.querySelector('[id*="group-members-' + groupId + '"]');
                 if (membersDiv) {
                     el = membersDiv;
@@ -8075,56 +8085,56 @@ function toggleGroupMembers(groupId) {
         }
     }
     
-    // Если все еще не найден, пробуем найти через data-атрибут
-    if (!el) {
-        const dataEl = document.querySelector('[data-group-id="' + groupId + '"]');
-        if (dataEl) {
-            el = dataEl;
-        }
-    }
-    
     if (!el) {
         console.warn('Элемент group-members-' + groupId + ' не найден');
-        // Создаем элемент в конце body для отладки
-        const fallback = document.createElement('div');
-        fallback.id = 'group-members-' + groupId;
-        fallback.style.cssText = 'display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;';
-        fallback.innerHTML = `<div style="padding:16px 22px;color:var(--text-muted);text-align:center;font-size:13px;">👥 Группа найдена, но данные не загружены</div>`;
-        document.body.appendChild(fallback);
-        el = fallback;
+        return;
     }
     
+    // ✅ Используем класс для состояния, а не только inline style
     const isHidden = el.style.display === 'none' || el.style.display === '';
     const isMobile = window.innerWidth <= 768;
     
+    // ✅ Сохраняем состояние в объекте группы
+    const g = groups.find(x => x.id === groupId);
+    if (g) {
+        g._isOpen = isHidden;
+    }
+    
     if (isHidden) {
+        // Показываем
         el.style.display = 'block';
+        el.classList.add('show-members');
+        
         if (isMobile) {
             el.style.transition = 'all 0.3s ease';
             el.style.maxHeight = '0';
             el.style.overflow = 'hidden';
-            setTimeout(() => {
+            // Ждём отрисовки
+            requestAnimationFrame(() => {
                 el.style.maxHeight = el.scrollHeight + 'px';
-            }, 10);
-            setTimeout(() => {
-                el.style.maxHeight = 'none';
-                el.style.overflow = '';
-            }, 400);
+                setTimeout(() => {
+                    el.style.maxHeight = 'none';
+                    el.style.overflow = '';
+                }, 400);
+            });
         }
     } else {
+        // Скрываем
         if (isMobile) {
             el.style.maxHeight = el.scrollHeight + 'px';
             el.style.overflow = 'hidden';
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 el.style.maxHeight = '0';
-            }, 10);
-            setTimeout(() => {
-                el.style.display = 'none';
-                el.style.maxHeight = 'none';
-                el.style.overflow = '';
-            }, 400);
+                setTimeout(() => {
+                    el.style.display = 'none';
+                    el.style.maxHeight = 'none';
+                    el.style.overflow = '';
+                    el.classList.remove('show-members');
+                }, 400);
+            });
         } else {
             el.style.display = 'none';
+            el.classList.remove('show-members');
         }
     }
 }
