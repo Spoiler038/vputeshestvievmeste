@@ -8087,6 +8087,30 @@ function toggleGroupMembers(groupId) {
     }
 }
 
+// ============================================================
+// === ДОБАВЛЕНИЕ ГРУППЫ =======================================
+// ============================================================
+
+function openAddGroup() {
+    editingGroupId = null;
+    document.getElementById('group-modal-title').textContent = 'Создать группу';
+    const content = document.getElementById('group-modal-content');
+    content.innerHTML = buildGroupForm({
+        name: '',
+        programId: null,
+        startDate: '',
+        endDate: '',
+        maxPeople: '',
+        status: 'набор',
+        notes: ''
+    });
+    
+    // Скрываем кнопку удаления
+    const deleteBtn = document.getElementById('delete-group-btn');
+    if (deleteBtn) deleteBtn.style.display = 'none';
+    
+    openModal('group-modal');
+}
   
 function openEditGroup(id) {
   const g = groups.find(x => x.id === id);
