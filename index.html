@@ -9162,18 +9162,21 @@ function gasPost(body) {
 // GET через JSONP (для чтения данных) с улучшенной обработкой таймаута
 function gasGet(params) {
     return new Promise((resolve, reject) => {
+        // ✅ ОЧИЩАЕМ СТАРЫЕ СКРИПТЫ
+        const oldScripts = document.querySelectorAll('script[id^="script__gc_"]');
+        oldScripts.forEach(s => {
+            if (s.parentNode) s.parentNode.removeChild(s);
+        });
+        
         const cbId = '_gc' + Date.now() + Math.random().toString(36).slice(2, 8);
         let isResolved = false;
-        let scriptLoaded = false;
         
-        // Таймаут увеличен до 45 секунд
         const timer = setTimeout(() => {
             if (!isResolved) {
                 isResolved = true;
                 try { delete window[cbId]; } catch(e) {}
                 const s = document.querySelector('script[id*="' + cbId + '"]');
                 if (s && s.parentNode) s.parentNode.removeChild(s);
-                // Не reject, а resolve с пометкой timeout
                 resolve({ ok: false, timeout: true, error: 'Таймаут загрузки данных' });
             }
         }, 45000);
@@ -9181,7 +9184,6 @@ function gasGet(params) {
         window[cbId] = function(data) {
             if (isResolved) return;
             isResolved = true;
-            scriptLoaded = true;
             clearTimeout(timer);
             try { delete window[cbId]; } catch(e) {}
             const s = document.querySelector('script[id*="' + cbId + '"]');
@@ -9189,7 +9191,6 @@ function gasGet(params) {
             resolve(data);
         };
 
-        // Формируем параметры запроса
         const queryParams = new URLSearchParams();
         Object.keys(params).forEach(key => {
             if (params[key] !== undefined && params[key] !== null) {
@@ -9199,18 +9200,15 @@ function gasGet(params) {
         queryParams.append('callback', cbId);
         queryParams.append('_t', Date.now());
 
-        // Правильный URL для JSONP
         const script = document.createElement('script');
         script.id = 'script_' + cbId;
         script.src = GAS_URL + '?' + queryParams.toString();
         script.onerror = function() {
             if (isResolved) return;
             isResolved = true;
-            scriptLoaded = false;
             clearTimeout(timer);
             try { delete window[cbId]; } catch(e) {}
             if (script.parentNode) script.parentNode.removeChild(script);
-            // Возвращаем ошибку, но не reject, чтобы не ломать приложение
             resolve({ ok: false, error: 'Ошибка загрузки скрипта' });
         };
         document.head.appendChild(script);
