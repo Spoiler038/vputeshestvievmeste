@@ -9114,7 +9114,7 @@ function hasUserTraveled(userId, programId) {
 // === GOOGLE SHEETS СИНХРОНИЗАЦИЯ =============================
 // ============================================================
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxP12ObWeZdG8D8D_vzyQw3HqBqT662h0iRqS-I8lx7u38tF_SoeHwHz0r_vSxZwslo/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbybmwOGaYlqhgAeiOajezmHgEWr8Urjb9rB6qpaXXm3gtIo5lorBE1S9p8ZiydZCHWY/exec';
 let sheetsInitialized = false;
 
 function gasPost(body) {
@@ -9296,6 +9296,7 @@ async function initSheetsSync() {
     
     await loadAllFromSheets();
 }
+  
 // Загрузка всех данных из Google Sheets
 async function loadAllFromSheets() {
   if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) {
@@ -9310,7 +9311,7 @@ async function loadAllFromSheets() {
 
     // Проверяем результат, даже если ошибка — продолжаем с локальными данными
     if (!result || !result.ok) {
-      console.warn('Sheets read error, using local data');
+      console.warn('Sheets read error, using local data:', result?.error || 'Unknown error');
       showToast('Офлайн-режим (данные из кэша)');
       return;
     }
@@ -9352,6 +9353,43 @@ async function loadAllFromSheets() {
       console.log('Загружено ' + purchases.length + ' поездок');
     }
 
+    // Загружаем пользователей
+    if (d.users && Array.isArray(d.users) && d.users.length > 0) {
+      const remoteUsers = d.users.map(normalizeUser);
+      const localOwner = users.find(u => u.role === 'owner');
+      let mergedUsers = [];
+      
+      if (localOwner) {
+        mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
+      } else {
+        mergedUsers = remoteUsers;
+      }
+      
+      const uniqueUsers = [];
+      const seenIds = new Set();
+      mergedUsers.forEach(u => {
+        if (!seenIds.has(u.id)) {
+          seenIds.add(u.id);
+          uniqueUsers.push(u);
+        }
+      });
+      
+      if (uniqueUsers.length > 0) {
+        users = uniqueUsers;
+        saveState('users', users);
+        console.log('Загружено ' + users.length + ' пользователей');
+        
+        // Обновляем текущего пользователя
+        if (currentUser) {
+          const updatedUser = users.find(u => u.id === currentUser.id);
+          if (updatedUser) {
+            currentUser = updatedUser;
+            updateNavForUser();
+          }
+        }
+      }
+    }
+
     // Загружаем настройки
     if (d.settings && Array.isArray(d.settings)) {
       for (const s of d.settings) {
@@ -9368,6 +9406,7 @@ async function loadAllFromSheets() {
             const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
             founderContent = { ...founderContent, ...parsed };
             saveState('founderContent', founderContent);
+            applyFounderContent();
           } catch(e) { console.warn('Parse founderContent error:', e); }
         }
         if (s.key === 'contactsContent') {
@@ -9375,6 +9414,7 @@ async function loadAllFromSheets() {
             const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
             contactsContent = { ...contactsContent, ...parsed };
             saveState('contactsContent', contactsContent);
+            applyContactsContent();
           } catch(e) { console.warn('Parse contactsContent error:', e); }
         }
         if (s.key === 'enabledTransports') {
