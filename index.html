@@ -1236,6 +1236,31 @@ input[type=number] {
 #groups-list-mobile [id^="group-members-"].show-members {
     max-height: none;
 }
+
+   #groups-list-mobile .btn {
+        position: relative;
+        z-index: 2;
+    }
+    
+    #groups-list-mobile [data-group-header] .btn {
+        pointer-events: auto;
+    }
+
+  #groups-list-mobile .btn {
+    position: relative;
+    z-index: 2;
+}
+
+#groups-list-mobile [data-group-header] .btn {
+    pointer-events: auto;
+}
+
+/* Активный фильтр в мобильной версии */
+#mob-group-filters .filter-tag.active {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent);
+}
 }
   .photo-upload-area .upload-icon svg {
     width: 48px;
@@ -6588,7 +6613,7 @@ function loadAdminUsers(isOwner, forceRefresh = false) {
                     }
                 }
                 
-                showToast('✅ Загружено ' + users.length + ' участников');
+                showToast('📩 Входящих заявок: ' + leads.length);
             }
         })
         .catch(err => {
@@ -10029,6 +10054,20 @@ function switchMobSection(section) {
     if (ov) ov.scrollTop = 0;
 }
 
+// Добавьте эту функцию перед renderMobAdminSection
+function setMobGroupFilter(btn, status) {
+    // Убираем активный класс у всех кнопок фильтра в мобильной версии
+    document.querySelectorAll('#mob-group-filters .filter-tag').forEach(b => {
+        b.classList.remove('active');
+    });
+    // Добавляем активный класс на выбранную кнопку
+    btn.classList.add('active');
+    // Устанавливаем глобальный фильтр
+    activeGroupFilter = status;
+    // Перерисовываем секцию групп
+    renderMobAdminSection('groups');
+}
+  
 async function renderMobAdminSection(section) {
   const box = document.getElementById('mob-admin-content');
   if (!box) return;
@@ -10326,20 +10365,20 @@ if (isLoading || !dataCache.purchases.data) {
     box.innerHTML = `
         <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">👥 Группы</h2>
         <div style="margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;" id="mob-group-filters">
-            <button class="filter-tag active" data-status="" onclick="setGroupFilter(this,'');renderMobAdminSection('groups')">Все</button>
-            <button class="filter-tag" data-status="набор" onclick="setGroupFilter(this,'набор');renderMobAdminSection('groups')">
+            <button class="filter-tag active" data-status="" onclick="setMobGroupFilter(this,'');renderMobAdminSection('groups')">Все</button>
+            <button class="filter-tag" data-status="набор" onclick="setMobGroupFilter(this,'набор');renderMobAdminSection('groups')">
                 <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#4CAF50;margin-right:4px;"></span> Набор
             </button>
-            <button class="filter-tag" data-status="укомплектована" onclick="setGroupFilter(this,'укомплектована');renderMobAdminSection('groups')">
+            <button class="filter-tag" data-status="укомплектована" onclick="setMobGroupFilter(this,'укомплектована');renderMobAdminSection('groups')">
                 <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#FFC107;margin-right:4px;"></span> Укомплектована
             </button>
-            <button class="filter-tag" data-status="в пути" onclick="setGroupFilter(this,'в пути');renderMobAdminSection('groups')">
+            <button class="filter-tag" data-status="в пути" onclick="setMobGroupFilter(this,'в пути');renderMobAdminSection('groups')">
                 <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2196F3;margin-right:4px;"></span> В пути
             </button>
-            <button class="filter-tag" data-status="завершена" onclick="setGroupFilter(this,'завершена');renderMobAdminSection('groups')">
+            <button class="filter-tag" data-status="завершена" onclick="setMobGroupFilter(this,'завершена');renderMobAdminSection('groups')">
                 <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#4CAF50;margin-right:4px;"></span> Завершена
             </button>
-            <button class="filter-tag" data-status="отменена" onclick="setGroupFilter(this,'отменена');renderMobAdminSection('groups')">
+            <button class="filter-tag" data-status="отменена" onclick="setMobGroupFilter(this,'отменена');renderMobAdminSection('groups')">
                 <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F44336;margin-right:4px;"></span> Отменена
             </button>
         </div>
@@ -10353,38 +10392,42 @@ if (isLoading || !dataCache.purchases.data) {
                 const isOpen = g._isOpen || false;
                 
                 let membersHTML = '';
-                if (g.members && g.members.length > 0) {
-                    membersHTML = `
-                        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px;">
-                            <thead>
-                                <tr style="background:var(--bg);">
-                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Участник</th>
-                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Телефон</th>
-                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Email</th>
-                                    <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Действия</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${g.members.map((m, mi) => `
-                                    <tr style="border-top:1px solid var(--border);">
-                                        <td style="padding:6px 10px;font-weight:600;font-size:12px;">${m.name}</td>
-                                        <td style="padding:6px 10px;color:var(--accent);font-size:11px;">
-                                            ${m.phone ? `<a href="tel:${m.phone.replace(/[^\d+]/g, '')}" style="color:var(--accent);text-decoration:none;">${m.phone}</a>` : '—'}
-                                        </td>
-                                        <td style="padding:6px 10px;color:var(--accent);font-size:11px;cursor:pointer;" onclick="event.stopPropagation();navigator.clipboard.writeText('${m.email || ''}');showToast('Email скопирован ✓');">
-                                            ${m.email || '—'}
-                                        </td>
-                                        <td style="padding:6px 10px;text-align:center;">
-                                            <button class="btn btn-danger" style="padding:2px 6px;font-size:10px;height:24px;" onclick="event.stopPropagation();removeMember(${g.id}, ${mi})">✕</button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
-                } else {
-                    membersHTML = `<div style="padding:12px 16px;color:var(--text-muted);text-align:center;font-size:12px;">👥 Нет участников</div>`;
-                }
+if (g.members && g.members.length > 0) {
+    membersHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:650px;">
+            <thead>
+                <tr style="background:var(--bg);">
+                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Участник</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Телефон</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Email</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Сумма</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Оплата</th>
+                    <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${g.members.map((m, mi) => `
+                    <tr style="border-top:1px solid var(--border);">
+                        <td style="padding:6px 10px;font-weight:600;font-size:12px;">${m.name}</td>
+                        <td style="padding:6px 10px;color:var(--accent);font-size:11px;">
+                            ${m.phone ? `<a href="tel:${m.phone.replace(/[^\d+]/g, '')}" style="color:var(--accent);text-decoration:none;">${m.phone}</a>` : '—'}
+                        </td>
+                        <td style="padding:6px 10px;color:var(--accent);font-size:11px;cursor:pointer;" onclick="event.stopPropagation();navigator.clipboard.writeText('${m.email || ''}');showToast('Email скопирован ✓');">
+                            ${m.email || '—'}
+                        </td>
+                        <td style="padding:6px 10px;font-weight:600;color:var(--accent2);font-size:12px;">${m.amount ? Number(m.amount).toLocaleString('ru') + ' ₽' : '—'}</td>
+                        <td style="padding:6px 10px;color:var(--text-muted);font-size:11px;">${m.payMethod || '—'}</td>
+                        <td style="padding:6px 10px;text-align:center;">
+                            <button class="btn btn-danger" style="padding:2px 6px;font-size:10px;height:24px;" onclick="event.stopPropagation();removeMember(${g.id}, ${mi})">✕</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+} else {
+    membersHTML = `<div style="padding:12px 16px;color:var(--text-muted);text-align:center;font-size:12px;">👥 Нет участников</div>`;
+}
                 
                 return `
                     <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">
