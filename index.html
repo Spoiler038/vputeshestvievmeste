@@ -8128,54 +8128,56 @@ function openEditGroup(id) {
 }
 
 function buildGroupForm(g) {
-  const progOptions = programs.map(p =>
-    `<option value="${p.id}" ${g.programId === p.id ? 'selected' : ''}>${p.name} · ${p.days} дн. · макс. ${p.maxPeople} чел.</option>`
-  ).join('');
+    const progOptions = programs.map(p =>
+        `<option value="${p.id}" ${g.programId === p.id ? 'selected' : ''}>${p.name} · ${p.days} дн. · макс. ${p.maxPeople} чел.</option>`
+    ).join('');
 
-  const statusOptions = GROUP_STATUSES.map(s =>
-    `<option value="${s}" ${(g.status || 'набор') === s ? 'selected' : ''}>${s}</option>`
-  ).join('');
+    const statusOptions = ['набор', 'укомплектована', 'в пути', 'завершена', 'отменена'].map(s =>
+        `<option value="${s}" ${(g.status || 'набор') === s ? 'selected' : ''}>${s}</option>`
+    ).join('');
 
-  return `
-    <div style="padding:4px 0;">
-      <div class="modal-grid">
-        <div class="form-group full">
-          <label>Название группы</label>
-          <input type="text" class="form-input" id="gm-name" placeholder="Алтай — лето 2026, группа 1" value="${g.name || ''}">
+    return `
+        <div style="padding:4px 0;">
+            <div class="modal-grid">
+                <div class="form-group full">
+                    <label>Название группы</label>
+                    <input type="text" class="form-input" id="gm-name" placeholder="Алтай — лето 2026, группа 1" value="${g.name || ''}">
+                </div>
+                <div class="form-group full">
+                    <label>Программа путешествия</label>
+                    <select class="filter-select" id="gm-program" onchange="updateGroupMaxPeople()">
+                        <option value="">— выберите программу —</option>
+                        ${progOptions}
+                    </select>
+                    <div id="gm-capacity-hint" style="font-size:12px;color:var(--text-muted);margin-top:5px;"></div>
+                </div>
+                <div class="form-group">
+                    <label>Дата начала</label>
+                    <input type="date" class="form-input" id="gm-start" value="${g.startDate || ''}" onchange="autoFillEndDate()">
+                </div>
+                <div class="form-group">
+                    <label>Дата окончания <span id="gm-end-hint" style="font-weight:400;color:var(--accent);font-size:11px;"></span></label>
+                    <input type="date" class="form-input" id="gm-end" value="${g.endDate || ''}" onchange="this.dataset.auto='0'">
+                </div>
+                <div class="form-group">
+                    <label>Макс. участников</label>
+                    <input type="number" class="form-input" id="gm-max" value="${g.maxPeople || ''}" placeholder="Берётся из программы">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Статус</label>
+                    <select class="filter-select" id="gm-status" style="padding:12px 16px;font-size:14px;height:auto;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);width:100%;font-family:var(--font-family);color:var(--text);">
+                        ${statusOptions}
+                    </select>
+                </div>
+                <div class="form-group full">
+                    <label>Заметки</label>
+                    <textarea class="form-textarea" id="gm-notes" style="min-height:70px;" placeholder="Любые заметки по группе...">${g.notes || ''}</textarea>
+                </div>
+            </div>
         </div>
-        <div class="form-group full">
-          <label>Программа путешествия</label>
-          <select class="filter-select" id="gm-program" onchange="updateGroupMaxPeople()">
-            <option value="">— выберите программу —</option>
-            ${progOptions}
-          </select>
-          <div id="gm-capacity-hint" style="font-size:12px;color:var(--text-muted);margin-top:5px;"></div>
-        </div>
-        <div class="form-group">
-          <label>Дата начала</label>
-          <input type="date" class="form-input" id="gm-start" value="${g.startDate || ''}" onchange="autoFillEndDate()">
-        </div>
-        <div class="form-group">
-          <label>Дата окончания <span id="gm-end-hint" style="font-weight:400;color:var(--accent);font-size:11px;"></span></label>
-          <input type="date" class="form-input" id="gm-end" value="${g.endDate || ''}" onchange="this.dataset.auto='0'">
-        </div>
-        <div class="form-group">
-          <label>Макс. участников</label>
-          <input type="number" class="form-input" id="gm-max" value="${g.maxPeople || ''}" placeholder="Берётся из программы">
-        </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label>Статус</label>
-          <select class="filter-select" id="gm-status" style="padding:12px 16px;font-size:14px;height:auto;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);width:100%;font-family:var(--font-family);color:var(--text);">${statusOptions}</select>
-        </div>
-        <div class="form-group full">
-          <label>Заметки</label>
-          <textarea class="form-textarea" id="gm-notes" style="min-height:70px;" placeholder="Любые заметки по группе...">${g.notes || ''}</textarea>
-        </div>
-      </div>
-    </div>
-  `;
+    `;
 }
-
+  
 function updateGroupMaxPeople() {
   const sel = document.getElementById('gm-program');
   const maxEl = document.getElementById('gm-max');
