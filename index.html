@@ -9114,7 +9114,7 @@ function hasUserTraveled(userId, programId) {
 // === GOOGLE SHEETS СИНХРОНИЗАЦИЯ =============================
 // ============================================================
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbybmwOGaYlqhgAeiOajezmHgEWr8Urjb9rB6qpaXXm3gtIo5lorBE1S9p8ZiydZCHWY/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwEwm2KfZC--7AmBndrY90BnySWOirWjQPd-zYaWJTHkJqPAJrBXE00ck2o1X4DALhW/exec';
 let sheetsInitialized = false;
 
 function gasPost(body) {
@@ -9164,6 +9164,7 @@ function gasGet(params) {
     return new Promise((resolve, reject) => {
         const cbId = '_gc' + Date.now() + Math.random().toString(36).slice(2, 8);
         let isResolved = false;
+        let scriptLoaded = false;
         
         // Таймаут увеличен до 45 секунд
         const timer = setTimeout(() => {
@@ -9180,6 +9181,7 @@ function gasGet(params) {
         window[cbId] = function(data) {
             if (isResolved) return;
             isResolved = true;
+            scriptLoaded = true;
             clearTimeout(timer);
             try { delete window[cbId]; } catch(e) {}
             const s = document.querySelector('script[id*="' + cbId + '"]');
@@ -9201,17 +9203,20 @@ function gasGet(params) {
         const script = document.createElement('script');
         script.id = 'script_' + cbId;
         script.src = GAS_URL + '?' + queryParams.toString();
-        script.onerror = () => {
+        script.onerror = function() {
             if (isResolved) return;
             isResolved = true;
+            scriptLoaded = false;
             clearTimeout(timer);
             try { delete window[cbId]; } catch(e) {}
             if (script.parentNode) script.parentNode.removeChild(script);
+            // Возвращаем ошибку, но не reject, чтобы не ломать приложение
             resolve({ ok: false, error: 'Ошибка загрузки скрипта' });
         };
         document.head.appendChild(script);
     });
 }
+  
 // Сохранение настройки в Google Sheets
 async function saveSettingToSheets(key, value) {
   if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return false;
