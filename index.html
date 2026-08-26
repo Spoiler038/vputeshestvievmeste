@@ -8046,7 +8046,7 @@ function loadAdminGroups() {
         return `
             <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:16px;overflow:hidden;">
                 <!-- Основная строка группы (кликабельная) -->
-                <div data-group-header data-group-id="${groupId}" style="padding:20px 22px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;cursor:pointer;">
+                <div data-group-header data-group-id="${groupId}" style="padding:20px 22px;display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;cursor:pointer;">
                     <div style="flex:1;min-width:200px;" onclick="toggleGroupMembers(${groupId}); event.stopPropagation();">
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
                             <strong style="font-size:17px;font-family:var(--font-family);">${g.name}</strong>
@@ -8066,9 +8066,9 @@ function loadAdminGroups() {
                         <div style="font-size:22px;font-weight:600;font-family:var(--font-family);color:var(--accent2);">${totalPaid.toLocaleString('ru')} ₽</div>
                         <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">сумма</div>
                     </div>
-                    <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:120px;">
-                      <div style="display:flex;gap:6px;">
-                      <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;flex:1;" onclick="event.stopPropagation();openEditGroup(${groupId})">✏️ Изменить</button>
+                    <div style="display:flex;flex-direction:column;gap:20px;align-items:stretch;min-width:120px;">
+                      <div style="display:flex;gap:10px;">
+                      <button class="btn btn-edit" style="padding:7px 12px;font-size:12px;" onclick="event.stopPropagation();openEditGroup(${groupId})">✏️ Изменить</button>
                       <button class="btn btn-danger" style="padding:7px 12px;font-size:12px;flex:1;" onclick="event.stopPropagation();deleteGroup(${groupId})">
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 6h18"/>
@@ -8078,7 +8078,7 @@ function loadAdminGroups() {
                     </svg>
                 </button>
             </div>
-    <button class="btn btn-outline btn-sm" style="width:100%;font-size:12px;padding:6px 14px;" onclick="event.stopPropagation();openAddMember(${groupId})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
+    <button class="btn btn-outline btn-sm" style="width:100%;font-size:14px;padding:6px 14px;" onclick="event.stopPropagation();openAddMember(${groupId})" ${filled >= max ? 'disabled title="Группа укомплектована"' : ''}>+ Участник</button>
 </div>
                 </div>
                 <!-- Список участников (раскрывается) -->
