@@ -3179,97 +3179,113 @@ const CACHE_TTL = 30000;
 // Флаг, чтобы избежать одновременных запросов
 let isDataLoading = false;
 
-  // Обновленная функция loadDataWithCache с управлением isLoading
-async function loadDataWithCache(sheetName, forceRefresh = false) {
-  // Проверяем кэш
-  const cache = dataCache[sheetName];
-  const now = Date.now();
-  
-  // Если данные есть в кэше и они не устарели, и не требуется принудительное обновление
-  if (!forceRefresh && cache.data && (now - cache.timestamp) < CACHE_TTL) {
-    console.log(`📦 Данные ${sheetName} из кэша (${Math.round((now - cache.timestamp)/1000)}с)`);
-    return cache.data;
-  }
-  
-  // Если уже идет загрузка - ждем
-  if (isLoading) {
-    console.log(`⏳ Загрузка ${sheetName} уже выполняется, ждем...`);
-    // Ждем завершения текущей загрузки (максимум 5 секунд)
-    let attempts = 0;
-    while (isLoading && attempts < 50) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
-    // Проверяем кэш еще раз
-    if (cache.data && (now - cache.timestamp) < CACHE_TTL) {
-      return cache.data;
-    }
-    // Если кэш все еще пуст, продолжаем загрузку
-  }
-  
-  isLoading = true;
-  updateMobProgress(10);
-  
-  try {
-    console.log(`📥 Загрузка данных ${sheetName} с сервера...`);
+  async function loadDataWithCache(sheetName, forceRefresh = false) {
+    // Проверяем кэш
+    const cache = dataCache[sheetName];
+    const now = Date.now();
     
-    // Проверяем версию
-    const localVersion = localStorage.getItem('vputi_data_version') || '0';
-    const versionResult = await gasGet({ action: 'checkVersion', version: localVersion });
-    
-    // Если версия не изменилась и не требуется принудительное обновление
-    if (!forceRefresh && versionResult && versionResult.ok && !versionResult.needsUpdate) {
-      // Версия актуальна, но данных в кэше нет - загружаем только нужный лист
-      const result = await gasGet({ action: 'read', sheet: sheetName });
-      if (result && result.ok && result.data) {
-        cache.data = result.data;
-        cache.timestamp = Date.now();
-        cache.version = localVersion;
-        updateMobProgress(100);
-        console.log(`✅ Загружено ${result.data.length} записей из ${sheetName}`);
+    // Если данные есть в кэше и они не устарели, и не требуется принудительное обновление
+    if (!forceRefresh && cache.data && (now - cache.timestamp) < CACHE_TTL) {
+        console.log(`📦 Данные ${sheetName} из кэша (${Math.round((now - cache.timestamp)/1000)}с)`);
         return cache.data;
-      }
     }
     
-    // Версия устарела или нужно обновить все данные
-    if (forceRefresh || (versionResult && versionResult.needsUpdate)) {
-      const fullResult = await gasGet({ action: 'getFullData' });
-      if (fullResult && fullResult.ok && fullResult.data) {
-        // Обновляем все кэши
-        Object.keys(fullResult.data).forEach(key => {
-          if (dataCache[key]) {
-            dataCache[key].data = fullResult.data[key];
-            dataCache[key].timestamp = Date.now();
-          }
-        });
-        if (fullResult.version) {
-          localStorage.setItem('vputi_data_version', fullResult.version);
+    // Если уже идет загрузка - ждем
+    if (isLoading) {
+        console.log(`⏳ Загрузка ${sheetName} уже выполняется, ждем...`);
+        let attempts = 0;
+        while (isLoading && attempts < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
         }
+        if (cache.data && (now - cache.timestamp) < CACHE_TTL) {
+            return cache.data;
+        }
+    }
+    
+    isLoading = true;
+    updateMobProgress(10);
+    
+    try {
+        console.log(`📥 Загрузка данных ${sheetName} с сервера...`);
+        
+        // Проверяем версию
+        const localVersion = localStorage.getItem('vputi_data_version') || '0';
+        let versionResult;
+        
+        try {
+            versionResult = await gasGet({ action: 'checkVersion', version: localVersion });
+        } catch(e) {
+            console.warn('Ошибка проверки версии, продолжаем с локальными данными');
+            versionResult = { ok: false, error: e.message };
+        }
+        
+        // Если версия не изменилась и не требуется принудительное обновление
+        if (!forceRefresh && versionResult && versionResult.ok && !versionResult.needsUpdate) {
+            // Версия актуальна, но данных в кэше нет - загружаем только нужный лист
+            try {
+                const result = await gasGet({ action: 'read', sheet: sheetName });
+                if (result && result.ok && result.data) {
+                    cache.data = result.data;
+                    cache.timestamp = Date.now();
+                    cache.version = localVersion;
+                    updateMobProgress(100);
+                    console.log(`✅ Загружено ${result.data.length} записей из ${sheetName}`);
+                    return cache.data;
+                }
+            } catch(e) {
+                console.warn('Ошибка загрузки данных, используем кэш:', e);
+                return cache.data || null;
+            }
+        }
+        
+        // Версия устарела или нужно обновить все данные
+        if (forceRefresh || (versionResult && versionResult.needsUpdate)) {
+            try {
+                const fullResult = await gasGet({ action: 'getFullData' });
+                if (fullResult && fullResult.ok && fullResult.data) {
+                    // Обновляем все кэши
+                    Object.keys(fullResult.data).forEach(key => {
+                        if (dataCache[key]) {
+                            dataCache[key].data = fullResult.data[key];
+                            dataCache[key].timestamp = Date.now();
+                        }
+                    });
+                    if (fullResult.version) {
+                        localStorage.setItem('vputi_data_version', fullResult.version);
+                    }
+                    updateMobProgress(100);
+                    console.log('✅ Все данные обновлены');
+                    return dataCache[sheetName]?.data || null;
+                }
+            } catch(e) {
+                console.warn('Ошибка загрузки полных данных, используем кэш:', e);
+                return cache.data || null;
+            }
+        }
+        
+        // Если что-то пошло не так, пробуем загрузить только нужный лист
+        try {
+            const result = await gasGet({ action: 'read', sheet: sheetName });
+            if (result && result.ok && result.data) {
+                cache.data = result.data;
+                cache.timestamp = Date.now();
+                updateMobProgress(100);
+                return cache.data;
+            }
+        } catch(e) {
+            console.warn('Ошибка загрузки данных, используем кэш:', e);
+        }
+        
+        return cache.data || null;
+    } catch(e) {
+        console.warn(`⚠️ Ошибка загрузки ${sheetName}:`, e);
+        return cache.data || null; // Возвращаем кэш, даже если он устарел
+    } finally {
+        isLoading = false;
         updateMobProgress(100);
-        console.log('✅ Все данные обновлены');
-        return dataCache[sheetName]?.data || null;
-      }
     }
-    
-    // Если что-то пошло не так, пробуем загрузить только нужный лист
-    const result = await gasGet({ action: 'read', sheet: sheetName });
-    if (result && result.ok && result.data) {
-      cache.data = result.data;
-      cache.timestamp = Date.now();
-      updateMobProgress(100);
-      return cache.data;
-    }
-    
-    return null;
-  } catch(e) {
-    console.warn(`⚠️ Ошибка загрузки ${sheetName}:`, e);
-    return cache.data || null; // Возвращаем кэш, даже если он устарел
-  } finally {
-    isLoading = false;
-    updateMobProgress(100);
-  }
 }
-
   
 
 // ============================================================
@@ -9145,56 +9161,56 @@ function gasPost(body) {
   
 // GET через JSONP (для чтения данных) с улучшенной обработкой таймаута
 function gasGet(params) {
-  return new Promise((resolve, reject) => {
-    const cbId = '_gc' + Date.now() + Math.random().toString(36).slice(2, 8);
-    let isResolved = false;
-    
-    // Таймаут увеличен до 45 секунд
-    const timer = setTimeout(() => {
-      if (!isResolved) {
-        isResolved = true;
-        try { delete window[cbId]; } catch(e) {}
-        const s = document.querySelector('script[id*="' + cbId + '"]');
-        if (s && s.parentNode) s.parentNode.removeChild(s);
-        // Не reject, а resolve с пометкой timeout
-        resolve({ ok: false, timeout: true, error: 'Таймаут загрузки данных' });
-      }
-    }, 45000);
+    return new Promise((resolve, reject) => {
+        const cbId = '_gc' + Date.now() + Math.random().toString(36).slice(2, 8);
+        let isResolved = false;
+        
+        // Таймаут увеличен до 45 секунд
+        const timer = setTimeout(() => {
+            if (!isResolved) {
+                isResolved = true;
+                try { delete window[cbId]; } catch(e) {}
+                const s = document.querySelector('script[id*="' + cbId + '"]');
+                if (s && s.parentNode) s.parentNode.removeChild(s);
+                // Не reject, а resolve с пометкой timeout
+                resolve({ ok: false, timeout: true, error: 'Таймаут загрузки данных' });
+            }
+        }, 45000);
 
-    window[cbId] = function(data) {
-      if (isResolved) return;
-      isResolved = true;
-      clearTimeout(timer);
-      try { delete window[cbId]; } catch(e) {}
-      const s = document.querySelector('script[id*="' + cbId + '"]');
-      if (s && s.parentNode) s.parentNode.removeChild(s);
-      resolve(data);
-    };
+        window[cbId] = function(data) {
+            if (isResolved) return;
+            isResolved = true;
+            clearTimeout(timer);
+            try { delete window[cbId]; } catch(e) {}
+            const s = document.querySelector('script[id*="' + cbId + '"]');
+            if (s && s.parentNode) s.parentNode.removeChild(s);
+            resolve(data);
+        };
 
-    // Формируем параметры запроса
-    const queryParams = new URLSearchParams();
-    Object.keys(params).forEach(key => {
-      if (params[key] !== undefined && params[key] !== null) {
-        queryParams.append(key, params[key]);
-      }
+        // Формируем параметры запроса
+        const queryParams = new URLSearchParams();
+        Object.keys(params).forEach(key => {
+            if (params[key] !== undefined && params[key] !== null) {
+                queryParams.append(key, params[key]);
+            }
+        });
+        queryParams.append('callback', cbId);
+        queryParams.append('_t', Date.now());
+
+        // Правильный URL для JSONP
+        const script = document.createElement('script');
+        script.id = 'script_' + cbId;
+        script.src = GAS_URL + '?' + queryParams.toString();
+        script.onerror = () => {
+            if (isResolved) return;
+            isResolved = true;
+            clearTimeout(timer);
+            try { delete window[cbId]; } catch(e) {}
+            if (script.parentNode) script.parentNode.removeChild(script);
+            resolve({ ok: false, error: 'Ошибка загрузки скрипта' });
+        };
+        document.head.appendChild(script);
     });
-    queryParams.append('callback', cbId);
-    queryParams.append('_t', Date.now());
-
-    // Правильный URL для JSONP
-    const script = document.createElement('script');
-    script.id = 'script_' + cbId;
-    script.src = GAS_URL + '?' + queryParams.toString();
-    script.onerror = () => {
-      if (isResolved) return;
-      isResolved = true;
-      clearTimeout(timer);
-      try { delete window[cbId]; } catch(e) {}
-      if (script.parentNode) script.parentNode.removeChild(script);
-      resolve({ ok: false, error: 'Ошибка загрузки скрипта' });
-    };
-    document.head.appendChild(script);
-  });
 }
 // Сохранение настройки в Google Sheets
 async function saveSettingToSheets(key, value) {
@@ -9236,19 +9252,50 @@ async function saveLeadToSheets(lead) {
   }
 }
 
-// Инициализация синхронизации
-async function initSheetsSync() {
-  if (sheetsInitialized) return;
-
-  if (!GAS_URL || GAS_URL === '' || GAS_URL.includes('ВСТАВЬТЕ')) {
-    console.log('Google Sheets не настроен, работаем только с localStorage');
-    return;
-  }
-
-  sheetsInitialized = true;
-  await loadAllFromSheets();
+// Проверка доступности GAS скрипта
+async function checkGASAvailability() {
+    if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) {
+        console.log('GAS URL не настроен');
+        return false;
+    }
+    
+    try {
+        // Простой ping запрос
+        const result = await gasGet({ action: 'ping' });
+        if (result && result.ok !== false) {
+            console.log('✅ GAS скрипт доступен');
+            return true;
+        } else {
+            console.warn('⚠️ GAS скрипт вернул ошибку:', result);
+            return false;
+        }
+    } catch(e) {
+        console.warn('⚠️ GAS скрипт недоступен:', e.message);
+        return false;
+    }
 }
 
+// Обновленная инициализация
+async function initSheetsSync() {
+    if (sheetsInitialized) return;
+
+    if (!GAS_URL || GAS_URL === '' || GAS_URL.includes('ВСТАВЬТЕ')) {
+        console.log('Google Sheets не настроен, работаем только с localStorage');
+        return;
+    }
+
+    sheetsInitialized = true;
+    
+    // Проверяем доступность
+    const isAvailable = await checkGASAvailability();
+    if (!isAvailable) {
+        console.log('GAS скрипт недоступен, работаем в офлайн-режиме');
+        showToast('📌 Офлайн-режим (данные из кэша)');
+        return;
+    }
+    
+    await loadAllFromSheets();
+}
 // Загрузка всех данных из Google Sheets
 async function loadAllFromSheets() {
   if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) {
