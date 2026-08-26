@@ -8002,7 +8002,8 @@ function loadAdminGroups() {
                     <thead>
                         <tr style="background:var(--bg);">
                             <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Участник</th>
-                            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Контакт</th>
+                            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Телефон</th>
+                            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Email</th>
                             <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Сумма</th>
                             <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Оплата</th>
                             <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Заметка</th>
@@ -8013,7 +8014,12 @@ function loadAdminGroups() {
                         ${(g.members || []).map((m, mi) => `
                             <tr style="border-top:1px solid var(--border);">
                                 <td style="padding:9px 14px;font-weight:600;">${m.name}</td>
-                                <td style="padding:9px 14px;color:var(--accent);font-size:12px;">${m.contact || '—'}</td>
+                                <td style="padding:9px 14px;color:var(--accent);font-size:12px;">
+                                    ${m.phone ? `<a href="tel:${m.phone.replace(/[^\d+]/g, '')}" style="color:var(--accent);text-decoration:none;">${m.phone}</a>` : '—'}
+                                </td>
+                                <td style="padding:9px 14px;color:var(--accent);font-size:12px;cursor:pointer;" onclick="event.stopPropagation();navigator.clipboard.writeText('${m.email || ''}');showToast('Email скопирован ✓');">
+                                    ${m.email || '—'}
+                                </td>
                                 <td style="padding:9px 14px;font-weight:600;color:var(--accent2);">${m.amount ? Number(m.amount).toLocaleString('ru') + ' ₽' : '—'}</td>
                                 <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;">${m.payMethod || '—'}</td>
                                 <td style="padding:9px 14px;color:var(--text-muted);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.note || ''}</td>
@@ -8512,105 +8518,108 @@ async function deleteGroup(id) {
   
   // === ДОБАВЛЕНИЕ УЧАСТНИКА В ГРУППУ ===
 function openAddMember(groupId) {
-  const g = groups.find(x => x.id === groupId);
-  if (!g) return;
+    const g = groups.find(x => x.id === groupId);
+    if (!g) return;
 
-  // ✅ ЗАПРЕТ ДОБАВЛЕНИЯ В ЗАВЕРШЕННУЮ ГРУППУ
     if (g.status === 'завершена') {
         showToast('❌ В завершенную группу нельзя добавлять участников');
         return;
     }
 
-  const filled = (g.members || []).length;
-  const max = g.maxPeople || 999;
-  if (filled >= max) {
-    showToast('Группа уже укомплектована');
-    return;
-  }
+    const filled = (g.members || []).length;
+    const max = g.maxPeople || 999;
+    if (filled >= max) {
+        showToast('Группа уже укомплектована');
+        return;
+    }
 
-  addMemberGroupId = groupId;
+    addMemberGroupId = groupId;
 
-  const registeredOptions = users
-    .filter(u => u.role === 'user')
-    .map(u => `<option value="reg_${u.id}">${u.name} (${u.username})</option>`)
-    .join('');
+    const registeredOptions = users
+        .filter(u => u.role === 'user')
+        .map(u => `<option value="reg_${u.id}">${u.name} (${u.username})</option>`)
+        .join('');
 
-  const payMethodOptions = PAYMENT_METHODS.map(m =>
-    `<option value="${m}">${m}</option>`
-  ).join('');
+    const payMethodOptions = PAYMENT_METHODS.map(m =>
+        `<option value="${m}">${m}</option>`
+    ).join('');
 
-  const prog = programs.find(p => p.id === g.programId);
-  const defaultAmount = prog ? prog.price : '';
+    const prog = programs.find(p => p.id === g.programId);
+    const defaultAmount = prog ? prog.price : '';
 
-  document.getElementById('group-member-content').innerHTML = `
-    <div style="padding:4px 0;">
-      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
-        Группа: <strong style="color:var(--text);">${g.name}</strong> — мест занято: <strong>${filled}/${max}</strong>
-      </div>
+    document.getElementById('group-member-content').innerHTML = `
+        <div style="padding:4px 0;">
+            <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
+                Группа: <strong style="color:var(--text);">${g.name}</strong> — мест занято: <strong>${filled}/${max}</strong>
+            </div>
 
-      <div style="display:flex;gap:8px;margin-bottom:14px;">
-        <button class="btn btn-outline btn-sm" id="tab-registered" onclick="switchMemberTab('registered')" style="background:var(--accent-light);border-color:var(--accent);color:var(--accent);">
-          👤 Зарегистрированный
-        </button>
-        <button class="btn btn-outline btn-sm" id="tab-manual" onclick="switchMemberTab('manual')">
-          ✏️ Вручную
-        </button>
-      </div>
+            <div style="display:flex;gap:8px;margin-bottom:14px;">
+                <button class="btn btn-outline btn-sm" id="tab-registered" onclick="switchMemberTab('registered')" style="background:var(--accent-light);border-color:var(--accent);color:var(--accent);">
+                    👤 Зарегистрированный
+                </button>
+                <button class="btn btn-outline btn-sm" id="tab-manual" onclick="switchMemberTab('manual')">
+                    ✏️ Вручную
+                </button>
+            </div>
 
-      <div id="member-tab-registered">
-        <div class="form-group">
-          <label>Выбрать участника сайта</label>
-          <select class="filter-select" id="gm-reg-user">
-            <option value="">— выберите —</option>
-            ${registeredOptions}
-          </select>
+            <div id="member-tab-registered">
+                <div class="form-group">
+                    <label>Выбрать участника сайта</label>
+                    <select class="filter-select" id="gm-reg-user">
+                        <option value="">— выберите —</option>
+                        ${registeredOptions}
+                    </select>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group">
+                        <label>Сумма (₽)</label>
+                        <input type="number" class="form-input" id="gm-reg-amount" value="${defaultAmount}" placeholder="65000">
+                    </div>
+                    <div class="form-group">
+                        <label>Способ оплаты</label>
+                        <select class="filter-select" id="gm-reg-method">${payMethodOptions}</select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Заметка</label>
+                    <input type="text" class="form-input" id="gm-reg-note" placeholder="Любая заметка...">
+                </div>
+            </div>
+
+            <div id="member-tab-manual" style="display:none;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group">
+                        <label>ФИО</label>
+                        <input type="text" class="form-input" id="gm-man-name" placeholder="Иванов Иван Иванович">
+                    </div>
+                    <div class="form-group">
+                        <label>Телефон</label>
+                        <input type="text" class="form-input" id="gm-man-phone" placeholder="+7 (900) 000-00-00">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" class="form-input" id="gm-man-email" placeholder="ivan@mail.ru">
+                    </div>
+                    <div class="form-group">
+                        <label>Сумма (₽)</label>
+                        <input type="number" class="form-input" id="gm-man-amount" value="${defaultAmount}" placeholder="65000">
+                    </div>
+                    <div class="form-group">
+                        <label>Способ оплаты</label>
+                        <select class="filter-select" id="gm-man-method">${payMethodOptions}</select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Заметка</label>
+                    <input type="text" class="form-input" id="gm-man-note" placeholder="Любая заметка...">
+                </div>
+            </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div class="form-group">
-            <label>Сумма (₽)</label>
-            <input type="number" class="form-input" id="gm-reg-amount" value="${defaultAmount}" placeholder="65000">
-          </div>
-          <div class="form-group">
-            <label>Способ оплаты</label>
-            <select class="filter-select" id="gm-reg-method">${payMethodOptions}</select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Заметка</label>
-          <input type="text" class="form-input" id="gm-reg-note" placeholder="Любая заметка...">
-        </div>
-      </div>
+    `;
 
-      <div id="member-tab-manual" style="display:none;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div class="form-group">
-            <label>ФИО</label>
-            <input type="text" class="form-input" id="gm-man-name" placeholder="Иванов Иван Иванович">
-          </div>
-          <div class="form-group">
-            <label>Телефон / email</label>
-            <input type="text" class="form-input" id="gm-man-contact" placeholder="+7 (900) 000-00-00">
-          </div>
-          <div class="form-group">
-            <label>Сумма (₽)</label>
-            <input type="number" class="form-input" id="gm-man-amount" value="${defaultAmount}" placeholder="65000">
-          </div>
-          <div class="form-group">
-            <label>Способ оплаты</label>
-            <select class="filter-select" id="gm-man-method">${payMethodOptions}</select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Заметка</label>
-          <input type="text" class="form-input" id="gm-man-note" placeholder="Любая заметка...">
-        </div>
-      </div>
-    </div>
-  `;
-
-  openModal('group-member-modal');
+    openModal('group-member-modal');
 }
-
+  
 function switchMemberTab(tab) {
   document.getElementById('member-tab-registered').style.display = tab === 'registered' ? '' : 'none';
   document.getElementById('member-tab-manual').style.display = tab === 'manual' ? '' : 'none';
@@ -8631,70 +8640,81 @@ function switchMemberTab(tab) {
 }
 
 function addMemberToGroup() {
-  const g = groups.find(x => x.id === addMemberGroupId);
-  if (!g) return;
+    const g = groups.find(x => x.id === addMemberGroupId);
+    if (!g) return;
 
-  const max = g.maxPeople || 999;
-  if ((g.members || []).length >= max) {
-    showToast('Достигнут лимит участников');
-    return;
-  }
-
-  const isManual = document.getElementById('member-tab-manual').style.display !== 'none';
-  let member;
-
-  if (isManual) {
-    const name = (document.getElementById('gm-man-name').value || '').trim();
-    const contact = (document.getElementById('gm-man-contact').value || '').trim();
-    const amount = document.getElementById('gm-man-amount').value;
-    const payMethod = document.getElementById('gm-man-method').value;
-    const note = document.getElementById('gm-man-note').value;
-
-    if (!name) { showToast('Укажите ФИО участника'); return; }
-    member = { name, contact, amount, payMethod, note, type: 'manual' };
-  } else {
-    const sel = document.getElementById('gm-reg-user').value;
-    if (!sel) { showToast('Выберите участника'); return; }
-
-    const uid = parseInt(sel.replace('reg_', ''));
-    const u = users.find(x => x.id === uid);
-    if (!u) { showToast('Пользователь не найден'); return; }
-
-    // === ПРОВЕРКА: уже ли этот пользователь в группе ===
-    const alreadyInGroup = (g.members || []).some(m => m.userId === uid);
-    if (alreadyInGroup) {
-      showToast('Этот участник уже добавлен в группу!');
-      return;
+    const max = g.maxPeople || 999;
+    if ((g.members || []).length >= max) {
+        showToast('Достигнут лимит участников');
+        return;
     }
 
-    const amount = document.getElementById('gm-reg-amount').value;
-    const payMethod = document.getElementById('gm-reg-method').value;
-    const note = document.getElementById('gm-reg-note').value;
+    const isManual = document.getElementById('member-tab-manual').style.display !== 'none';
+    let member;
 
-    member = {
-      name: u.name,
-      contact: u.email || u.username,
-      amount: amount,
-      payMethod: payMethod,
-      note: note,
-      userId: u.id,
-      type: 'registered'
-    };
-  }
+    if (isManual) {
+        const name = (document.getElementById('gm-man-name').value || '').trim();
+        const phone = normalizePhone(document.getElementById('gm-man-phone').value.trim());
+        const email = (document.getElementById('gm-man-email').value || '').trim();
+        const amount = document.getElementById('gm-man-amount').value;
+        const payMethod = document.getElementById('gm-man-method').value;
+        const note = document.getElementById('gm-man-note').value;
 
-  if (!g.members) g.members = [];
-  g.members.push(member);
+        if (!name) { showToast('Укажите ФИО участника'); return; }
+        member = { 
+            name, 
+            phone, 
+            email, 
+            contact: email || phone || name,
+            amount, 
+            payMethod, 
+            note, 
+            type: 'manual' 
+        };
+    } else {
+        const sel = document.getElementById('gm-reg-user').value;
+        if (!sel) { showToast('Выберите участника'); return; }
 
-  saveState('groups', groups);
+        const uid = parseInt(sel.replace('reg_', ''));
+        const u = users.find(x => x.id === uid);
+        if (!u) { showToast('Пользователь не найден'); return; }
 
-  gasPost({
-    action: 'upsert', sheet: 'groups',
-    data: { ...g, members: JSON.stringify(g.members) }
-  }).catch(e => console.warn('Member sync error:', e));
+        const alreadyInGroup = (g.members || []).some(m => m.userId === uid);
+        if (alreadyInGroup) {
+            showToast('Этот участник уже добавлен в группу!');
+            return;
+        }
 
-  closeModal('group-member-modal');
-  loadAdminGroups();
-  showToast('Участник добавлен ✓');
+        const amount = document.getElementById('gm-reg-amount').value;
+        const payMethod = document.getElementById('gm-reg-method').value;
+        const note = document.getElementById('gm-reg-note').value;
+
+        member = {
+            name: u.name,
+            phone: u.phone || '',
+            email: u.email || '',
+            contact: u.email || u.phone || u.username,
+            amount: amount,
+            payMethod: payMethod,
+            note: note,
+            userId: u.id,
+            type: 'registered'
+        };
+    }
+
+    if (!g.members) g.members = [];
+    g.members.push(member);
+
+    saveState('groups', groups);
+
+    gasPost({
+        action: 'upsert', sheet: 'groups',
+        data: { ...g, members: JSON.stringify(g.members) }
+    }).catch(e => console.warn('Member sync error:', e));
+
+    closeModal('group-member-modal');
+    loadAdminGroups();
+    showToast('Участник добавлен ✓');
 }
 
 async function removeMember(groupId, memberIndex) {
@@ -10338,18 +10358,22 @@ if (isLoading || !dataCache.purchases.data) {
                             <thead>
                                 <tr style="background:var(--bg);">
                                     <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Участник</th>
-                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Контакт</th>
-                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Сумма</th>
-                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Действия</th>
+                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Телефон</th>
+                                    <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Email</th>
+                                    <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Действия</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${g.members.map((m, mi) => `
                                     <tr style="border-top:1px solid var(--border);">
                                         <td style="padding:6px 10px;font-weight:600;font-size:12px;">${m.name}</td>
-                                        <td style="padding:6px 10px;color:var(--accent);font-size:11px;">${m.contact || '—'}</td>
-                                        <td style="padding:6px 10px;font-weight:600;color:var(--accent2);font-size:12px;">${m.amount ? Number(m.amount).toLocaleString('ru') + ' ₽' : '—'}</td>
-                                        <td style="padding:6px 10px;">
+                                        <td style="padding:6px 10px;color:var(--accent);font-size:11px;">
+                                             ${m.phone ? `<a href="tel:${m.phone.replace(/[^\d+]/g, '')}" style="color:var(--accent);text-decoration:none;">${m.phone}</a>` : '—'}
+                                        </td>
+                                        <td style="padding:6px 10px;color:var(--accent);font-size:11px;cursor:pointer;" onclick="event.stopPropagation();navigator.clipboard.writeText('${m.email || ''}');showToast('Email скопирован ✓');">
+                                            ${m.email || '—'}
+                                        </td>
+                                        <td style="padding:6px 10px;text-align:center;">
                                             <button class="btn btn-danger" style="padding:2px 6px;font-size:10px;height:24px;" onclick="event.stopPropagation();removeMember(${g.id}, ${mi})">✕</button>
                                         </td>
                                     </tr>
@@ -10376,10 +10400,12 @@ if (isLoading || !dataCache.purchases.data) {
                                 <div style="font-size:20px;font-weight:600;color:var(--accent2);">${filled}/${max}</div>
                                 <div style="font-size:10px;color:var(--text-muted);">участников</div>
                             </div>
-                            <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                                <button class="btn btn-outline btn-sm" style="font-size:10px;padding:4px 8px;height:26px;" onclick="event.stopPropagation();openAddMember(${g.id})" ${filled >= max ? 'disabled' : ''}>+</button>
+                            <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
                                 <button class="btn btn-edit" style="font-size:10px;padding:4px 8px;height:26px;" onclick="event.stopPropagation();openEditGroup(${g.id})">✏️</button>
                                 <button class="btn btn-danger" style="font-size:10px;padding:4px 8px;height:26px;" onclick="event.stopPropagation();deleteGroup(${g.id})">🗑</button>
+                            </div>
+                              <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+                               <button class="btn btn-outline btn-sm" style="font-size:10px;padding:4px 10px;height:26px;" onclick="event.stopPropagation();openAddMember(${g.id})" ${filled >= max ? 'disabled' : ''}>+ Участник</button>
                             </div>
                         </div>
                         <!-- Список участников (раскрывается) -->
