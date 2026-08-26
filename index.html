@@ -1211,6 +1211,12 @@ input[type=number] {
         font-size: 11px !important;
     }
 }
+  .photo-upload-area .upload-icon svg {
+    width: 48px;
+    height: 48px;
+    color: var(--text-muted);
+    stroke: var(--text-muted);
+}
 </style>
 </head>
 <body>
@@ -2105,10 +2111,15 @@ input[type=number] {
         <div class="form-group full">
           <label>Фото программы</label>
           <!-- Область загрузки фото (показывается когда нет фото) -->
-          <div class="photo-upload-area" id="photo-upload-area" onclick="document.getElementById('program-photo-input').click()">
-            <span class="upload-icon">📸</span>
-            <span class="upload-text">Нажмите, чтобы выбрать фото</span>
-            <input type="file" id="program-photo-input" accept="image/*" style="display:none" onchange="previewProgramPhoto(event)">
+          <div class="photo-upload-area" id="photo-upload-area" onclick="document.getElementById('program-photo-input').click()" style="display: flex;">
+          <span class="upload-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+          </svg>
+          </span>
+          <span class="upload-text">Нажмите, чтобы выбрать фото</span>
+          <input type="file" id="program-photo-input" accept="image/*" style="display:none" onchange="previewProgramPhoto(event)">
           </div>
           <!-- Превью фото (показывается когда фото загружено) -->
           <div class="photo-preview-wrap" id="photo-preview-wrap" style="display:none;" onclick="document.getElementById('program-photo-input').click()">
@@ -3125,7 +3136,15 @@ const CACHE_TTL = 30000;
 // Флаг, чтобы избежать одновременных запросов
 let isDataLoading = false;
 
-  async function loadDataWithCache(sheetName, forceRefresh = false) {
+  // ============================================================
+// === УЛУЧШЕННАЯ ЗАГРУЗКА ДАННЫХ С ОЧЕРЕДЬЮ ==================
+// ============================================================
+
+// Очередь загрузки
+let loadQueue = [];
+let isQueueProcessing = false;
+
+async function loadDataWithCache(sheetName, forceRefresh = false) {
     // Проверяем кэш
     const cache = dataCache[sheetName];
     const now = Date.now();
@@ -3136,24 +3155,31 @@ let isDataLoading = false;
         return cache.data;
     }
     
-    // Если уже идет загрузка - ждем
-    if (isLoading) {
-        console.log(`⏳ Загрузка ${sheetName} уже выполняется, ждем...`);
-        let attempts = 0;
-        while (isLoading && attempts < 50) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-        }
-        if (cache.data && (now - cache.timestamp) < CACHE_TTL) {
-            return cache.data;
-        }
-    }
+    // Добавляем в очередь
+    return new Promise((resolve, reject) => {
+        loadQueue.push({
+            sheetName,
+            forceRefresh,
+            resolve,
+            reject,
+            timestamp: Date.now()
+        });
+        processQueue();
+    });
+}
+
+async function processQueue() {
+    if (isQueueProcessing || loadQueue.length === 0) return;
     
-    isLoading = true;
+    isQueueProcessing = true;
     updateMobProgress(10);
     
     try {
-        console.log(`📥 Загрузка данных ${sheetName} с сервера...`);
+        // Берем первый элемент из очереди
+        const task = loadQueue.shift();
+        const { sheetName, forceRefresh } = task;
+        
+        console.log(`📥 Загрузка данных ${sheetName} с сервера (${loadQueue.length + 1} в очереди)...`);
         
         // Проверяем версию
         const localVersion = localStorage.getItem('vputi_data_version') || '0';
@@ -3172,16 +3198,25 @@ let isDataLoading = false;
             try {
                 const result = await gasGet({ action: 'read', sheet: sheetName });
                 if (result && result.ok && result.data) {
-                    cache.data = result.data;
-                    cache.timestamp = Date.now();
-                    cache.version = localVersion;
+                    dataCache[sheetName].data = result.data;
+                    dataCache[sheetName].timestamp = Date.now();
+                    dataCache[sheetName].version = localVersion;
                     updateMobProgress(100);
                     console.log(`✅ Загружено ${result.data.length} записей из ${sheetName}`);
-                    return cache.data;
+                    task.resolve(dataCache[sheetName].data);
+                    processQueue();
+                    return;
                 }
             } catch(e) {
                 console.warn('Ошибка загрузки данных, используем кэш:', e);
-                return cache.data || null;
+                if (dataCache[sheetName].data) {
+                    task.resolve(dataCache[sheetName].data);
+                    processQueue();
+                    return;
+                }
+                task.reject(e);
+                processQueue();
+                return;
             }
         }
         
@@ -3202,11 +3237,20 @@ let isDataLoading = false;
                     }
                     updateMobProgress(100);
                     console.log('✅ Все данные обновлены');
-                    return dataCache[sheetName]?.data || null;
+                    task.resolve(dataCache[sheetName]?.data || null);
+                    processQueue();
+                    return;
                 }
             } catch(e) {
                 console.warn('Ошибка загрузки полных данных, используем кэш:', e);
-                return cache.data || null;
+                if (dataCache[sheetName].data) {
+                    task.resolve(dataCache[sheetName].data);
+                    processQueue();
+                    return;
+                }
+                task.reject(e);
+                processQueue();
+                return;
             }
         }
         
@@ -3214,25 +3258,43 @@ let isDataLoading = false;
         try {
             const result = await gasGet({ action: 'read', sheet: sheetName });
             if (result && result.ok && result.data) {
-                cache.data = result.data;
-                cache.timestamp = Date.now();
+                dataCache[sheetName].data = result.data;
+                dataCache[sheetName].timestamp = Date.now();
                 updateMobProgress(100);
-                return cache.data;
+                task.resolve(dataCache[sheetName].data);
+                processQueue();
+                return;
             }
         } catch(e) {
             console.warn('Ошибка загрузки данных, используем кэш:', e);
         }
         
-        return cache.data || null;
+        if (dataCache[sheetName].data) {
+            task.resolve(dataCache[sheetName].data);
+        } else {
+            task.reject(new Error(`Не удалось загрузить данные ${sheetName}`));
+        }
+        
     } catch(e) {
-        console.warn(`⚠️ Ошибка загрузки ${sheetName}:`, e);
-        return cache.data || null; // Возвращаем кэш, даже если он устарел
+        console.warn(`⚠️ Ошибка загрузки:`, e);
+        // Если есть элемент в очереди, возвращаем ошибку
+        if (loadQueue.length > 0) {
+            const task = loadQueue.shift();
+            if (dataCache[task.sheetName]?.data) {
+                task.resolve(dataCache[task.sheetName].data);
+            } else {
+                task.reject(e);
+            }
+        }
     } finally {
-        isLoading = false;
+        isQueueProcessing = false;
         updateMobProgress(100);
+        // Обрабатываем следующий элемент в очереди
+        if (loadQueue.length > 0) {
+            setTimeout(processQueue, 200);
+        }
     }
-}
-  
+}  
 
 // ============================================================
 // === ВИДЫ ТРАНСПОРТА =========================================
@@ -8218,108 +8280,131 @@ function autoFillEndDate() {
 }
 
 function saveGroup() {
-  const name = (document.getElementById('gm-name').value || '').trim();
-  const programId = parseInt(document.getElementById('gm-program').value) || null;
-  const startDate = document.getElementById('gm-start').value;
-  const endDate = document.getElementById('gm-end').value;
-  const status = document.getElementById('gm-status').value;
-  const notes = document.getElementById('gm-notes').value;
-  let maxPeople = parseInt(document.getElementById('gm-max').value) || 0;
+    const name = (document.getElementById('gm-name').value || '').trim();
+    const programId = parseInt(document.getElementById('gm-program').value) || null;
+    const startDate = document.getElementById('gm-start').value;
+    const endDate = document.getElementById('gm-end').value;
+    const status = document.getElementById('gm-status').value;
+    const notes = document.getElementById('gm-notes').value;
+    let maxPeople = parseInt(document.getElementById('gm-max').value) || 0;
 
-  if (!name) { showToast('Укажите название группы'); return; }
+    if (!name) { showToast('Укажите название группы'); return; }
 
-  const prog = programs.find(p => p.id === programId);
-  if (prog && (!maxPeople || maxPeople > prog.maxPeople)) {
-    maxPeople = prog.maxPeople;
-  }
-
-  let groupToReturn = null;
-
-  if (editingGroupId) {
-    const g = groups.find(x => x.id === editingGroupId);
-    if (g) {
-      // Сохраняем старый статус для проверки
-      const oldStatus = g.status;
-      
-      g.name = name;
-      g.programId = programId;
-      g.programName = prog ? prog.name : '';
-      g.startDate = startDate;
-      g.endDate = endDate;
-      g.status = status;
-      g.notes = notes;
-      g.maxPeople = maxPeople;
-      
-      // Если статус изменился на "завершена" — добавляем поездки участникам
-      if (status === 'завершена' && oldStatus !== 'завершена') {
-        // Показываем подтверждение через confirmDialog
-        const memberCount = (g.members || []).length;
-        const registeredCount = (g.members || []).filter(m => m.userId).length;
-        
-        confirmDialog(
-          'Группа «' + g.name + '» будет отмечена как завершённая.\n' +
-          'Участников в группе: ' + memberCount + '\n' +
-          'Зарегистрированных участников: ' + registeredCount + '\n\n' +
-          'Путешествие будет добавлено в историю всем зарегистрированным участникам.',
-          { icon: '✅', title: 'Завершить группу?', ok: 'Завершить', danger: false }
-        ).then(ok => {
-          if (ok) {
-            // Обновляем статус и завершаем группу
-            g.status = 'завершена';
-            finalizeGroup(g);
-            // Сохраняем после подтверждения
-            saveState('groups', groups);
-            syncGroupToSheets(g);
-            closeModal('group-modal');
-            loadAdminGroups();
-            // Обновляем статистику если нужно
-            if (currentUser && currentUser.role === 'owner') {
-              loadAdminStats();
-            }
-            showToast('Группа завершена ✓');
-          } else {
-            // Возвращаем старый статус, если пользователь отменил
-            g.status = oldStatus;
-            showToast('Изменение отменено');
-          }
-        });
-        return;
-      }
-      
-      groupToReturn = g;
+    const prog = programs.find(p => p.id === programId);
+    if (prog && (!maxPeople || maxPeople > prog.maxPeople)) {
+        maxPeople = prog.maxPeople;
     }
-    showToast('Группа обновлена ✓');
-  } else {
-    const newGroup = {
-      id: groups.length > 0 ? Math.max(...groups.map(g => g.id)) + 1 : 1,
-      name: name,
-      programId: programId,
-      programName: prog ? prog.name : '',
-      startDate: startDate,
-      endDate: endDate,
-      status: status,
-      notes: notes,
-      maxPeople: maxPeople,
-      members: [],
-      createdAt: new Date().toISOString().slice(0, 10)
-    };
-    groups.push(newGroup);
-    groupToReturn = newGroup;
-    showToast('Группа создана ✓');
-  }
 
-  saveState('groups', groups);
-  
-  if (groupToReturn) {
-    syncGroupToSheets(groupToReturn);
-  }
+    let groupToReturn = null;
 
-  closeModal('group-modal');
-  loadAdminGroups();
-  // Обновляем статистику если нужно
-  if (currentUser && currentUser.role === 'owner') {
-    loadAdminStats();
-  }
+    if (editingGroupId) {
+        const g = groups.find(x => x.id === editingGroupId);
+        if (g) {
+            const oldStatus = g.status;
+            
+            // ✅ ПРОВЕРКА: если группа уже завершена, нельзя изменить статус обратно
+            if (oldStatus === 'завершена' && status !== 'завершена') {
+                confirmDialog(
+                    'Группа уже имеет статус "Завершена".\n' +
+                    'Изменение статуса может привести к дублированию поездок.\n' +
+                    'Продолжить?',
+                    { icon: '⚠️', title: 'Внимание!', ok: 'Продолжить', danger: true }
+                ).then(ok => {
+                    if (!ok) return;
+                    g.status = status;
+                    saveState('groups', groups);
+                    syncGroupToSheets(g);
+                    closeModal('group-modal');
+                    loadAdminGroups();
+                    showToast('Статус изменён');
+                });
+                return;
+            }
+            
+            // ✅ Если статус меняется на "завершена" - проверяем, были ли уже добавлены поездки
+            if (status === 'завершена' && oldStatus !== 'завершена') {
+                // Проверяем, есть ли уже поездки у участников
+                const existingPurchases = purchases.filter(p => p.groupId === g.id);
+                if (existingPurchases.length > 0) {
+                    showToast('⚠️ Поездки уже добавлены участникам');
+                    g.status = 'завершена';
+                    saveState('groups', groups);
+                    syncGroupToSheets(g);
+                    closeModal('group-modal');
+                    loadAdminGroups();
+                    return;
+                }
+                
+                const memberCount = (g.members || []).length;
+                const registeredCount = (g.members || []).filter(m => m.userId).length;
+                
+                confirmDialog(
+                    'Группа «' + g.name + '» будет отмечена как завершённая.\n' +
+                    'Участников в группе: ' + memberCount + '\n' +
+                    'Зарегистрированных участников: ' + registeredCount + '\n\n' +
+                    'Путешествие будет добавлено в историю всем зарегистрированным участникам.',
+                    { icon: '✅', title: 'Завершить группу?', ok: 'Завершить', danger: false }
+                ).then(ok => {
+                    if (ok) {
+                        g.status = 'завершена';
+                        // ✅ Передаем флаг, что это завершение через сохранение
+                        finalizeGroup(g, true);
+                        saveState('groups', groups);
+                        syncGroupToSheets(g);
+                        closeModal('group-modal');
+                        loadAdminGroups();
+                        if (currentUser && currentUser.role === 'owner') {
+                            loadAdminStats();
+                        }
+                        showToast('Группа завершена ✓');
+                    } else {
+                        g.status = oldStatus;
+                        showToast('Изменение отменено');
+                    }
+                });
+                return;
+            }
+            
+            g.name = name;
+            g.programId = programId;
+            g.programName = prog ? prog.name : '';
+            g.startDate = startDate;
+            g.endDate = endDate;
+            g.status = status;
+            g.notes = notes;
+            g.maxPeople = maxPeople;
+            groupToReturn = g;
+        }
+        showToast('Группа обновлена ✓');
+    } else {
+        const newGroup = {
+            id: groups.length > 0 ? Math.max(...groups.map(g => g.id)) + 1 : 1,
+            name: name,
+            programId: programId,
+            programName: prog ? prog.name : '',
+            startDate: startDate,
+            endDate: endDate,
+            status: status,
+            notes: notes,
+            maxPeople: maxPeople,
+            members: [],
+            createdAt: new Date().toISOString().slice(0, 10)
+        };
+        groups.push(newGroup);
+        groupToReturn = newGroup;
+        showToast('Группа создана ✓');
+    }
+
+    if (groupToReturn) {
+        saveState('groups', groups);
+        syncGroupToSheets(groupToReturn);
+    }
+
+    closeModal('group-modal');
+    loadAdminGroups();
+    if (currentUser && currentUser.role === 'owner') {
+        loadAdminStats();
+    }
 }
 
 // Вспомогательная функция для синхронизации группы
@@ -8403,6 +8488,12 @@ async function deleteGroup(id) {
 function openAddMember(groupId) {
   const g = groups.find(x => x.id === groupId);
   if (!g) return;
+
+  // ✅ ЗАПРЕТ ДОБАВЛЕНИЯ В ЗАВЕРШЕННУЮ ГРУППУ
+    if (g.status === 'завершена') {
+        showToast('❌ В завершенную группу нельзя добавлять участников');
+        return;
+    }
 
   const filled = (g.members || []).length;
   const max = g.maxPeople || 999;
@@ -8759,145 +8850,144 @@ function confirmDeleteGroupMember() {
   
   // === СМЕНА СТАТУСА ГРУППЫ ===
 async function cycleGroupStatus(groupId) {
-  const g = groups.find(x => x.id === groupId);
-  if (!g) return;
+    const g = groups.find(x => x.id === groupId);
+    if (!g) return;
 
-  const order = ['набор', 'укомплектована', 'в пути', 'завершена', 'отменена'];
-  const cur = order.indexOf(g.status);
-  
-  // Если статус не найден в списке, устанавливаем первый
-  if (cur === -1) {
-    g.status = 'набор';
+    const order = ['набор', 'укомплектована', 'в пути', 'завершена', 'отменена'];
+    const cur = order.indexOf(g.status);
+    
+    if (cur === -1) {
+        g.status = 'набор';
+        saveState('groups', groups);
+        syncGroupToSheets(g);
+        loadAdminGroups();
+        return;
+    }
+    
+    const next = order[(cur + 1) % order.length];
+
+    // ✅ Запрещаем изменение статуса завершенной группы
+    if (g.status === 'завершена') {
+        showToast('❌ Нельзя изменить статус завершенной группы');
+        return;
+    }
+
+    if (next === 'завершена') {
+        const existingPurchases = purchases.filter(p => p.groupId === g.id);
+        if (existingPurchases.length > 0) {
+            showToast('⚠️ Поездки уже добавлены участникам');
+            g.status = 'завершена';
+            saveState('groups', groups);
+            syncGroupToSheets(g);
+            loadAdminGroups();
+            return;
+        }
+        
+        const memberCount = (g.members || []).length;
+        const registeredCount = (g.members || []).filter(m => m.userId).length;
+        
+        const ok = await confirmDialog(
+            'Группа «' + g.name + '» будет отмечена как завершённая.\n' +
+            'Участников в группе: ' + memberCount + '\n' +
+            'Зарегистрированных участников: ' + registeredCount + '\n\n' +
+            'Путешествие будет добавлено в историю всем зарегистрированным участникам.',
+            { icon: '✅', title: 'Завершить группу?', ok: 'Завершить', danger: false }
+        );
+        if (!ok) return;
+        
+        g.status = 'завершена';
+        const added = finalizeGroup(g);
+        if (added > 0) {
+            showToast('✅ Группа завершена, добавлено ' + added + ' поездок');
+        } else {
+            showToast('✅ Группа завершена');
+        }
+        
+    } else if (next === 'отменена') {
+        const ok = await confirmDialog(
+            'Группа «' + g.name + '» будет отмечена как отменённая.',
+            { icon: '❌', title: 'Отменить группу?', ok: 'Да, отменить', danger: true }
+        );
+        if (!ok) return;
+        g.status = 'отменена';
+        
+    } else {
+        g.status = next;
+    }
+
     saveState('groups', groups);
     syncGroupToSheets(g);
     loadAdminGroups();
-    return;
-  }
-  
-  const next = order[(cur + 1) % order.length];
-
-  // Для финальных статусов — спросить подтверждение
-  if (next === 'завершена') {
-    if (g.status === 'завершена') {
-      showToast('Группа уже завершена');
-      return;
+    
+    if (currentUser && currentUser.role === 'owner') {
+        loadAdminStats();
     }
-    
-    const memberCount = (g.members || []).length;
-    const registeredCount = (g.members || []).filter(m => m.userId).length;
-    
-    // Проверяем, есть ли уже поездки у участников
-    const existingPurchases = purchases.filter(p => p.groupId === g.id);
-    if (existingPurchases.length > 0) {
-      showToast('⚠️ Поездки уже добавлены участникам');
-      g.status = 'завершена';
-      saveState('groups', groups);
-      syncGroupToSheets(g);
-      loadAdminGroups();
-      return;
-    }
-    
-    const ok = await confirmDialog(
-      'Группа «' + g.name + '» будет отмечена как завершённая.\n' +
-      'Участников в группе: ' + memberCount + '\n' +
-      'Зарегистрированных участников: ' + registeredCount + '\n\n' +
-      'Путешествие будет добавлено в историю всем зарегистрированным участникам.',
-      { icon: '✅', title: 'Завершить группу?', ok: 'Завершить', danger: false }
-    );
-    if (!ok) return;
-    
-    g.status = 'завершена';
-    // Записываем поездки участникам
-    const added = finalizeGroup(g);
-    if (added > 0) {
-      showToast('✅ Группа завершена, добавлено ' + added + ' поездок');
-    } else {
-      showToast('✅ Группа завершена');
-    }
-    
-  } else if (next === 'отменена') {
-    if (g.status === 'отменена') {
-      showToast('Группа уже отменена');
-      return;
-    }
-    const ok = await confirmDialog(
-      'Группа «' + g.name + '» будет отмечена как отменённая.',
-      { icon: '❌', title: 'Отменить группу?', ok: 'Да, отменить', danger: true }
-    );
-    if (!ok) return;
-    g.status = 'отменена';
-    
-  } else {
-    g.status = next;
-  }
-
-  saveState('groups', groups);
-  syncGroupToSheets(g);
-  loadAdminGroups();
-  
-  if (currentUser && currentUser.role === 'owner') {
-    loadAdminStats();
-  }
-  showToast('Статус изменён: ' + g.status);
+    showToast('Статус изменён: ' + g.status);
 }
 
-
-// === ЗАВЕРШЕНИЕ ГРУППЫ — запись в историю поездок ===
-function finalizeGroup(g) {
-  const prog = programs.find(p => p.id === g.programId);
-  if (!prog) {
-    showToast('Программа не найдена, поездка не добавлена');
-    return 0;
-  }
-
-  let added = 0;
-  const today = g.endDate || new Date().toISOString().slice(0, 10);
-
-  (g.members || []).forEach(member => {
-    if (!member.userId) return;
-
-    // Проверяем, не добавлена ли уже эта поездка
-    const already = purchases.find(
-      p => p.userId === member.userId && p.programId === g.programId && p.groupId === g.id
-    );
-    if (already) {
-      already.date = today;
-      already.status = 'завершено';
-      return;
+// Обновленная функция finalizeGroup - проверяем дубликаты
+function finalizeGroup(g, isManualSave = false) {
+    const prog = programs.find(p => p.id === g.programId);
+    if (!prog) {
+        showToast('Программа не найдена, поездка не добавлена');
+        return 0;
     }
 
-    const price = parseFloat(member.amount) || prog.price || 0;
+    // ✅ ПРОВЕРКА: есть ли уже поездки для этой группы
+    const existingPurchases = purchases.filter(p => p.groupId === g.id);
+    if (existingPurchases.length > 0) {
+        console.log('⚠️ Поездки для группы уже добавлены:', existingPurchases.length);
+        showToast('⚠️ Поездки уже добавлены участникам');
+        return 0;
+    }
+
+    let added = 0;
+    const today = g.endDate || new Date().toISOString().slice(0, 10);
+
+    (g.members || []).forEach(member => {
+        if (!member.userId) return;
+
+        // ✅ Проверяем дубликаты по userId + groupId
+        const already = purchases.find(
+            p => p.userId === member.userId && p.groupId === g.id
+        );
+        if (already) {
+            console.log('⚠️ Участник уже имеет поездку в этой группе:', member.userId);
+            return;
+        }
+
+        const price = parseFloat(member.amount) || prog.price || 0;
+        
+        const purchase = {
+            id: purchases.length > 0 ? Math.max(...purchases.map(p => p.id)) + 1 : 1,
+            userId: member.userId,
+            programId: g.programId,
+            price: price,
+            date: today,
+            status: 'завершено',
+            groupId: g.id,
+            groupName: g.name,
+            programName: prog.name
+        };
+
+        purchases.push(purchase);
+        added++;
+
+        gasPost({ 
+            action: 'upsert', 
+            sheet: 'purchases', 
+            data: purchase 
+        }).catch(() => {});
+    });
+
+    if (added > 0) {
+        saveState('purchases', purchases);
+        showToast('✅ Путешествие добавлено в историю ' + added + ' участникам!');
+    } else {
+        showToast('⚠️ Новых поездок не добавлено');
+    }
     
-    const purchase = {
-      id: purchases.length > 0 ? Math.max(...purchases.map(p => p.id)) + 1 : 1,
-      userId: member.userId,
-      programId: g.programId,
-      price: price,
-      date: today,
-      status: 'завершено',
-      groupId: g.id,
-      groupName: g.name,
-      programName: prog.name
-    };
-
-    purchases.push(purchase);
-    added++;
-
-    gasPost({ 
-      action: 'upsert', 
-      sheet: 'purchases', 
-      data: purchase 
-    }).catch(() => {});
-  });
-
-  if (added > 0) {
-    saveState('purchases', purchases);
-    showToast('✅ Путешествие добавлено в историю ' + added + ' участникам!');
-  }else {
-    showToast('⚠️ Новых поездок не добавлено (возможно, уже были добавлены)');
-  }
-  
-  return added;
+    return added;
 }
   
 // === ОТКРЫТИЕ СПИСКА ПОЕЗДОК ПОЛЬЗОВАТЕЛЯ ===
