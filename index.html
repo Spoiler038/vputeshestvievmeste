@@ -6491,8 +6491,8 @@ function loadAdminPrograms() {
         <td style="vertical-align:middle;"><strong>${p.name}</strong></td>
         <td style="vertical-align:middle;"><span class="tag tag-green">${p.season}</span></td>
         <td style="vertical-align:middle;">${p.transport}</td>
-        <td style="vertical-align:middle;text-align:center;">${p.days}</td>
-        <td style="vertical-align:middle;font-weight:600;text-align:right;padding-right:16px;">${p.price.toLocaleString('ru')} ₽</td>
+        <td style="vertical-align:middle;">${p.days}</td>
+        <td style="vertical-align:middle;font-weight:600;padding-right:16px;">${p.price.toLocaleString('ru')} ₽</td>
         <td style="vertical-align:middle;padding:8px 12px;">
             <div style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;white-space:nowrap;">
                 <button class="btn btn-edit" style="padding:4px 10px;font-size:11px;line-height:1.4;height:28px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:none;border-radius:6px;cursor:pointer;background:var(--accent2);color:white;" onclick="event.stopPropagation();openEditProgram(${p.id})">Изменить</button>
