@@ -1077,51 +1077,21 @@ html.modal-open {overflow: hidden !important;}
   .mobile-admin-toggle.visible {
     display: inline-flex !important;
   }
+[id^="group-members-"] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
 
-   #groups-list .admin-section,
-  [id^="group-members-"],
-  #group-members-1,
-  #group-members-2,
-  #group-members-3,
-  #group-members-4,
-  #group-members-5,
-  #group-members-6,
-  #group-members-7,
-  #group-members-8,
-  #group-members-9,
-  #group-members-10,
-  #group-members-11,
-  #group-members-12,
-  #group-members-13,
-  #group-members-14,
-  #group-members-15,
-  #group-members-16,
-  #group-members-17,
-  #group-members-18,
-  #group-members-19,
-  #group-members-20,
-  [id^="group-members-"] {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-  }
-  
-  [id^="group-members-"] table {
-    display: block !important;
-    overflow-x: auto !important;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
+[id^="group-members-"] table {
     min-width: 500px;
-    width: 100%;
-  }
-  
-  [id^="group-members-"] table td,
-  [id^="group-members-"] table th {
+    font-size: 11px;
+}
+
+[id^="group-members-"] table th,
+[id^="group-members-"] table td {
     padding: 6px 10px !important;
     font-size: 11px !important;
-    white-space: nowrap;
-  }
-  
+}  
 }
 
 /* ===== ОТКЛЮЧАЕМ ЭФФЕКТЫ "BOUNCE" В PWA ===== */
@@ -1163,74 +1133,52 @@ input[type=number] {
   #user-trips-modal .btn-danger svg {
     width: 14px;
     height: 14px;
-  }  
+  }
 
-  /* ===== ГРУППЫ — ОТОБРАЖЕНИЕ УЧАСТНИКОВ ===== */
-#groups-list .admin-section,
+  /* ===== ГРУППЫ — ОТОБРАЖЕНИЕ УЧАСТНИКОВ (УПРОЩЁННО) ===== */
 [id^="group-members-"] {
-    overflow-x: auto !important;
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    width: 100%;
 }
 
-/* Стиль для контейнера участников внутри карточки группы */
-[id^="group-members-"] {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
-/* Стиль для таблицы участников */
 [id^="group-members-"] table {
-    display: table !important;
-    overflow-x: auto !important;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-    min-width: 100%;
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
 }
 
-/* Заголовки таблицы участников */
 [id^="group-members-"] table th {
-    padding: 8px 14px !important;
-    text-align: left !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.08em !important;
-    color: var(--text-muted) !important;
-    background: var(--bg) !important;
-    border-bottom: 1px solid var(--border) !important;
-    white-space: nowrap !important;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 2 !important;
+    padding: 8px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
 }
 
-/* Ячейки таблицы участников */
 [id^="group-members-"] table td {
-    padding: 9px 14px !important;
-    font-size: 12px !important;
-    border-top: 1px solid var(--border) !important;
-    white-space: nowrap !important;
-    vertical-align: middle !important;
+    padding: 9px 14px;
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    white-space: nowrap;
+    vertical-align: middle;
 }
 
-/* Кнопка удаления в таблице */
 [id^="group-members-"] table .btn-danger {
-    padding: 4px 8px !important;
-    font-size: 11px !important;
-    background: #C0392B !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 6px !important;
-    cursor: pointer !important;
+    padding: 4px 8px;
+    font-size: 11px;
+    background: #C0392B;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
-/* Стилизация скроллбара для таблиц групп */
+/* Стилизация скроллбара */
 [id^="group-members-"]::-webkit-scrollbar {
     height: 6px;
     width: 6px;
