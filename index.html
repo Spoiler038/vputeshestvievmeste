@@ -1330,6 +1330,140 @@ input[type=number] {
     color: var(--text-muted);
     stroke: var(--text-muted);
 }
+
+  /* ===== ФОТО-ВЬЮВЕР ===== */
+#photo-viewer {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+#photo-viewer.active {
+    display: flex;
+}
+
+#photo-viewer:hover .photo-nav-btn {
+    opacity: 1 !important;
+}
+
+.photo-nav-btn {
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.photo-nav-btn:hover {
+    background: rgba(255,255,255,0.2) !important;
+}
+
+#photo-viewer .photo-nav-btn {
+    opacity: 0;
+}
+#photo-viewer:hover .photo-nav-btn {
+    opacity: 0.6;
+}
+#photo-viewer .photo-nav-btn:hover {
+    opacity: 1;
+}
+
+/* Мобильные кнопки */
+@media (max-width: 768px) {
+    #photo-viewer-mobile-nav {
+        display: flex !important;
+    }
+    #photo-viewer .photo-nav-btn {
+        display: none;
+    }
+    #photo-viewer-footer {
+        font-size: 12px;
+        padding: 8px 16px;
+        bottom: 20px;
+        max-width: 90%;
+    }
+    #photo-viewer-content {
+        margin-bottom: 20px;
+    }
+    #photo-viewer-img {
+        max-height: 65vh;
+    }
+
+  .steps .step {
+        display: flex;
+        gap: 15px;
+        align-items: flex-start;
+        padding: 0;
+        text-align: left;
+    }
+    .step-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
+    .step-text {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        text-align: left;
+        display: block;
+        width: 100%;
+    }
+    .step-text br {
+        display: none;
+    }
+    .step-num {
+        flex-shrink: 0;
+        margin: 0;
+    }
+    .step-content {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+/* Стили для сетки галереи на странице */
+.gallery-grid {
+    display: grid;
+    gap: 16px;
+}
+.gallery-grid .gallery-item {
+    aspect-ratio: 1/1;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--bg2);
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.gallery-grid .gallery-item:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-lg);
+    z-index: 2;
+}
+.gallery-grid .gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.gallery-grid .gallery-item .gallery-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 10px 8px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.6));
+    color: white;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.gallery-grid .gallery-item:hover .gallery-overlay {
+    opacity: 1;
+}
+.gallery-grid .gallery-item .gallery-overlay .author {
+    font-weight: 600;
+}
+.gallery-grid .gallery-item .gallery-overlay .program {
+    font-size: 10px;
+    opacity: 0.7;
+}
 </style>
 </head>
 <body>
@@ -1342,7 +1476,7 @@ input[type=number] {
     <a href="javascript:void(0)" onclick="smoothScroll('programs')">ПРОГРАММЫ</a>
     <a href="javascript:void(0)" onclick="smoothScroll('about')">ОБ ОСНОВАТЕЛЕ</a>
     <a href="javascript:void(0)" onclick="smoothScroll('how')">КАК МЫ ЕЗДИМ</a>
-    <a href="javascript:void(0)" onclick="smoothScroll('gallery')"></a>
+    <a href="javascript:void(0)" onclick="showPage('gallery')">ГАЛЕРЕЯ</a>
     <a href="javascript:void(0)" onclick="smoothScroll('contact')">КОНТАКТЫ</a>
     </div>
     <div class="nav-auth">
@@ -1733,6 +1867,94 @@ input[type=number] {
 
 </div>
 <!-- ===== КОНЕЦ ГЛАВНОЙ СТРАНИЦЫ ===== -->
+
+<!-- ===== СТРАНИЦА ГАЛЕРЕИ ===== -->
+<div id="page-gallery" class="hidden" style="min-height:100vh;padding-top:80px;background:var(--bg);">
+    <div class="container" style="padding-top:24px;">
+        <!-- Шапка -->
+        <div class="section-header" style="margin-bottom:32px;">
+            <div>
+                <span class="section-label">Сообщество</span>
+                <h2 class="section-title" style="font-size:clamp(30px,5vw,50px);">
+                    <em style="color:var(--accent2);">Все фото</em> 
+                    <span style="font-size:18px;font-weight:400;color:var(--text-muted);" id="gallery-total-count">путешественников</span>
+                </h2>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="showPage('home')">← На сайт</button>
+        </div>
+
+        <!-- Фильтры и сортировка -->
+        <div class="filter-bar" style="margin-bottom:24px;">
+            <div class="filter-row" style="grid-template-columns: 1fr 1fr auto;">
+                <div class="filter-group">
+                    <label>Программа</label>
+                    <select class="filter-select" id="gallery-filter-program" onchange="applyGalleryFilters()">
+                        <option value="">Все программы</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Сортировка</label>
+                    <select class="filter-select" id="gallery-filter-sort" onchange="applyGalleryFilters()">
+                        <option value="newest">Сначала новые</option>
+                        <option value="oldest">Сначала старые</option>
+                        <option value="popular">По популярности</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="display:flex;align-items:flex-end;gap:8px;">
+                    <label style="margin-bottom:0;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Масштаб</label>
+                    <div style="display:flex;gap:4px;">
+                        <button class="btn btn-outline btn-sm" onclick="changeGalleryGridSize(-1)" style="padding:4px 10px;font-size:14px;">−</button>
+                        <span id="gallery-grid-size-label" style="display:flex;align-items:center;padding:0 8px;font-size:13px;font-weight:500;min-width:50px;justify-content:center;">4</span>
+                        <button class="btn btn-outline btn-sm" onclick="changeGalleryGridSize(1)" style="padding:4px 10px;font-size:14px;">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="filter-actions" style="border-top:none;padding-top:8px;margin-top:0;">
+                <button class="btn btn-outline btn-sm" onclick="resetGalleryFilters()">Сбросить</button>
+            </div>
+        </div>
+
+        <!-- Сетка фото -->
+        <div class="gallery-grid" id="gallery-full-grid" style="grid-template-columns:repeat(4,1fr);">
+            <!-- Фото будут отображаться здесь -->
+        </div>
+
+        <!-- Сообщение, если фото нет -->
+        <div id="gallery-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text-muted);">
+            <div style="font-size:48px;margin-bottom:14px;">📸</div>
+            <h3 style="font-family:var(--font-family);font-size:24px;font-weight:500;margin-bottom:8px;">Пока нет фотографий</h3>
+            <p>Станьте первым, кто поделится впечатлениями!</p>
+        </div>
+
+        <!-- Кнопка "Загрузить ещё" (пагинация) -->
+        <div id="gallery-load-more" style="text-align:center;margin-top:32px;display:none;">
+            <button class="btn btn-outline" onclick="loadMoreGallery()">Загрузить ещё</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ФОТО-ВЬЮВЕР (полноэкранный просмотр) ===== -->
+<div id="photo-viewer" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+    <button id="photo-viewer-close" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:28px;cursor:pointer;padding:10px 16px;border-radius:50%;transition:background 0.2s;z-index:10;">✕</button>
+    
+    <div id="photo-viewer-content" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;position:relative;">
+        <button class="photo-nav-btn" id="photo-viewer-prev" style="position:absolute;left:20px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.4);border:none;color:white;font-size:32px;cursor:pointer;padding:16px 20px;border-radius:50%;transition:all 0.3s;z-index:5;opacity:0;">‹</button>
+        <img id="photo-viewer-img" style="max-width:100%;max-height:80vh;object-fit:contain;border-radius:8px;cursor:pointer;">
+        <button class="photo-nav-btn" id="photo-viewer-next" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.4);border:none;color:white;font-size:32px;cursor:pointer;padding:16px 20px;border-radius:50%;transition:all 0.3s;z-index:5;opacity:0;">›</button>
+    </div>
+    
+    <div id="photo-viewer-footer" style="position:absolute;bottom:30px;left:50%;transform:translateX(-50%);text-align:center;color:rgba(255,255,255,0.8);font-size:14px;background:rgba(0,0,0,0.5);padding:12px 24px;border-radius:12px;backdrop-filter:blur(10px);">
+        <span id="photo-viewer-caption"></span>
+        <span style="margin:0 12px;opacity:0.5;">·</span>
+        <span id="photo-viewer-counter"></span>
+    </div>
+    
+    <!-- Мобильные кнопки навигации под фото -->
+    <div id="photo-viewer-mobile-nav" style="display:none;position:absolute;bottom:90px;left:50%;transform:translateX(-50%);gap:40px;background:rgba(0,0,0,0.3);padding:8px 20px;border-radius:30px;backdrop-filter:blur(8px);">
+        <button onclick="photoViewerPrev()" style="background:none;border:none;color:white;font-size:28px;cursor:pointer;padding:4px 12px;">‹</button>
+        <button onclick="photoViewerNext()" style="background:none;border:none;color:white;font-size:28px;cursor:pointer;padding:4px 12px;">›</button>
+    </div>
+</div>
   
 <!-- ===== ЛИЧНЫЙ КАБИНЕТ ===== -->
 <div id="page-dashboard" class="hidden">
@@ -3219,20 +3441,24 @@ function updateProgress(percent) {
     }
     
     // Показываем/скрываем прогресс-бар
-    if (percent > 0 && percent < 100) {
+    // ✅ ИСПРАВЛЕНИЕ: скрываем только когда percent === 100 И больше не будет обновлений
+    if (percent >= 100) {
+        // Добавляем небольшую задержку перед скрытием
+        setTimeout(() => {
+            const pcBar = document.getElementById('pc-progress-bar');
+            if (pcBar) {
+                pcBar.style.display = 'none';
+            }
+            const mobBar = document.getElementById('mob-progress-bar');
+            if (mobBar) {
+                mobBar.style.display = 'none';
+            }
+        }, 500);
+    } else if (percent > 0) {
         const pcBar = document.getElementById('pc-progress-bar');
         if (pcBar) pcBar.style.display = 'block';
         const mobBar = document.getElementById('mob-progress-bar');
         if (mobBar) mobBar.style.display = 'block';
-    } else if (percent >= 100) {
-        const pcBar = document.getElementById('pc-progress-bar');
-        if (pcBar) {
-            setTimeout(() => { pcBar.style.display = 'none'; }, 500);
-        }
-        const mobBar = document.getElementById('mob-progress-bar');
-        if (mobBar) {
-            setTimeout(() => { mobBar.style.display = 'none'; }, 500);
-        }
     }
 }
 
@@ -4263,25 +4489,85 @@ function resetFilters() {
 const GALLERY_PREVIEW_COUNT = 6;
 
 function renderGallery() {
-  const grid = document.getElementById('gallery-grid');
-  const moreBtn = document.getElementById('gallery-more-btn');
-
-  if (!gallery.length) {
-    grid.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px 0;">Пока нет фотографий. Будьте первыми!</p>';
-    if (moreBtn) moreBtn.style.display = 'none';
-    return;
-  }
-
-  const preview = gallery.slice(-GALLERY_PREVIEW_COUNT);
-  grid.innerHTML = preview.map(item =>
-    `<div class="gallery-item" onclick="showAllGallery()">
-      ${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>📷</span>`}
-      <div class="gallery-meta">${item.caption} — ${item.author}</div>
-    </div>`
-  ).join('');
-
-  if (moreBtn) moreBtn.style.display = gallery.length > GALLERY_PREVIEW_COUNT ? '' : 'none';
+    // Обновляем превью на главной
+    const grid = document.getElementById('gallery-grid');
+    const moreBtn = document.getElementById('gallery-more-btn');
+    
+    if (!gallery.length) {
+        if (grid) grid.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px 0;">Пока нет фотографий. Будьте первыми!</p>';
+        if (moreBtn) moreBtn.style.display = 'none';
+        return;
+    }
+    
+    // Обновляем фильтр программ на странице галереи
+    updateGalleryProgramFilter();
+    
+    // Если страница галереи открыта, обновляем её
+    if (currentPage === 'gallery') {
+        renderGalleryPage();
+    }
+    
+    // Превью на главной
+    const preview = gallery.slice(-GALLERY_PREVIEW_COUNT);
+    if (grid) {
+        grid.innerHTML = preview.map(item =>
+            `<div class="gallery-item" onclick="showPage('gallery')">
+                ${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>📷</span>`}
+                <div class="gallery-meta">${item.caption} — ${item.author}</div>
+            </div>`
+        ).join('');
+    }
+    
+    if (moreBtn) moreBtn.style.display = gallery.length > GALLERY_PREVIEW_COUNT ? '' : 'none';
 }
+
+  function updateGalleryProgramFilter() {
+    const sel = document.getElementById('gallery-filter-program');
+    if (!sel) return;
+    
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Все программы</option>';
+    
+    // Получаем уникальные программы из фото
+    const programIds = [...new Set(gallery.map(g => g.programId).filter(id => id))];
+    programIds.forEach(id => {
+        const prog = programs.find(p => p.id === id);
+        if (prog) {
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = prog.name;
+            sel.appendChild(opt);
+        }
+    });
+    
+    if ([...sel.options].some(o => o.value === current)) sel.value = current;
+}
+
+// Модифицируем showPage для поддержки галереи
+const originalShowPage = showPage;
+showPage = function(page) {
+    // Вызываем оригинальную функцию
+    originalShowPage(page);
+    
+    if (page === 'gallery') {
+        // Показываем страницу галереи
+        const galleryPage = document.getElementById('page-gallery');
+        if (galleryPage) {
+            galleryPage.style.display = '';
+            galleryPage.classList.remove('hidden');
+            // Обновляем данные
+            updateGalleryProgramFilter();
+            renderGalleryPage();
+        }
+    } else {
+        // Скрываем галерею если она открыта
+        const galleryPage = document.getElementById('page-gallery');
+        if (galleryPage) {
+            galleryPage.style.display = 'none';
+            galleryPage.classList.add('hidden');
+        }
+    }
+};
 
 function showAllGallery() {
   const content = document.getElementById('gallery-modal-content');
@@ -4747,7 +5033,7 @@ function loadDashboard() {
         <div class="profile-info-label">О себе</div>${u.bio || '—'}
     </div>
     <div class="profile-info-item">
-        <div class="profile-info-label">Участник с</div>${u.joinedDate}
+        <div class="profile-info-label">Участник с</div>${u.joinedDate ? `<div style="font-size:10px;color:var(--text-muted);">с ${formatDateForDisplay(u.joinedDate)}</div>` : ''}
     </div>
 `;
 
@@ -9228,7 +9514,7 @@ async function cycleGroupStatus(groupId) {
 
     // ✅ Запрещаем изменение статуса завершенной группы
     if (g.status === 'завершена') {
-        showToast('❌ Нельзя изменить статус завершенной группы');
+        showToast('Нельзя изменить статус завершенной группы');
         return;
     }
 
@@ -10950,6 +11236,247 @@ function generateProgramPDF() {
     showToast('Ошибка создания PDF: ' + err.message);
   });
 }
+
+// ============================================================
+// === СТРАНИЦА ГАЛЕРЕИ =======================================
+// ============================================================
+
+let galleryPageSize = 4; // количество колонок
+let galleryCurrentPage = 0;
+const GALLERY_PER_PAGE = 24;
+let galleryFilteredPhotos = [];
+let galleryAllPhotos = [];
+
+// Состояние фото-вьювера
+let viewerPhotos = [];
+let viewerCurrentIndex = 0;
+
+function renderGalleryPage() {
+    const grid = document.getElementById('gallery-full-grid');
+    const empty = document.getElementById('gallery-empty');
+    const loadMore = document.getElementById('gallery-load-more');
+    
+    // Применяем фильтры и сортировку
+    applyGalleryFilters();
+    
+    const photos = galleryFilteredPhotos.length > 0 ? galleryFilteredPhotos : gallery;
+    
+    if (photos.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        loadMore.style.display = 'none';
+        document.getElementById('gallery-total-count').textContent = '0 фото';
+        return;
+    }
+    
+    empty.style.display = 'none';
+    document.getElementById('gallery-total-count').textContent = photos.length + ' фото';
+    
+    // Пагинация
+    const start = 0;
+    const end = Math.min(GALLERY_PER_PAGE * (galleryCurrentPage + 1), photos.length);
+    const pagePhotos = photos.slice(start, end);
+    
+    if (galleryCurrentPage === 0) {
+        grid.innerHTML = '';
+    }
+    
+    // Обновляем существующие или добавляем новые
+    const existingItems = grid.querySelectorAll('.gallery-item');
+    const existingCount = existingItems.length;
+    
+    // Если это первая страница или обновление фильтра, перерисовываем всё
+    if (galleryCurrentPage === 0 || galleryFilteredPhotos.length > 0) {
+        grid.innerHTML = '';
+    }
+    
+    // Находим фото, которые ещё не отображены
+    const newPhotos = galleryCurrentPage === 0 ? pagePhotos : pagePhotos.slice(existingCount);
+    
+    newPhotos.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'gallery-item';
+        const globalIndex = galleryCurrentPage === 0 ? index : existingCount + index;
+        div.onclick = () => openPhotoViewer(photos, globalIndex);
+        
+        const prog = programs.find(p => p.id === item.programId);
+        const programName = prog ? prog.name : '';
+        
+        div.innerHTML = `
+            ${item.url ? `<img src="${item.url}" alt="${item.caption}" loading="lazy" onerror="this.style.display='none'">` : `<span style="font-size:48px;">📷</span>`}
+            <div class="gallery-overlay">
+                <div class="author">${item.author || '—'}</div>
+                ${programName ? `<div class="program">${programName}</div>` : ''}
+                <div style="font-size:10px;opacity:0.5;">${item.createdAt || ''}</div>
+            </div>
+        `;
+        grid.appendChild(div);
+    });
+    
+    // Показываем/скрываем кнопку "Загрузить ещё"
+    if (photos.length > GALLERY_PER_PAGE * (galleryCurrentPage + 1)) {
+        loadMore.style.display = 'block';
+    } else {
+        loadMore.style.display = 'none';
+    }
+}
+
+function applyGalleryFilters() {
+    const programFilter = document.getElementById('gallery-filter-program').value;
+    const sortType = document.getElementById('gallery-filter-sort').value;
+    
+    let photos = [...gallery];
+    
+    // Фильтр по программе
+    if (programFilter) {
+        photos = photos.filter(p => String(p.programId) === programFilter);
+    }
+    
+    // Сортировка
+    switch(sortType) {
+        case 'newest':
+            photos.sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0));
+            break;
+        case 'oldest':
+            photos.sort((a, b) => new Date(a.createdAt || a.date || 0) - new Date(b.createdAt || b.date || 0));
+            break;
+        case 'popular':
+            // По количеству просмотров (если есть) или просто по дате
+            photos.sort((a, b) => (b.views || 0) - (a.views || 0));
+            break;
+    }
+    
+    galleryFilteredPhotos = photos;
+    galleryCurrentPage = 0;
+    renderGalleryPage();
+}
+
+function loadMoreGallery() {
+    galleryCurrentPage++;
+    renderGalleryPage();
+}
+
+function resetGalleryFilters() {
+    document.getElementById('gallery-filter-program').value = '';
+    document.getElementById('gallery-filter-sort').value = 'newest';
+    galleryFilteredPhotos = [];
+    galleryCurrentPage = 0;
+    renderGalleryPage();
+}
+
+function changeGalleryGridSize(delta) {
+    const sizes = [2, 3, 4, 5, 6];
+    let currentIndex = sizes.indexOf(galleryPageSize);
+    if (currentIndex === -1) currentIndex = 2; // 4 по умолчанию
+    
+    let newIndex = currentIndex + delta;
+    if (newIndex < 0) newIndex = 0;
+    if (newIndex >= sizes.length) newIndex = sizes.length - 1;
+    
+    galleryPageSize = sizes[newIndex];
+    document.getElementById('gallery-grid-size-label').textContent = galleryPageSize;
+    document.getElementById('gallery-full-grid').style.gridTemplateColumns = `repeat(${galleryPageSize}, 1fr)`;
+}
+
+// ============================================================
+// === ФОТО-ВЬЮВЕР ============================================
+// ============================================================
+
+function openPhotoViewer(photos, index) {
+    viewerPhotos = photos;
+    viewerCurrentIndex = index;
+    
+    const viewer = document.getElementById('photo-viewer');
+    const img = document.getElementById('photo-viewer-img');
+    const caption = document.getElementById('photo-viewer-caption');
+    const counter = document.getElementById('photo-viewer-counter');
+    
+    viewer.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    updateViewerPhoto();
+}
+
+function updateViewerPhoto() {
+    const photo = viewerPhotos[viewerCurrentIndex];
+    if (!photo) return;
+    
+    const img = document.getElementById('photo-viewer-img');
+    const caption = document.getElementById('photo-viewer-caption');
+    const counter = document.getElementById('photo-viewer-counter');
+    
+    img.src = photo.url;
+    caption.textContent = photo.caption || 'Без подписи';
+    counter.textContent = `${viewerCurrentIndex + 1} / ${viewerPhotos.length}`;
+    
+    // Обновляем состояние кнопок
+    document.getElementById('photo-viewer-prev').style.visibility = viewerCurrentIndex > 0 ? 'visible' : 'hidden';
+    document.getElementById('photo-viewer-next').style.visibility = viewerCurrentIndex < viewerPhotos.length - 1 ? 'visible' : 'hidden';
+}
+
+function photoViewerNext() {
+    if (viewerCurrentIndex < viewerPhotos.length - 1) {
+        viewerCurrentIndex++;
+        updateViewerPhoto();
+    }
+}
+
+function photoViewerPrev() {
+    if (viewerCurrentIndex > 0) {
+        viewerCurrentIndex--;
+        updateViewerPhoto();
+    }
+}
+
+function closePhotoViewer() {
+    document.getElementById('photo-viewer').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Инициализация фото-вьювера
+document.addEventListener('DOMContentLoaded', function() {
+    const viewer = document.getElementById('photo-viewer');
+    
+    // Закрытие по ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closePhotoViewer();
+        if (e.key === 'ArrowLeft') photoViewerPrev();
+        if (e.key === 'ArrowRight') photoViewerNext();
+    });
+    
+    // Кнопки навигации
+    document.getElementById('photo-viewer-prev').onclick = photoViewerPrev;
+    document.getElementById('photo-viewer-next').onclick = photoViewerNext;
+    document.getElementById('photo-viewer-close').onclick = closePhotoViewer;
+    
+    // Закрытие по клику на фон
+    document.getElementById('photo-viewer-content').onclick = function(e) {
+        if (e.target === this) closePhotoViewer();
+    };
+    
+    // Свайпы для мобильных
+    let startX = 0;
+    let startY = 0;
+    const img = document.getElementById('photo-viewer-img');
+    
+    img.addEventListener('touchstart', function(e) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    }, { passive: true });
+    
+    img.addEventListener('touchend', function(e) {
+        const endX = e.changedTouches[0].clientX;
+        const endY = e.changedTouches[0].clientY;
+        const diffX = startX - endX;
+        const diffY = startY - endY;
+        
+        if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+            if (diffX > 0) photoViewerNext();
+            else photoViewerPrev();
+        }
+    }, { passive: true });
+});  
+  
 // ============================================================
 // === ИНИЦИАЛИЗАЦИЯ ===========================================
 // ============================================================
