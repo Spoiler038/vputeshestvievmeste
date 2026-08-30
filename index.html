@@ -1289,6 +1289,40 @@ input[type=number] {
     background: var(--accent);
     border-radius: 4px;
 }
+  .steps .step-text {
+    text-align: justify;
+    text-justify: inter-word;
+    padding-right: 4px;
+}
+  .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+    }
+    
+    .gallery-item {
+        aspect-ratio: 1/1;
+        border-radius: 8px;
+    }
+    
+    .gallery-item .gallery-meta {
+        font-size: 10px;
+        padding: 12px 8px 6px;
+        opacity: 1;
+        background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    }
+}
+  .gallery-grid .gallery-item {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gallery-grid .gallery-item:hover {
+    transform: scale(1.03) rotate(-1deg);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: 2;
+}
+
+.gallery-grid .gallery-item:nth-child(odd):hover {
+    transform: scale(1.03) rotate(1deg);
 }
   .photo-upload-area .upload-icon svg {
     width: 48px;
@@ -1308,7 +1342,7 @@ input[type=number] {
     <a href="javascript:void(0)" onclick="smoothScroll('programs')">ПРОГРАММЫ</a>
     <a href="javascript:void(0)" onclick="smoothScroll('about')">ОБ ОСНОВАТЕЛЕ</a>
     <a href="javascript:void(0)" onclick="smoothScroll('how')">КАК МЫ ЕЗДИМ</a>
-    <a href="javascript:void(0)" onclick="smoothScroll('gallery')">ГАЛЕРЕЯ</a>
+    <a href="javascript:void(0)" onclick="smoothScroll('gallery')"></a>
     <a href="javascript:void(0)" onclick="smoothScroll('contact')">КОНТАКТЫ</a>
     </div>
     <div class="nav-auth">
@@ -1593,13 +1627,13 @@ input[type=number] {
   </div>
 </section>
 
-<!-- ===== ГАЛЕРЕЯ ===== -->
+<!-- =====  ===== -->
 <section class="section section-alt" id="gallery">
   <div class="container">
     <div class="section-header">
       <div>
         <span class="section-label">Сообщество</span>
-        <h2 class="section-title">Галерея <em>путешественников</em></h2>
+        <h2 class="section-title"> <em>путешественников</em></h2>
       </div>
       <a href="#" onclick="smoothScroll('gallery');showAllGallery();return false;" style="font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap;align-self:flex-end;">Все фото →</a>
     </div>
@@ -1680,7 +1714,7 @@ input[type=number] {
         <h4>Разделы</h4>
         <a href="#" onclick="smoothScroll('programs')">Программы</a>
         <a href="#" onclick="smoothScroll('about')">Об основателе</a>
-        <a href="#" onclick="smoothScroll('gallery')">Галерея</a>
+        <a href="#" onclick="smoothScroll('gallery')"></a>
         <a href="#" onclick="smoothScroll('contact')">Контакты</a>
       </div>
       <div class="footer-col">
@@ -1791,7 +1825,7 @@ input[type=number] {
   <!-- ПОДСКАЗКА ДЛЯ ПОЛЬЗОВАТЕЛЯ -->
   <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:16px 20px;margin-bottom:20px;border-left:4px solid var(--accent);">
     <div style="display:flex;align-items:flex-start;gap:12px;">
-      <span style="font-size:24px;">📸</span>
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>     <circle cx="12" cy="13" r="4"/> </svg>
       <div>
         <div style="font-weight:600;font-size:15px;color:var(--accent);">Добавляйте фото из путешествий!</div>
         <div style="font-size:13px;color:var(--text-muted);line-height:1.6;">
@@ -2416,11 +2450,11 @@ input[type=number] {
   </div>
 </div>
 
-<!-- Модалка: Галерея -->
+<!-- Модалка:  -->
 <div class="modal-overlay" id="gallery-modal">
   <div class="modal" style="max-width:960px;">
     <div class="modal-header">
-      <h2 class="modal-title">Галерея путешественников</h2>
+      <h2 class="modal-title"> путешественников</h2>
       <button class="modal-close" onclick="closeModal('gallery-modal')">✕</button>
     </div>
     <div class="modal-scroll">
@@ -4267,24 +4301,112 @@ function showAllGallery() {
   content.innerHTML = Object.entries(byProgram).map(([progId, photos]) => {
     const prog = progId !== 'general' ? programs.find(p => p.id === parseInt(progId)) : null;
     const title = prog ? prog.name : 'Общие фото';
+    const emoji = prog ? '🗺' : '📷';
+    
     return `
       <div style="margin-bottom:32px;">
         <h4 style="font-family:var(--font-family);font-size:17px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;color:var(--text);">
-          ${prog ? '🗺' : '📷'} ${title}
+          ${emoji} ${title}
           <span style="font-size:12px;font-weight:400;color:var(--text-muted);">${photos.length} фото</span>
         </h4>
         <div class="gallery-grid">
           ${photos.map(item => `
-            <div class="gallery-item">
+            <div class="gallery-item" onclick="openPhotoFullscreen('${item.url}', '${item.caption} — ${item.author}')">
               ${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>📷</span>`}
               <div class="gallery-meta">${item.caption} — ${item.author}</div>
             </div>
           `).join('')}
         </div>
-      </div>`;
+      </div>
+    `;
   }).join('');
 
   openModal('gallery-modal');
+}
+  
+  // Открытие фото в полный экран
+function openPhotoFullscreen(imgSrc, caption) {
+    // Создаем оверлей
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(0,0,0,0.92);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 20px;
+    `;
+    
+    // Контейнер для фото и подписи
+    const container = document.createElement('div');
+    container.style.cssText = `
+        max-width: 95vw;
+        max-height: 95vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    `;
+    
+    // Фото
+    const img = document.createElement('img');
+    img.src = imgSrc;
+    img.style.cssText = `
+        max-width: 100%;
+        max-height: 85vh;
+        object-fit: contain;
+        border-radius: 8px;
+        box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+    `;
+    
+    // Подпись
+    const captionEl = document.createElement('div');
+    captionEl.textContent = caption || '';
+    captionEl.style.cssText = `
+        color: white;
+        font-size: 14px;
+        text-align: center;
+        opacity: 0.8;
+        font-family: var(--font-family);
+    `;
+    
+    container.appendChild(img);
+    container.appendChild(captionEl);
+    overlay.appendChild(container);
+    
+    // Закрытие по клику
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay || e.target === img) {
+            document.body.removeChild(overlay);
+            document.body.style.overflow = '';
+        }
+    });
+    
+    // Закрытие по ESC
+    document.addEventListener('keydown', function closeOnEsc(e) {
+        if (e.key === 'Escape') {
+            if (document.body.contains(overlay)) {
+                document.body.removeChild(overlay);
+                document.body.style.overflow = '';
+                document.removeEventListener('keydown', closeOnEsc);
+            }
+        }
+    });
+    
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+}
+
+  // Закрытие полноэкранного фото (можно вызвать извне)
+function closePhotoFullscreen() {
+    const overlay = document.querySelector('div[style*="position: fixed; inset: 0px; z-index: 1000;"]');
+    if (overlay && overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+        document.body.style.overflow = '';
+    }
 }
   // ============================================================
 // === КАК МЫ ПУТЕШЕСТВУЕМ =====================================
@@ -4668,6 +4790,7 @@ function loadDashboard() {
   updatePhotoProgramSelect(u.id);
 }
 
+
 function updatePhotoProgramSelect(userId) {
   const sel = document.getElementById('photo-program');
   if (!sel) return;
@@ -4729,6 +4852,87 @@ function renderUserGallery(userId) {
       </div>
     `;
   }).join('');
+}
+
+
+  // Удаление фото (для администратора)
+async function deletePhoto(photoId) {
+    const photo = gallery.find(g => g.id === photoId);
+    if (!photo) return;
+    
+    // Проверка прав: администратор может удалить любое фото
+    const isAdmin = currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin');
+    const isOwner = currentUser && currentUser.id === photo.userId;
+    
+    if (!isAdmin && !isOwner) {
+        showToast('У вас нет прав на удаление этого фото');
+        return;
+    }
+    
+    const ok = await confirmDialog('Удалить это фото?', { 
+        icon: '🗑', 
+        title: 'Удалить фото?', 
+        ok: 'Удалить' 
+    });
+    if (!ok) return;
+    
+    gallery = gallery.filter(g => g.id !== photoId);
+    saveState('gallery', gallery);
+    
+    // Синхронизация с Sheets
+    try {
+        await gasPost({ action: 'delete', sheet: 'gallery', id: photoId });
+    } catch(e) {
+        console.warn('Gallery delete sync error:', e);
+    }
+    
+    // Обновляем интерфейс
+    renderGallery();
+    if (currentUser) {
+        renderUserGallery(currentUser.id);
+        renderUserDocs();
+    }
+    if (currentPage === 'admin' || document.getElementById('page-admin')?.classList.contains('hidden') === false) {
+        loadAdmin();
+    }
+    showToast('Фото удалено');
+}
+
+// Редактирование подписи фото
+async function editPhotoCaption(photoId) {
+    const photo = gallery.find(g => g.id === photoId);
+    if (!photo) return;
+    
+    const isAdmin = currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin');
+    const isOwner = currentUser && currentUser.id === photo.userId;
+    
+    if (!isAdmin && !isOwner) {
+        showToast('У вас нет прав на редактирование этого фото');
+        return;
+    }
+    
+    const newCaption = prompt('Введите новую подпись:', photo.caption || '');
+    if (newCaption === null) return;
+    if (!newCaption.trim()) {
+        showToast('Подпись не может быть пустой');
+        return;
+    }
+    
+    photo.caption = newCaption.trim();
+    saveState('gallery', gallery);
+    
+    // Синхронизация с Sheets
+    try {
+        await gasPost({ action: 'upsert', sheet: 'gallery', data: photo });
+    } catch(e) {
+        console.warn('Gallery update sync error:', e);
+    }
+    
+    renderGallery();
+    if (currentUser) {
+        renderUserGallery(currentUser.id);
+    }
+    showToast('Подпись обновлена');
 }
   // ============================================================
 // === СОХРАНЕНИЕ ПРОФИЛЯ ======================================
@@ -6730,20 +6934,17 @@ function renderUsersTable(isOwner) {
   
   purchases = loadState('purchases', []);
   
-  // Если пользователей нет - показываем сообщение
   if (!users || users.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">👥 Нет участников. Добавьте первого!</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);">👥 Нет участников. Добавьте первого!</td></tr>`;
     return;
   }
   
-  // Сортируем: владелец всегда первый
   const sortedUsers = [...users].sort((a, b) => {
     if (a.role === 'owner') return -1;
     if (b.role === 'owner') return 1;
     return 0;
   });
   
-  // Проверяем, есть ли у пользователя права администратора
   const isAdmin = currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin');
   
   tbody.innerHTML = sortedUsers.map(u => {
@@ -6751,17 +6952,20 @@ function renderUsersTable(isOwner) {
     const isOwnerUser = u.role === 'owner';
     const isAdminUser = u.role === 'admin';
     
-    // Определяем стиль строки
+    // ✅ Убираем onclick с строки, оставляем только для не-владельцев на кнопку
     let rowClickHandler = '';
     let rowTitle = '';
     if (!isOwnerUser) {
-      rowClickHandler = `openUserEditModal(${u.id})`;
       rowTitle = 'title="Нажмите для просмотра и редактирования"';
     } else {
       rowTitle = 'title="Владелец клуба"';
     }
     
-    return `<tr style="cursor:${isOwnerUser ? 'default' : 'pointer'};" onclick="${rowClickHandler}" ${rowTitle}>
+    // Форматируем телефон для отображения
+    const displayPhone = u.phone ? formatPhoneForDisplay(u.phone) : '—';
+    const phoneLink = u.phone ? formatPhoneForLink(u.phone) : '';
+    
+    return `<tr style="cursor:default;" ${rowTitle}>
       <td style="vertical-align:middle;white-space:nowrap;">
         <strong>${u.name || 'Без имени'}</strong>
         ${isOwnerUser ? '<span style="font-size:10px;color:var(--accent2);margin-left:6px;">⭐</span>' : ''}
@@ -6769,9 +6973,12 @@ function renderUsersTable(isOwner) {
       </td>
       <td style="vertical-align:middle;color:var(--text-muted);word-break:break-all;max-width:160px;">${u.username || '—'}</td>
       <td style="vertical-align:middle;color:var(--accent);font-size:12px;white-space:nowrap;">
-    ${u.phone ? `<a href="tel:${formatPhoneForLink(u.phone)}" style="color:var(--accent);text-decoration:none;">${formatPhoneForDisplay(u.phone)}</a>` : '—'}
-</td>
-      <td style="vertical-align:middle;color:var(--accent);font-size:12px;word-break:break-all;max-width:180px;">${u.email || '—'}</td>
+        ${u.phone ? `<a href="tel:${phoneLink}" style="color:var(--accent);text-decoration:none;" onclick="event.stopPropagation();">${displayPhone}</a>` : '—'}
+      </td>
+      <td style="vertical-align:middle;color:var(--accent);font-size:12px;word-break:break-all;max-width:180px;cursor:pointer;" 
+          onclick="event.stopPropagation();navigator.clipboard.writeText('${u.email || ''}');showToast('Email скопирован ✓');">
+        ${u.email || '—'}
+      </td>
       <td style="vertical-align:middle;white-space:nowrap;min-width:100px;" onclick="event.stopPropagation();">
         ${isAdmin ? 
           (isOwnerUser ? 
@@ -6803,6 +7010,7 @@ function renderUsersTable(isOwner) {
       </td>
       <td style="vertical-align:middle;white-space:nowrap;" onclick="event.stopPropagation();">
         <div style="display:flex;gap:8px;flex-wrap:nowrap;align-items:center;white-space:nowrap;">
+          ${!isOwnerUser ? `<button class="btn btn-edit" style="padding:3px 6px;font-size:10px;line-height:1.4;height:26px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:none;border-radius:4px;cursor:pointer;background:var(--accent2);color:white;" onclick="openUserEditModal(${u.id})">✏️</button>` : ''}
           <button class="btn btn-outline btn-sm" style="padding:3px 6px;font-size:10px;line-height:1.4;height:26px;width:26px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:4px;border:1.5px solid var(--border);background:transparent;cursor:pointer;" onclick="showUserStats(${u.id})">📊</button>
           ${u.role !== 'owner' ? `<button class="btn btn-danger" style="padding:3px 6px;font-size:10px;line-height:1.4;height:26px;width:26px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:none;border-radius:4px;cursor:pointer;background:#C0392B;color:white;" onclick="deleteUser(${u.id})">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -10432,7 +10640,6 @@ if (isLoading || !dataCache.purchases.data) {
                 if (el) {
                     el.style.display = 'block';
                     el.classList.add('show-members');
-                    // ✅ Принудительно устанавливаем стили для скролла
                     el.style.overflowX = 'auto';
                     el.style.overflowY = 'hidden';
                     el.style.webkitOverflowScrolling = 'touch';
@@ -10496,8 +10703,8 @@ if (isLoading || !dataCache.purchases.data) {
                                     <tr style="border-top:1px solid var(--border);">
                                         <td style="padding:6px 10px;font-weight:600;font-size:12px;">${m.name || '—'}</td>
                                         <td style="padding:6px 10px;color:var(--accent);font-size:11px;">
-                                          ${m.phone ? `<a href="tel:${formatPhoneForLink(m.phone)}" style="color:var(--accent);text-decoration:none;">${formatPhoneForDisplay(m.phone)}</a>` : '—'}
-                                          </td>
+                                            ${m.phone ? `<a href="tel:${formatPhoneForLink(m.phone)}" style="color:var(--accent);text-decoration:none;" onclick="event.stopPropagation();">${formatPhoneForDisplay(m.phone)}</a>` : '—'}
+                                        </td>
                                         <td style="padding:6px 10px;color:var(--accent);font-size:11px;cursor:pointer;" onclick="event.stopPropagation();navigator.clipboard.writeText('${m.email || ''}');showToast('Email скопирован ✓');">
                                             ${m.email || '—'}
                                         </td>
@@ -10517,26 +10724,28 @@ if (isLoading || !dataCache.purchases.data) {
                 
                 return `
                     <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">
-                        <div data-group-header data-group-id="${g.id}" style="padding:12px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;cursor:pointer;" onclick="toggleGroupMembers(${g.id});">
+                        <!-- Заголовок группы - теперь без клика на весь блок -->
+                        <div style="padding:12px 14px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--bg);">
                             <div style="flex:1;min-width:120px;">
                                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">
                                     <strong style="font-size:14px;font-family:var(--font-family);">${g.name}</strong>
                                     <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${g.id})" style="cursor:pointer;font-size:8px;padding:1px 6px;">${g.status} ✎</span>
                                 </div>
                                 <div style="font-size:11px;color:var(--text-muted);">${prog ? prog.name : (g.programName || '—')}</div>
+                                ${g.startDate ? `<div style="font-size:10px;color:var(--text-muted);">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
                             </div>
                             <div style="text-align:center;min-width:50px;padding:2px 6px;">
-                                <div style="font-size:18px;font-weight:600;color:var(--accent2);line-height:1.2;">${filled}/${max}</div>
-                                <div style="font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">участников</div>
-                            </div>
-                            <div style="display:flex;flex-direction:column;gap:4px;min-width:70px;flex:0 0 auto;">
-                                <div style="display:flex;gap:4px;">
-                                    <button class="btn btn-edit" style="font-size:9px;padding:3px 8px;height:24px;flex:1;min-width:0;" onclick="event.stopPropagation();openEditGroup(${g.id})">✏️</button>
-                                    <button class="btn btn-danger" style="font-size:9px;padding:3px 8px;height:24px;flex:1;min-width:0;" onclick="event.stopPropagation();deleteGroup(${g.id})">🗑</button>
-                                </div>
-                                <button class="btn btn-outline btn-sm" style="font-size:9px;padding:2px 8px;height:22px;width:100%;" onclick="event.stopPropagation();openAddMember(${g.id})" ${filled >= max ? 'disabled' : ''}>+ Участник</button>
+                                <div style="font-size:18px;font-weight:600;color:var(--accent2);line-height:1.2;cursor:pointer;" onclick="toggleGroupMembers(${g.id});">${filled}/${max}</div>
+                                <div style="font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;" onclick="toggleGroupMembers(${g.id});">участников</div>
                             </div>
                         </div>
+                        <!-- Кнопки управления группой - отдельная строка -->
+                        <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--surface);border-bottom:1px solid var(--border);">
+                            <button class="btn btn-edit" style="font-size:10px;padding:4px 10px;height:28px;flex:1;min-width:60px;" onclick="event.stopPropagation();openEditGroup(${g.id})">✏️ Изменить</button>
+                            <button class="btn btn-danger" style="font-size:10px;padding:4px 10px;height:28px;flex:1;min-width:60px;" onclick="event.stopPropagation();deleteGroup(${g.id})">🗑 Удалить</button>
+                            <button class="btn btn-outline btn-sm" style="font-size:10px;padding:4px 10px;height:28px;flex:1;min-width:70px;" onclick="event.stopPropagation();openAddMember(${g.id})" ${filled >= max ? 'disabled' : ''}>+ Участник</button>
+                        </div>
+                        <!-- Список участников (раскрывается) -->
                         <div id="group-members-${g.id}" style="display:${isOpen ? 'block' : 'none'};border-top:1px solid var(--border);overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding:0;max-width:100%;">
                             ${membersHTML}
                         </div>
