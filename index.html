@@ -1386,36 +1386,43 @@ input[type=number] {
     }
 
   .steps .step {
-        display: flex;
-        gap: 15px;
-        align-items: flex-start;
-        padding: 0;
-        text-align: left;
-    }
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+    padding: 0;
+    text-align: left;
+    flex-direction: row;
+  }
     .step-title {
-        font-size: 14px;
-        font-weight: 600;
-        margin-bottom: 2px;
-    }
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
     .step-text {
-        font-size: 12px;
-        color: var(--text-muted);
-        line-height: 1.5;
-        text-align: left;
-        display: block;
-        width: 100%;
-    }
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    text-align: left;
+    display: block;
+    width: 100%;
+  }
     .step-text br {
         display: none;
     }
     .step-num {
-        flex-shrink: 0;
-        margin: 0;
-    }
+    flex-shrink: 0;
+    margin: 0;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
     .step-content {
         flex: 1;
         min-width: 0;
     }
+  .steps {
+    gap: 16px;
+  }
 }
 
 /* Стили для сетки галереи на странице */
@@ -1662,23 +1669,31 @@ input[type=number] {
       <div class="steps">
         <div class="step">
           <div class="step-num">1</div>
-          <div class="step-title">Выберите программу</div>
-          <div class="step-text">Используйте фильтр, чтобы найти подходящий маршрут по сезону, бюджету и типу отдыха.</div>
+          <div class="step-content">
+            <div class="step-title">Выберите программу</div>
+            <div class="step-text">Используйте фильтр, чтобы найти подходящий маршрут по сезону, бюджету и типу отдыха.</div>
+          </div>
         </div>
         <div class="step">
           <div class="step-num">2</div>
-          <div class="step-title">Оставьте заявку</div>
-          <div class="step-text">Заполните форму на сайте или напишите Марине напрямую. Обычно отвечаем в тот же день.</div>
+          <div class="step-content">
+            <div class="step-title">Оставьте заявку</div>
+            <div class="step-text">Заполните форму на сайте или напишите Марине напрямую. Обычно отвечаем в тот же день.</div>
+          </div>
         </div>
         <div class="step">
           <div class="step-num">3</div>
-          <div class="step-title">Обсудим детали</div>
-          <div class="step-text">Уточним все нюансы, ответим на вопросы и согласуем место в группе.</div>
+          <div class="step-content">
+            <div class="step-title">Обсудим детали</div>
+            <div class="step-text">Уточним все нюансы, ответим на вопросы и согласуем место в группе.</div>
+          </div>
         </div>
         <div class="step">
           <div class="step-num">4</div>
-          <div class="step-title">В путь!</div>
-          <div class="step-text">Собирайте рюкзак — мы уже всё организовали. Вам остаётся только наслаждаться.</div>
+          <div class="step-content">
+            <div class="step-title">В путь!</div>
+            <div class="step-text">Собирайте рюкзак — мы уже всё организовали. Вам остаётся только наслаждаться.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -8039,16 +8054,21 @@ async function saveUserEdit(userId) {
 // === СТАТИСТИКА ПОЛЬЗОВАТЕЛЯ ===
 function showUserStats(userId) {
   const u = users.find(x => x.id === userId);
+  if (!u) {
+    showToast('Пользователь не найден');
+    return;
+  }
+  
   const userPurchases = purchases.filter(p => p.userId === userId);
   const total = userPurchases.reduce((s, p) => s + p.price, 0);
 
   document.getElementById('user-stats-content').innerHTML = `
     <div style="padding:4px 0;">
       <div style="margin-bottom:18px;margin-top: 18px;display:flex;align-items:center;gap:14px;">
-        <div class="user-avatar" style="width:52px;height:52px;font-size:22px;">${u.name[0]}</div>
+        <div class="user-avatar" style="width:52px;height:52px;font-size:22px;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;border-radius:50%;">${u.name ? u.name[0] : '?'}</div>
         <div>
-          <div style="font-size:20px;font-family:var(--font-family);font-weight:500;">${u.name}</div>
-          <div style="font-size:13px;color:var(--text-muted);">${u.email}</div>
+          <div style="font-size:20px;font-family:var(--font-family);font-weight:500;">${u.name || 'Без имени'}</div>
+          <div style="font-size:13px;color:var(--text-muted);">${u.email || '—'}</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;">
@@ -8059,8 +8079,13 @@ function showUserStats(userId) {
       ${userPurchases.length === 0 ? '<p style="color:var(--text-muted);">Пока нет покупок.</p>' :
         userPurchases.map(pu => {
           const prog = programs.find(p => p.id === pu.programId);
+          let formattedDate = pu.date || '';
+          if (formattedDate && formattedDate.includes('-')) {
+            const parts = formattedDate.split('-');
+            formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+          }
           return `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
-            <div><div style="font-weight:600;">${prog ? prog.name : '—'}</div><div style="font-size:12px;color:var(--text-muted);">${formatDateToDisplay(pu.date)}</div></div>
+            <div><div style="font-weight:600;">${prog ? prog.name : 'Программа удалена'}</div><div style="font-size:12px;color:var(--text-muted);">${formattedDate}</div></div>
             <div style="font-family:var(--font-family);font-size:19px;font-weight:600;color:var(--accent2);">${pu.price.toLocaleString('ru')} ₽</div>
           </div>`;
         }).join('')}
@@ -8685,6 +8710,10 @@ function bumpDataVersion() {
 // === УЛУЧШЕННАЯ ФУНКЦИЯ ToggleGroupMembers ==================
 // ============================================================
 
+// ============================================================
+// === УЛУЧШЕННАЯ ФУНКЦИЯ ToggleGroupMembers ==================
+// ============================================================
+
 function toggleGroupMembers(groupId) {
     // Пытаемся найти элемент разными способами
     let el = document.getElementById('group-members-' + groupId);
@@ -8699,6 +8728,7 @@ function toggleGroupMembers(groupId) {
                     el = membersDiv;
                     break;
                 }
+                // Создаём контейнер для участников, если его нет
                 const newDiv = document.createElement('div');
                 newDiv.id = 'group-members-' + groupId;
                 newDiv.style.cssText = 'display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;';
@@ -8745,8 +8775,9 @@ function toggleGroupMembers(groupId) {
             table.style.borderCollapse = 'collapse';
         }
         
+        // Для мобильных добавляем анимацию
         if (isMobile) {
-            el.style.transition = 'all 0.3s ease';
+            el.style.transition = 'max-height 0.3s ease-out';
             el.style.maxHeight = '0';
             el.style.overflow = 'hidden';
             requestAnimationFrame(() => {
@@ -8848,8 +8879,9 @@ function buildGroupForm(g) {
                     <input type="date" class="form-input" id="gm-start" value="${g.startDate || ''}" onchange="autoFillEndDate()">
                 </div>
                 <div class="form-group">
-                    <label>Дата окончания <span id="gm-end-hint" style="font-weight:400;color:var(--accent);font-size:11px;"></span></label>
+                    <label>Дата окончания</label>
                     <input type="date" class="form-input" id="gm-end" value="${g.endDate || ''}" onchange="this.dataset.auto='0'">
+                    <div id="gm-end-hint" style="font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;margin-top:4px;"></div>
                 </div>
                 <div class="form-group">
                     <label>Макс. участников</label>
@@ -8901,14 +8933,15 @@ function autoFillEndDate() {
     endEl.value = endStr;
     endEl.dataset.auto = '1';
   }
-  if (hintEl) {
-    hintEl.textContent = 'АВТО ' + prog.days + ' ДНЕЙ';
-    hintEl.style.textTransform = 'uppercase';
-    hintEl.style.fontWeight = '600';
+  if (hintEl && endEl && endEl.value) {
+    hintEl.textContent = '📅 ' + prog.days + ' дней · дата подставлена автоматически';
     hintEl.style.fontSize = '10px';
+    hintEl.style.color = 'var(--accent)';
+  } else if (hintEl) {
+    hintEl.textContent = '';
   }
 }
-
+  
 function saveGroup() {
     const name = (document.getElementById('gm-name').value || '').trim();
     const programId = parseInt(document.getElementById('gm-program').value) || null;
@@ -9032,6 +9065,15 @@ function saveGroup() {
 
     closeModal('group-modal');
     loadAdminGroups();
+  
+     // ✅ ОБНОВЛЯЕМ МОБИЛЬНУЮ ПАНЕЛЬ, ЕСЛИ ОНА ОТКРЫТА
+    if (isMobPanelOpen ) {
+        const activeMobSection = document.querySelector('.mob-item.active')?.dataset?.section;
+        if (activeMobSection === 'groups') {
+            renderMobAdminSection('groups');
+        }
+    }
+    
     if (currentUser && currentUser.role === 'owner') {
         loadAdminStats();
     }
