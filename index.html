@@ -1784,7 +1784,7 @@ input[type=number] {
         <span class="section-label">Сообщество</span>
         <h2 class="section-title">Галерея <em>путешественников</em></h2>
       </div>
-      <a href="#" onclick="smoothScroll('gallery');showAllGallery();return false;" style="font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap;align-self:flex-end;">Все фото →</a>
+      <a href="#" onclick="event.preventDefault(); showPage('gallery');" style="font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap;align-self:flex-end;">Все фото →</a>
     </div>
     <div class="gallery-grid" id="gallery-grid"></div>
     <div id="gallery-more-btn" style="text-align:center;margin-top:28px;display:none;">
@@ -2142,6 +2142,7 @@ input[type=number] {
       <div class="admin-nav-item" onclick="switchAdmin('users')"><span class="admin-nav-icon">👥</span> Участники</div>
       <div class="admin-nav-item" onclick="switchAdmin('leads')"><span class="admin-nav-icon">📩</span> Заявки</div>
       <div class="admin-nav-item" onclick="switchAdmin('groups')"><span class="admin-nav-icon">👥</span> Группы</div>
+      <div class="admin-nav-item" onclick="switchAdmin('photos')"><span class="admin-nav-icon">📸</span> Фото</div>
       <div class="admin-nav-item" onclick="switchAdmin('settings')"><span class="admin-nav-icon">⚙️</span> Настройки</div>
       <div class="admin-nav-item" onclick="switchAdmin('founder')"><span class="admin-nav-icon">👤</span> Об основателе</div>
       <div class="admin-nav-item" onclick="switchAdmin('howto')"><span class="admin-nav-icon">🚂</span> Как мы ездим</div>
@@ -4522,8 +4523,14 @@ function renderGallery() {
         renderGalleryPage();
     }
     
-    // Превью на главной
-    const preview = gallery.slice(-GALLERY_PREVIEW_COUNT);
+    // Превью на главной - с РАНДОМНОЙ сортировкой
+    const shuffled = [...gallery];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    const preview = shuffled.slice(0, GALLERY_PREVIEW_COUNT);
     if (grid) {
         grid.innerHTML = preview.map(item =>
             `<div class="gallery-item" onclick="showPage('gallery')">
@@ -4535,7 +4542,6 @@ function renderGallery() {
     
     if (moreBtn) moreBtn.style.display = gallery.length > GALLERY_PREVIEW_COUNT ? '' : 'none';
 }
-
   function updateGalleryProgramFilter() {
     const sel = document.getElementById('gallery-filter-program');
     if (!sel) return;
@@ -4584,46 +4590,6 @@ showPage = function(page) {
     }
 };
 
-function showAllGallery() {
-  const content = document.getElementById('gallery-modal-content');
-  if (!gallery.length) {
-    content.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px 0;">Пока нет фотографий.</p>';
-    openModal('gallery-modal');
-    return;
-  }
-
-  const byProgram = {};
-  gallery.forEach(item => {
-    const key = item.programId || 'general';
-    if (!byProgram[key]) byProgram[key] = [];
-    byProgram[key].push(item);
-  });
-
-  content.innerHTML = Object.entries(byProgram).map(([progId, photos]) => {
-    const prog = progId !== 'general' ? programs.find(p => p.id === parseInt(progId)) : null;
-    const title = prog ? prog.name : 'Общие фото';
-    const emoji = prog ? '🗺' : '📷';
-    
-    return `
-      <div style="margin-bottom:32px;">
-        <h4 style="font-family:var(--font-family);font-size:17px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;color:var(--text);">
-          ${emoji} ${title}
-          <span style="font-size:12px;font-weight:400;color:var(--text-muted);">${photos.length} фото</span>
-        </h4>
-        <div class="gallery-grid">
-          ${photos.map(item => `
-            <div class="gallery-item" onclick="openPhotoFullscreen('${item.url}', '${item.caption} — ${item.author}')">
-              ${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>📷</span>`}
-              <div class="gallery-meta">${item.caption} — ${item.author}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  openModal('gallery-modal');
-}
   
   // Открытие фото в полный экран
 function openPhotoFullscreen(imgSrc, caption) {
@@ -6815,7 +6781,7 @@ function switchAdmin(section) {
         return;
     }
 
-    const sections = ['dashboard', 'programs', 'users', 'leads', 'groups', 'settings', 'founder', 'howto', 'contacts'];
+    const sections = ['dashboard', 'programs', 'users', 'leads', 'groups', 'photos', 'settings', 'founder', 'howto', 'contacts'];
     
     document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.admin-nav-item').forEach((n, i) => {
@@ -6863,6 +6829,10 @@ function switchAdmin(section) {
             
         case 'groups':
             loadAdminGroups();
+            break;
+
+        case 'photos':
+            loadAdminPhotos();
             break;
             
         case 'settings':
@@ -11518,6 +11488,82 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, { passive: true });
 });  
+
+  // ============================================================
+// === АДМИНКА: УПРАВЛЕНИЕ ФОТО ==============================
+// ============================================================
+
+function loadAdminPhotos() {
+    const container = document.getElementById('admin-photos-content');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="admin-page-title">📸 Управление фото</div>
+        <div class="admin-page-sub">Все фото сообщества — можно удалять и редактировать подписи</div>
+        <div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;">
+            <input type="text" id="admin-photo-search" placeholder="Поиск по подписи или автору..." style="flex:1;min-width:200px;padding:10px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);font-family:var(--font-family);font-size:14px;" oninput="filterAdminPhotos()">
+            <button class="btn btn-outline btn-sm" onclick="filterAdminPhotos()">🔍</button>
+        </div>
+        <div id="admin-photos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+            ${gallery.map(photo => `
+                <div class="gallery-item" style="aspect-ratio:1/1;border-radius:var(--radius-sm);overflow:hidden;position:relative;background:var(--bg2);" data-id="${photo.id}">
+                    ${photo.url ? `<img src="${photo.url}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="display:flex;align-items:center;justify-content:center;height:100%;font-size:32px;">📷</span>`}
+                    <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));padding:10px;color:white;font-size:11px;display:flex;flex-direction:column;gap:2px;">
+                        <div><strong>${photo.author || '—'}</strong> ${photo.caption ? '· ' + photo.caption : ''}</div>
+                        <div style="display:flex;gap:6px;">
+                            <button class="btn btn-outline btn-sm" style="font-size:10px;padding:2px 8px;background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);" onclick="editPhotoCaptionAdmin(${photo.id})">✏️</button>
+                            <button class="btn btn-danger" style="font-size:10px;padding:2px 8px;" onclick="deletePhotoAdmin(${photo.id})">🗑</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function deletePhotoAdmin(photoId) {
+    const photo = gallery.find(g => g.id === photoId);
+    if (!photo) return;
+    
+    confirmDialog('Удалить фото «' + (photo.caption || 'без подписи') + '»?', {
+        icon: '🗑',
+        title: 'Удалить фото?',
+        ok: 'Удалить'
+    }).then(ok => {
+        if (!ok) return;
+        
+        gallery = gallery.filter(g => g.id !== photoId);
+        saveState('gallery', gallery);
+        gasPost({ action: 'delete', sheet: 'gallery', id: photoId }).catch(() => {});
+        loadAdminPhotos();
+        renderGallery();
+        showToast('Фото удалено');
+    });
+}
+
+function editPhotoCaptionAdmin(photoId) {
+    const photo = gallery.find(g => g.id === photoId);
+    if (!photo) return;
+    
+    const newCaption = prompt('Введите новую подпись:', photo.caption || '');
+    if (newCaption === null) return;
+    
+    photo.caption = newCaption.trim();
+    saveState('gallery', gallery);
+    gasPost({ action: 'upsert', sheet: 'gallery', data: photo }).catch(() => {});
+    loadAdminPhotos();
+    renderGallery();
+    showToast('Подпись обновлена');
+}
+
+function filterAdminPhotos() {
+    const query = document.getElementById('admin-photo-search').value.toLowerCase();
+    const items = document.querySelectorAll('#admin-photos-grid .gallery-item');
+    items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(query) ? '' : 'none';
+    });
+}
   
 // ============================================================
 // === ИНИЦИАЛИЗАЦИЯ ===========================================
