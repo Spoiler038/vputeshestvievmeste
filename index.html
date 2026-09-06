@@ -1426,6 +1426,63 @@ input[type=number] {
     #photo-viewer-img {
         max-height: 65vh;
     }
+  /* Фильтры галереи на мобильных - 2 строки */
+    #page-gallery .filter-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        align-items: start;
+    }
+    
+    #page-gallery .filter-row .filter-group {
+        margin-bottom: 4px;
+    }
+    
+    #page-gallery .filter-row .filter-group label {
+        font-size: 10px;
+        margin-bottom: 4px;
+    }
+    
+    #page-gallery .filter-row .filter-group select {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+    
+    /* Третий элемент (Масштаб) переносим на вторую строку */
+    #page-gallery .filter-row .filter-group:last-child {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding-top: 4px;
+        border-top: 1px solid var(--border);
+        margin-top: 4px;
+    }
+    
+    #page-gallery .filter-row .filter-group:last-child label {
+        margin-bottom: 0;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+    
+    #page-gallery .filter-row .filter-group:last-child > div {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+    }
+    
+    #page-gallery .filter-actions {
+        padding-top: 4px;
+        margin-top: 0;
+        border-top: none;
+        justify-content: flex-start;
+    }
+    
+    #page-gallery .filter-actions .btn {
+        font-size: 12px;
+        padding: 4px 12px;
+    }
 
   .steps .step {
     display: flex;
@@ -1512,6 +1569,41 @@ input[type=number] {
 .gallery-grid .gallery-item .gallery-overlay .program {
     font-size: 10px;
     opacity: 0.7;
+}
+  /* Стили для фильтров галереи на ПК */
+#page-gallery .filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 14px;
+    align-items: end;
+}
+
+#page-gallery .filter-row .filter-group:last-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 2px;
+}
+
+#page-gallery .filter-row .filter-group:last-child label {
+    margin-bottom: 0;
+    font-size: 11px;
+    white-space: nowrap;
+    padding-bottom: 2px;
+}
+
+#page-gallery .filter-row .filter-group:last-child > div {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+#page-gallery .filter-actions {
+    padding-top: 0;
+    margin-top: 0;
+    border-top: none;
+    justify-content: flex-start;
+    align-items: center;
 }
 </style>
 </head>
@@ -1935,10 +2027,10 @@ input[type=number] {
                 <span class="section-label">Сообщество</span>
                 <h2 class="section-title" style="font-size:clamp(30px,5vw,50px);">
                     <em style="color:var(--accent2);">Все фото</em> 
-                    <span style="font-size:18px;font-weight:400;color:var(--text-muted);" id="gallery-total-count">путешественников</span>
+                    <span style="font-size:18px;font-weight:400;color:var(--text-muted);"</span>
                 </h2>
             </div>
-            <button class="btn btn-outline btn-sm" onclick="showPage('home')">← На сайт</button>
+            <button class="btn btn-outline btn-sm" onclick="showPage('home')">← Назад</button>
         </div>
 
         <!-- Фильтры и сортировка -->
@@ -3396,6 +3488,10 @@ body.modal-open {
 // === ПЕРЕМЕННЫЕ И СОСТОЯНИЕ ==================================
 // ============================================================
 
+// Состояние фото-вьювера
+let viewerPhotos = [];
+let viewerCurrentIndex = 0;
+  
 // Хранилище данных (localStorage)
 function loadState(key, def) {
   try {
@@ -4668,35 +4764,63 @@ showPage = function(page) {
 // ============================================================
 
 function openPhotoViewerWithNavigation(photos, index) {
+    if (!photos || photos.length === 0) {
+        showToast('Нет фото для просмотра');
+        return;
+    }
+    
     viewerPhotos = photos;
-    viewerCurrentIndex = index;
+    viewerCurrentIndex = index || 0;
+    
+    // Убеждаемся, что индекс в пределах массива
+    if (viewerCurrentIndex >= viewerPhotos.length) {
+        viewerCurrentIndex = viewerPhotos.length - 1;
+    }
+    if (viewerCurrentIndex < 0) {
+        viewerCurrentIndex = 0;
+    }
     
     const viewer = document.getElementById('photo-viewer');
     const img = document.getElementById('photo-viewer-img');
     const caption = document.getElementById('photo-viewer-caption');
     const counter = document.getElementById('photo-viewer-counter');
     
+    if (!viewer) {
+        showToast('Ошибка: фото-вьювер не найден');
+        return;
+    }
+    
     viewer.classList.add('active');
     document.body.style.overflow = 'hidden';
     
     updateViewerPhoto();
 }
-
+  
 function updateViewerPhoto() {
+    if (!viewerPhotos || viewerPhotos.length === 0) {
+        closePhotoViewer();
+        return;
+    }
+    
     const photo = viewerPhotos[viewerCurrentIndex];
-    if (!photo) return;
+    if (!photo) {
+        closePhotoViewer();
+        return;
+    }
     
     const img = document.getElementById('photo-viewer-img');
     const caption = document.getElementById('photo-viewer-caption');
     const counter = document.getElementById('photo-viewer-counter');
     
-    img.src = photo.url;
-    caption.textContent = photo.caption || 'Без подписи';
-    counter.textContent = `${viewerCurrentIndex + 1} / ${viewerPhotos.length}`;
+    if (img) img.src = photo.url;
+    if (caption) caption.textContent = photo.caption || 'Без подписи';
+    if (counter) counter.textContent = `${viewerCurrentIndex + 1} / ${viewerPhotos.length}`;
     
     // Обновляем состояние кнопок
-    document.getElementById('photo-viewer-prev').style.visibility = viewerCurrentIndex > 0 ? 'visible' : 'hidden';
-    document.getElementById('photo-viewer-next').style.visibility = viewerCurrentIndex < viewerPhotos.length - 1 ? 'visible' : 'hidden';
+    const prevBtn = document.getElementById('photo-viewer-prev');
+    const nextBtn = document.getElementById('photo-viewer-next');
+    if (prevBtn) prevBtn.style.visibility = viewerCurrentIndex > 0 ? 'visible' : 'hidden';
+    if (nextBtn) nextBtn.style.visibility = viewerCurrentIndex < viewerPhotos.length - 1 ? 'visible' : 'hidden';
 }
 
 function photoViewerNext() {
@@ -11401,12 +11525,10 @@ function renderGalleryPage() {
         grid.innerHTML = '';
         empty.style.display = 'block';
         loadMore.style.display = 'none';
-        document.getElementById('gallery-total-count').textContent = '0 фото';
         return;
     }
     
     empty.style.display = 'none';
-    document.getElementById('gallery-total-count').textContent = photos.length + ' фото';
     
     // Пагинация
     const start = 0;
@@ -11418,8 +11540,12 @@ function renderGalleryPage() {
     pagePhotos.forEach((item, index) => {
         const div = document.createElement('div');
         div.className = 'gallery-item';
-        const globalIndex = index;
-        div.onclick = () => openPhotoViewerWithNavigation(photos, globalIndex);
+        // Используем замыкание для сохранения индекса
+        div.onclick = (function(idx) {
+            return function() {
+                openPhotoViewerWithNavigation(photos, idx);
+            };
+        })(index);
         
         const prog = programs.find(p => p.id === item.programId);
         const programName = prog ? prog.name : '';
