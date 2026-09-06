@@ -1612,7 +1612,7 @@ input[type=number] {
 <!-- ===== НАВИГАЦИЯ ===== -->
 <nav class="navbar" id="navbar">
   <div class="navbar-inner">
-    <a class="logo" href="#" onclick="showPage('home')"><span>В</span>ПУТЕШЕСТВИЕВМЕСТЕ</a>
+    <a class="logo" href="javascript:void(0)" onclick="showPage('home')"><span>В</span>ПУТЕШЕСТВИЕВМЕСТЕ</a>
     <div class="nav-links">
     <a href="javascript:void(0)" onclick="smoothScroll('programs')">ПРОГРАММЫ</a>
     <a href="javascript:void(0)" onclick="smoothScroll('about')">ОБ ОСНОВАТЕЛЕ</a>
@@ -3058,6 +3058,22 @@ input[type=number] {
 
 <!-- ===== БИБЛИОТЕКИ ===== -->
 <script>
+  function showPage(page) {
+    // Проверяем, загрузилась ли основная логика
+    if (typeof window._showPageMain === 'function') {
+        // Если основная функция уже загружена - вызываем её
+        window._showPageMain(page);
+        return;
+    }
+    
+    // Если основная функция ещё не загружена - сохраняем вызов в очередь
+    if (!window._pendingPageCalls) {
+        window._pendingPageCalls = [];
+    }
+    window._pendingPageCalls.push(page);
+    
+    console.log('⏳ showPage вызвана до загрузки основной логики, добавлено в очередь:', page);
+}
 // Глобальный объект для отслеживания состояния загрузки библиотек
 window._LIB_LOAD_STATE = window._LIB_LOAD_STATE || {
     jspdf: false,
@@ -3906,7 +3922,7 @@ let currentEditUserId = null;
 // === НАВИГАЦИЯ ===============================================
 // ============================================================
 
-function showPage(page) {
+function _showPageMain(page) {
   // Скрываем все страницы
   const home = document.getElementById('page-home');
   const detail = document.getElementById('page-detail');
@@ -4002,6 +4018,18 @@ function showPage(page) {
   }
 
   window.scrollTo(0, 0);
+}
+
+  window._showPageMain = _showPageMain;
+
+// Обрабатываем вызовы, которые были сделаны до загрузки основной логики
+if (window._pendingPageCalls && window._pendingPageCalls.length > 0) {
+    console.log('🔄 Обработка отложенных вызовов showPage:', window._pendingPageCalls);
+    const calls = window._pendingPageCalls.slice();
+    window._pendingPageCalls = [];
+    calls.forEach(page => {
+        _showPageMain(page);
+    });
 }
 
 function smoothScroll(id) {
