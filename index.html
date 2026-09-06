@@ -11020,7 +11020,7 @@ if (isLoading || !dataCache.purchases.data) {
     `;
 
   // ✅ СЕКЦИЯ ГРУППЫ
-} else if (section === 'groups') {
+  } else if (section === 'groups') {
     if (typeof loadAdminGroups === 'function') {
         const openStates = {};
         groups.forEach(g => {
@@ -11154,8 +11154,8 @@ if (isLoading || !dataCache.purchases.data) {
         <button class="btn btn-primary" style="margin-top:12px;width:100%;" onclick="openAddGroup()">+ Создать группу</button>
     `;
 
-    // ✅ СЕКЦИЯ ФОТО (МОБИЛЬНАЯ ВЕРСИЯ)
-} else if (section === 'photos') {
+  // ✅ СЕКЦИЯ ФОТО (МОБИЛЬНАЯ ВЕРСИЯ)
+  } else if (section === 'photos') {
     const photos = gallery || [];
     
     box.innerHTML = `
@@ -11179,7 +11179,6 @@ if (isLoading || !dataCache.purchases.data) {
             `).join('')}
         </div>
     `;
-}
 
   // ✅ СЕКЦИЯ НАСТРОЙКИ
   } else if (section === 'settings') {
