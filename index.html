@@ -4852,7 +4852,8 @@ function openPhotoViewerWithNavigation(photos, index) {
         showToast('Ошибка: фото-вьювер не найден');
         return;
     }
-    
+
+    viewer.style.display = '';
     viewer.classList.add('active');
     document.body.style.overflow = 'hidden';
     
@@ -11975,6 +11976,22 @@ document.addEventListener('click', function(e) {
         }
     }
 }, { passive: false });
+</script>
+  <script>
+// ===== РЕГИСТРАЦИЯ SERVICE WORKER =====
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/vputeshestvievmeste/sw.js', {
+            scope: '/vputeshestvievmeste/'
+        })
+        .then(function(registration) {
+            console.log('✅ SW зарегистрирован:', registration.scope);
+        })
+        .catch(function(error) {
+            console.warn('⚠️ Ошибка регистрации SW:', error);
+        });
+    });
+}
 </script>
 </body>
 </html>
