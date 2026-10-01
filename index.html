@@ -1500,67 +1500,32 @@ input[type=number] {
    ФИЛЬТРЫ ГАЛЕРЕИ (актуальная версия)
    ============================================ */
 
-/* 3 колонки: Программа | Сортировка | (Масштаб + Сбросить) */
-#page-gallery .filter-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 14px;
-    align-items: end;
-}
+/* ===== Третья колонка фильтров галереи: Масштаб + Сбросить ===== */
 
-#page-gallery .filter-group {
+/* ПК: одна строка внутри колонки */
+#page-gallery .filter-scale-group .scale-row {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    align-items: center;
+    gap: 10px;
+    height: 46px; /* как высота select */
 }
 
-#page-gallery .filter-group label {
+#page-gallery .filter-scale-group .scale-row label {
+    margin: 0;
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text-muted);
-    margin-bottom: 0;
-}
-
-/* Третья колонка: масштаб + сброс */
-#page-gallery .filter-scale-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-/* Строка "МАСШТАБ" + кнопка "Сбросить" */
-#page-gallery .filter-scale-group .scale-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    height: 16px;
-}
-
-#page-gallery .filter-scale-group .scale-header label {
-    margin: 0;
+    white-space: nowrap;
     line-height: 1;
 }
 
-/* Компактная кнопка "Сбросить" — на уровне текста "СОРТИРОВКА" */
-#page-gallery .filter-scale-group .btn-reset-gallery {
-    padding: 0 12px;
-    font-size: 11px;
-    height: 20px;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Строка с кнопками масштаба — высота как у select */
 #page-gallery .filter-scale-group .scale-controls {
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 46px;
+    height: 38px;
 }
 
 #page-gallery .filter-scale-group .scale-controls button {
@@ -1589,7 +1554,21 @@ input[type=number] {
     color: var(--text);
 }
 
-/* ===== МОБИЛЬНАЯ ВЕРСИЯ ФИЛЬТРОВ ГАЛЕРЕИ ===== */
+/* Компактная кнопка "Сбросить" — на уровне текста "СОРТИРОВКА" */
+#page-gallery .filter-scale-group .btn-reset-gallery {
+    padding: 0 12px;
+    font-size: 11px;
+    height: 26px;
+    line-height: 1;
+    margin-left: auto; /* прижимаем вправо внутри строки */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ===== МОБИЛЬНАЯ ВЕРСИЯ ===== */
 @media (max-width: 768px) {
     #page-gallery .filter-row {
         grid-template-columns: 1fr 1fr;
@@ -1604,21 +1583,50 @@ input[type=number] {
         margin-top: 4px;
     }
 
-    #page-gallery .filter-scale-group .scale-header {
-        width: 100%;
+    /* ✅ На мобильной ВСЁ в одну строку: МАСШТАБ, −4+, Сбросить */
+    #page-gallery .filter-scale-group .scale-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         height: auto;
+        flex-wrap: nowrap; /* не переносим */
+        width: 100%;
+    }
+
+    #page-gallery .filter-scale-group .scale-row label {
+        font-size: 10px;
+        flex-shrink: 0;
     }
 
     #page-gallery .filter-scale-group .scale-controls {
+        display: flex;
+        align-items: center;
+        gap: 4px;
         height: auto;
-        justify-content: flex-start;
+        flex-shrink: 0;
+        margin-left: auto; /* кнопки масштаба — вправо */
     }
 
-    /* Кнопка "Сбросить" — компактная */
+    #page-gallery .filter-scale-group .scale-controls button {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+
+    #page-gallery .filter-scale-group .scale-controls #gallery-grid-size-label {
+        min-width: 36px;
+        height: 32px;
+        font-size: 13px;
+        padding: 0 6px;
+    }
+
+    /* Кнопка "Сбросить" — справа, компактная */
     #page-gallery .filter-scale-group .btn-reset-gallery {
-        height: 28px;
-        padding: 0 14px;
-        font-size: 12px;
+        height: 32px;
+        padding: 0 10px;
+        font-size: 11px;
+        margin-left: 0; /* убираем auto, чтобы шла после кнопок масштаба */
+        flex-shrink: 0;
     }
 }
 </style>
@@ -2067,16 +2075,16 @@ input[type=number] {
             </select>
         </div>
         <div class="filter-group filter-scale-group">
-            <div class="scale-header">
-                <label>Масштаб</label>
-                <button class="btn btn-outline btn-sm btn-reset-gallery" onclick="resetGalleryFilters()">Сбросить</button>
-            </div>
-            <div class="scale-controls">
-                <button class="btn btn-outline btn-sm" onclick="changeGalleryGridSize(-1)">−</button>
-                <span id="gallery-grid-size-label">4</span>
-                <button class="btn btn-outline btn-sm" onclick="changeGalleryGridSize(1)">+</button>
-            </div>
+    <div class="scale-row">
+        <label>Масштаб</label>
+        <div class="scale-controls">
+            <button class="btn btn-outline btn-sm" onclick="changeGalleryGridSize(-1)">−</button>
+            <span id="gallery-grid-size-label">4</span>
+            <button class="btn btn-outline btn-sm" onclick="changeGalleryGridSize(1)">+</button>
         </div>
+        <button class="btn btn-outline btn-sm btn-reset-gallery" onclick="resetGalleryFilters()">Сбросить</button>
+    </div>
+</div>
     </div>
 </div>
 
@@ -2100,7 +2108,7 @@ input[type=number] {
 </div>
 
 <!-- ===== ФОТО-ВЬЮВЕР (полноэкранный просмотр) ===== -->
-<div id="photo-viewer" style="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+<div id="photo-viewer" style="position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
     <button id="photo-viewer-close" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:28px;cursor:pointer;padding:10px 16px;border-radius:50%;transition:background 0.2s;z-index:10;">✕</button>
     
     <div id="photo-viewer-content" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;position:relative;">
