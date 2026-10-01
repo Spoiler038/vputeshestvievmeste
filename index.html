@@ -1311,47 +1311,7 @@ input[type=number] {
         background: linear-gradient(transparent, rgba(0,0,0,0.7));
     }
 
-  /* Фильтры галереи на мобильных - 2 строки */
-    #page-gallery .filter-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 14px;
-    align-items: end;
-}
-    
-    #page-gallery .filter-row .filter-group:last-child {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-bottom: 2px;
-}
-    
-    #page-gallery .filter-row .filter-group:last-child label {
-    margin-bottom: 0;
-    font-size: 11px;
-    white-space: nowrap;
-    padding-bottom: 2px;
-}
-    
-    #page-gallery .filter-row .filter-group:last-child > div {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
-    
-    #page-gallery .filter-actions {
-    padding-top: 0;
-    margin-top: 0;
-    border-top: none;
-    justify-content: flex-start;
-    align-items: center;
-}
-    
-    #page-gallery .filter-actions .btn {
-        font-size: 12px;
-        padding: 4px 12px;
-    }
-  
+   
 }
   .gallery-grid .gallery-item {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -1426,63 +1386,7 @@ input[type=number] {
     #photo-viewer-img {
         max-height: 65vh;
     }
-  /* Фильтры галереи на мобильных - 2 строки */
-    #page-gallery .filter-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        align-items: start;
-    }
-    
-    #page-gallery .filter-row .filter-group {
-        margin-bottom: 4px;
-    }
-    
-    #page-gallery .filter-row .filter-group label {
-        font-size: 10px;
-        margin-bottom: 4px;
-    }
-    
-    #page-gallery .filter-row .filter-group select {
-        padding: 8px 10px;
-        font-size: 13px;
-    }
-    
-    /* Третий элемент (Масштаб) переносим на вторую строку */
-    #page-gallery .filter-row .filter-group:last-child {
-        grid-column: 1 / -1;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        padding-top: 4px;
-        border-top: 1px solid var(--border);
-        margin-top: 4px;
-    }
-    
-    #page-gallery .filter-row .filter-group:last-child label {
-        margin-bottom: 0;
-        font-size: 11px;
-        white-space: nowrap;
-    }
-    
-    #page-gallery .filter-row .filter-group:last-child > div {
-        display: flex;
-        gap: 4px;
-        align-items: center;
-    }
-    
-    #page-gallery .filter-actions {
-        padding-top: 4px;
-        margin-top: 0;
-        border-top: none;
-        justify-content: flex-start;
-    }
-    
-    #page-gallery .filter-actions .btn {
-        font-size: 12px;
-        padding: 4px 12px;
-    }
+ 
 
   .steps .step {
     display: flex;
@@ -1570,41 +1474,7 @@ input[type=number] {
     font-size: 10px;
     opacity: 0.7;
 }
-  /* Стили для фильтров галереи на ПК */
-#page-gallery .filter-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 14px;
-    align-items: end;
-}
-
-#page-gallery .filter-row .filter-group:last-child {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-bottom: 2px;
-}
-
-#page-gallery .filter-row .filter-group:last-child label {
-    margin-bottom: 0;
-    font-size: 11px;
-    white-space: nowrap;
-    padding-bottom: 2px;
-}
-
-#page-gallery .filter-row .filter-group:last-child > div {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
-
-#page-gallery .filter-actions {
-    padding-top: 0;
-    margin-top: 0;
-    border-top: none;
-    justify-content: flex-start;
-    align-items: center;
-}
+ 
 
   /* ===== АДМИН: УПРАВЛЕНИЕ ФОТО ===== */
 #admin-photos-grid {
@@ -1624,6 +1494,132 @@ input[type=number] {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+  /* ============================================
+   ФИЛЬТРЫ ГАЛЕРЕИ (актуальная версия)
+   ============================================ */
+
+/* 3 колонки: Программа | Сортировка | (Масштаб + Сбросить) */
+#page-gallery .filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    align-items: end;
+}
+
+#page-gallery .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#page-gallery .filter-group label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0;
+}
+
+/* Третья колонка: масштаб + сброс */
+#page-gallery .filter-scale-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Строка "МАСШТАБ" + кнопка "Сбросить" */
+#page-gallery .filter-scale-group .scale-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    height: 16px;
+}
+
+#page-gallery .filter-scale-group .scale-header label {
+    margin: 0;
+    line-height: 1;
+}
+
+/* Компактная кнопка "Сбросить" — на уровне текста "СОРТИРОВКА" */
+#page-gallery .filter-scale-group .btn-reset-gallery {
+    padding: 0 12px;
+    font-size: 11px;
+    height: 20px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Строка с кнопками масштаба — высота как у select */
+#page-gallery .filter-scale-group .scale-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 46px;
+}
+
+#page-gallery .filter-scale-group .scale-controls button {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#page-gallery .filter-scale-group .scale-controls #gallery-grid-size-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 38px;
+    padding: 0 10px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+}
+
+/* ===== МОБИЛЬНАЯ ВЕРСИЯ ФИЛЬТРОВ ГАЛЕРЕИ ===== */
+@media (max-width: 768px) {
+    #page-gallery .filter-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    /* Третья колонка — на всю ширину */
+    #page-gallery .filter-scale-group {
+        grid-column: 1 / -1;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+        margin-top: 4px;
+    }
+
+    #page-gallery .filter-scale-group .scale-header {
+        width: 100%;
+        height: auto;
+    }
+
+    #page-gallery .filter-scale-group .scale-controls {
+        height: auto;
+        justify-content: flex-start;
+    }
+
+    /* Кнопка "Сбросить" — компактная */
+    #page-gallery .filter-scale-group .btn-reset-gallery {
+        height: 28px;
+        padding: 0 14px;
+        font-size: 12px;
+    }
 }
 </style>
 </head>
@@ -2053,36 +2049,36 @@ input[type=number] {
             <button class="btn btn-outline btn-sm" onclick="showPage('home')">← Назад</button>
         </div>
 
-        <!-- Фильтры и сортировка -->
-        <div class="filter-bar" style="margin-bottom:24px;">
-            <div class="filter-row" style="grid-template-columns: 1fr 1fr auto;">
-                <div class="filter-group">
-                    <label>Программа</label>
-                    <select class="filter-select" id="gallery-filter-program" onchange="applyGalleryFilters()">
-                        <option value="">Все программы</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Сортировка</label>
-                    <select class="filter-select" id="gallery-filter-sort" onchange="applyGalleryFilters()">
-                        <option value="newest">Сначала новые</option>
-                        <option value="oldest">Сначала старые</option>
-                        <option value="popular">По популярности</option>
-                    </select>
-                </div>
-                <div class="filter-group" style="display:flex;align-items:flex-end;gap:8px;">
-                    <label style="margin-bottom:0;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Масштаб</label>
-                    <div style="display:flex;gap:4px;">
-                        <button class="btn btn-outline btn-sm" onclick="changeGalleryGridSize(-1)" style="padding:4px 10px;font-size:14px;">−</button>
-                        <span id="gallery-grid-size-label" style="display:flex;align-items:center;padding:0 8px;font-size:13px;font-weight:500;min-width:50px;justify-content:center;">4</span>
-                        <button class="btn btn-outline btn-sm" onclick="changeGalleryGridSize(1)" style="padding:4px 10px;font-size:14px;">+</button>
-                    </div>
-                </div>
+       <!-- Фильтры и сортировка -->
+<div class="filter-bar" style="margin-bottom:24px;">
+    <div class="filter-row">
+        <div class="filter-group">
+            <label>Программа</label>
+            <select class="filter-select" id="gallery-filter-program" onchange="applyGalleryFilters()">
+                <option value="">Все программы</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Сортировка</label>
+            <select class="filter-select" id="gallery-filter-sort" onchange="applyGalleryFilters()">
+                <option value="newest">Сначала новые</option>
+                <option value="oldest">Сначала старые</option>
+                <option value="popular">По популярности</option>
+            </select>
+        </div>
+        <div class="filter-group filter-scale-group">
+            <div class="scale-header">
+                <label>Масштаб</label>
+                <button class="btn btn-outline btn-sm btn-reset-gallery" onclick="resetGalleryFilters()">Сбросить</button>
             </div>
-            <div class="filter-actions" style="border-top:none;padding-top:8px;margin-top:0;">
-                <button class="btn btn-outline btn-sm" onclick="resetGalleryFilters()">Сбросить</button>
+            <div class="scale-controls">
+                <button class="btn btn-outline btn-sm" onclick="changeGalleryGridSize(-1)">−</button>
+                <span id="gallery-grid-size-label">4</span>
+                <button class="btn btn-outline btn-sm" onclick="changeGalleryGridSize(1)">+</button>
             </div>
         </div>
+    </div>
+</div>
 
         <!-- Сетка фото -->
         <div class="gallery-grid" id="gallery-full-grid" style="grid-template-columns:repeat(4,1fr);">
@@ -2104,7 +2100,7 @@ input[type=number] {
 </div>
 
 <!-- ===== ФОТО-ВЬЮВЕР (полноэкранный просмотр) ===== -->
-<div id="photo-viewer" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+<div id="photo-viewer" style="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
     <button id="photo-viewer-close" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:28px;cursor:pointer;padding:10px 16px;border-radius:50%;transition:background 0.2s;z-index:10;">✕</button>
     
     <div id="photo-viewer-content" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;position:relative;">
@@ -4705,7 +4701,6 @@ function resetFilters() {
 const GALLERY_PREVIEW_COUNT = 6;
 
 function renderGallery() {
-    // Обновляем превью на главной
     const grid = document.getElementById('gallery-grid');
     const moreBtn = document.getElementById('gallery-more-btn');
     
@@ -4715,15 +4710,13 @@ function renderGallery() {
         return;
     }
     
-    // Обновляем фильтр программ на странице галереи
     updateGalleryProgramFilter();
     
-    // Если страница галереи открыта, обновляем её
     if (currentPage === 'gallery') {
         renderGalleryPage();
     }
     
-    // Превью на главной - с РАНДОМНОЙ сортировкой
+    // Превью на главной - с рандомной сортировкой
     const shuffled = [...gallery];
     for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -4732,16 +4725,25 @@ function renderGallery() {
     
     const preview = shuffled.slice(0, GALLERY_PREVIEW_COUNT);
     if (grid) {
-        grid.innerHTML = preview.map(item =>
-            `<div class="gallery-item" onclick="showPage('gallery')">
-                ${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>📷</span>`}
-                <div class="gallery-meta">${item.caption} — ${item.author}</div>
+        grid.innerHTML = preview.map((item, index) =>
+            `<div class="gallery-item" data-gallery-index="${index}">
+                ${item.url ? `<img src="${item.url}" alt="${item.caption || ''}" onerror="imgHide(this)">` : `<span>📷</span>`}
+                <div class="gallery-meta">${item.caption || ''} — ${item.author || ''}</div>
             </div>`
         ).join('');
+
+        // ✅ Навешиваем обработчики на превью (открывают вьювер сразу)
+        grid.querySelectorAll('.gallery-item').forEach((el, index) => {
+            el.addEventListener('click', function() {
+                // ✅ Открываем вьювер с тем же порядком, что и в превью
+                openPhotoViewerWithNavigation(preview, index);
+            });
+        });
     }
     
     if (moreBtn) moreBtn.style.display = gallery.length > GALLERY_PREVIEW_COUNT ? '' : 'none';
 }
+  
   function updateGalleryProgramFilter() {
     const sel = document.getElementById('gallery-filter-program');
     if (!sel) return;
