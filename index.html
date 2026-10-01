@@ -2922,6 +2922,45 @@ input[type=number] {
   </div>
 </div>
 
+  <!-- Модалка: Редактирование подписи фото -->
+<div class="modal-overlay" id="caption-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h2 class="modal-title">✏️ Подпись к фото</h2>
+      <button class="modal-close" onclick="closeModal('caption-modal')">✕</button>
+    </div>
+    <div class="modal-scroll">
+      <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:16px;">
+        <img id="caption-photo-preview" 
+             style="width:72px;height:72px;object-fit:cover;border-radius:var(--radius-sm);background:var(--bg2);flex-shrink:0;" 
+             alt="">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:4px;">Автор</div>
+          <div id="caption-photo-author" style="font-weight:600;font-size:14px;color:var(--text);">—</div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Подпись</label>
+        <input type="text" 
+               class="form-input" 
+               id="caption-input" 
+               placeholder="Название места или момента"
+               maxlength="120"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();saveCaption();}">
+        <div style="display:flex;justify-content:space-between;margin-top:6px;">
+          <span id="caption-hint" style="font-size:11px;color:var(--text-muted);">Оставьте пустым, чтобы убрать подпись</span>
+          <span id="caption-counter" style="font-size:11px;color:var(--text-muted);">0 / 120</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('caption-modal')">Отмена</button>
+      <button class="btn btn-primary" id="caption-save-btn" onclick="saveCaption()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== МОДАЛЬНОЕ ОКНО ДЛЯ ВОССТАНОВЛЕНИЯ ПАРОЛЯ ===== -->
 <div class="modal-overlay" id="reset-password-modal">
   <div class="modal" style="max-width:440px;">
@@ -3957,20 +3996,13 @@ function _showPageMain(page) {
   const detail = document.getElementById('page-detail');
   const dashboard = document.getElementById('page-dashboard');
   const admin = document.getElementById('page-admin');
+  const galleryPage = document.getElementById('page-gallery');
 
   if (home) home.style.display = 'none';
-  if (detail) {
-    detail.classList.remove('active');
-    detail.style.display = 'none';
-  }
-  if (dashboard) {
-    dashboard.classList.add('hidden');
-    dashboard.style.display = 'none';
-  }
-  if (admin) {
-    admin.classList.add('hidden');
-    admin.style.display = 'none';
-  }
+  if (detail) { detail.classList.remove('active'); detail.style.display = 'none'; }
+  if (dashboard) { dashboard.classList.add('hidden'); dashboard.style.display = 'none'; }
+  if (admin) { admin.classList.add('hidden'); admin.style.display = 'none'; }
+  if (galleryPage) { galleryPage.classList.add('hidden'); galleryPage.style.display = 'none'; }
 
   currentPage = page;
 
@@ -4045,6 +4077,16 @@ function _showPageMain(page) {
       loadAdmin();
     }
   }
+
+ } else if (page === 'gallery') {
+    const galleryPage = document.getElementById('page-gallery');
+    if (galleryPage) {
+        galleryPage.classList.remove('hidden');
+        galleryPage.style.display = '';
+    }
+    updateGalleryProgramFilter();
+    renderGalleryPage();
+}
 
   window.scrollTo(0, 0);
 }
@@ -4773,33 +4815,6 @@ function renderGallery() {
     
     if ([...sel.options].some(o => o.value === current)) sel.value = current;
 }
-
-// Модифицируем showPage для поддержки галереи
-const originalShowPage = showPage;
-showPage = function(page) {
-    // Вызываем оригинальную функцию
-    originalShowPage(page);
-    
-    if (page === 'gallery') {
-        // Показываем страницу галереи
-        const galleryPage = document.getElementById('page-gallery');
-        if (galleryPage) {
-            galleryPage.style.display = '';
-            galleryPage.classList.remove('hidden');
-            // Обновляем данные
-            updateGalleryProgramFilter();
-            renderGalleryPage();
-        }
-    } else {
-        // Скрываем галерею если она открыта
-        const galleryPage = document.getElementById('page-gallery');
-        if (galleryPage) {
-            galleryPage.style.display = 'none';
-            galleryPage.classList.add('hidden');
-        }
-    }
-};
-
   
   function openPhotoFullscreen(imgSrc, caption) {
     // Сначала переходим на страницу галереи
@@ -11835,19 +11850,103 @@ function deletePhotoAdmin(photoId) {
     });
 }
 
+// ===== РЕДАКТИРОВАНИЕ ПОДПИСИ ФОТО =====
+let editingCaptionPhotoId = null;
+
 function editPhotoCaptionAdmin(photoId) {
     const photo = gallery.find(g => g.id === photoId);
     if (!photo) return;
-    
-    const newCaption = prompt('Введите новую подпись:', photo.caption || '');
-    if (newCaption === null) return;
-    
-    photo.caption = newCaption.trim();
-    saveState('gallery', gallery);
-    gasPost({ action: 'upsert', sheet: 'gallery', data: photo }).catch(() => {});
-    loadAdminPhotos();
-    renderGallery();
-    showToast('Подпись обновлена');
+
+    editingCaptionPhotoId = photoId;
+
+    // Заполняем модалку
+    const preview = document.getElementById('caption-photo-preview');
+    const author = document.getElementById('caption-photo-author');
+    const input = document.getElementById('caption-input');
+    const counter = document.getElementById('caption-counter');
+
+    if (photo.url) {
+        preview.src = photo.url;
+        preview.style.display = 'block';
+    } else {
+        preview.removeAttribute('src');
+        preview.style.display = 'none';
+    }
+    author.textContent = photo.author || 'Аноним';
+
+    input.value = photo.caption || '';
+    counter.textContent = input.value.length + ' / 120';
+
+    // Живой счётчик
+    input.oninput = function() {
+        counter.textContent = this.value.length + ' / 120';
+    };
+
+    openModal('caption-modal');
+
+    // Автофокус и выделение
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 100);
+}
+
+async function saveCaption() {
+    if (!editingCaptionPhotoId) return;
+
+    const photo = gallery.find(g => g.id === editingCaptionPhotoId);
+    if (!photo) {
+        closeModal('caption-modal');
+        return;
+    }
+
+    const input = document.getElementById('caption-input');
+    const btn = document.getElementById('caption-save-btn');
+
+    const newCaption = input.value.trim();
+
+    // Если подпись не изменилась — просто закрываем
+    if ((photo.caption || '') === newCaption) {
+        closeModal('caption-modal');
+        return;
+    }
+
+    // Блокируем кнопку
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Сохранение...';
+    }
+
+    try {
+        photo.caption = newCaption;
+        saveState('gallery', gallery);
+
+        // Синхронизация с Google Sheets
+        try {
+            await gasPost({ action: 'upsert', sheet: 'gallery', data: photo });
+        } catch(e) {
+            console.warn('Gallery update sync error:', e);
+        }
+
+        // Обновляем интерфейс
+        renderGallery();
+        if (currentUser) renderUserGallery(currentUser.id);
+        if (currentPage === 'admin' && typeof loadAdminPhotos === 'function') {
+            loadAdminPhotos();
+        }
+
+        closeModal('caption-modal');
+        showToast('Подпись обновлена ✓');
+    } catch(e) {
+        console.error('Save caption error:', e);
+        showToast('Ошибка сохранения: ' + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Сохранить';
+        }
+        editingCaptionPhotoId = null;
+    }
 }
 
 function filterAdminPhotos() {
