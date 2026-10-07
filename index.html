@@ -10409,169 +10409,30 @@ async function loadAllFromSheets() {
     // === Попытка 2 (retry) при ошибке или таймауте ===
     if (!result || !result.ok) {
       console.warn('⚠️ Первая попытка не удалась:', result?.error || 'unknown');
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 3000));
       result = await gasGet({ action: 'readAll' });
     }
 
-    // === Если и вторая не удалась — офлайн-режим ===
+    // === Попытка 3 (retry) — даём GAS время "прогреться" ===
+    if (!result || !result.ok) {
+      console.warn('⚠️ Вторая попытка не удалась, retry через 10 сек...');
+      await new Promise(r => setTimeout(r, 10000));
+      result = await gasGet({ action: 'readAll' });
+    }
+
+    // === Если и третья не удалась — офлайн-режим + фоновое обновление ===
     if (!result || !result.ok) {
       console.warn('Sheets read error, using local data:', result?.error || 'Unknown error');
       showToast('📌 Офлайн-режим (данные из кэша)', 8000);
+      // ✅ Планируем фоновое обновление через 60 секунд
+      scheduleBackgroundSync();
       return;
     }
 
     const d = result.data || {};
 
-    // === ПРОГРАММЫ ===
-    if (d.programs && Array.isArray(d.programs) && d.programs.length > 0) {
-      programs = d.programs.map(normalizeProgram);
-      saveState('programs', programs);
-      invalidateCache('programs');
-      console.log('✅ Загружено ' + programs.length + ' программ');
-    }
-
-    // === ГАЛЕРЕЯ ===
-    if (d.gallery && Array.isArray(d.gallery) && d.gallery.length > 0) {
-      gallery = d.gallery;
-      saveState('gallery', gallery);
-      invalidateCache('gallery');
-      console.log('✅ Загружено ' + gallery.length + ' фото');
-    }
-
-    // === ЗАЯВКИ ===
-    if (d.leads && Array.isArray(d.leads) && d.leads.length > 0) {
-      leads = d.leads;
-      saveState('leads', leads);
-      invalidateCache('leads');
-      console.log('✅ Загружено ' + leads.length + ' заявок');
-    }
-
-    // === ГРУППЫ ===
-    if (d.groups && Array.isArray(d.groups) && d.groups.length > 0) {
-      groups = d.groups.map(normalizeGroup);
-      saveState('groups', groups);
-      invalidateCache('groups');
-      console.log('✅ Загружено ' + groups.length + ' групп');
-    }
-
-    // === ПОКУПКИ (ПОЕЗДКИ) ===
-    if (d.purchases && Array.isArray(d.purchases) && d.purchases.length > 0) {
-      purchases = d.purchases.map(normalizePurchase);
-      saveState('purchases', purchases);
-      invalidateCache('purchases');
-      console.log('✅ Загружено ' + purchases.length + ' поездок');
-    }
-
-    // === ПОЛЬЗОВАТЕЛИ (с сохранением локального владельца) ===
-    if (d.users && Array.isArray(d.users) && d.users.length > 0) {
-      const remoteUsers = d.users.map(normalizeUser);
-      const localOwner = users.find(u => u.role === 'owner');
-      let mergedUsers = [];
-
-      if (localOwner) {
-        // Локальный владелец всегда приоритетнее
-        mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
-      } else {
-        mergedUsers = remoteUsers;
-      }
-
-      // Удаляем дубликаты по id
-      const uniqueUsers = [];
-      const seenIds = new Set();
-      mergedUsers.forEach(u => {
-        if (!seenIds.has(u.id)) {
-          seenIds.add(u.id);
-          uniqueUsers.push(u);
-        }
-      });
-
-      if (uniqueUsers.length > 0) {
-        users = uniqueUsers;
-        saveState('users', users);
-        invalidateCache('users');
-        console.log('✅ Загружено ' + users.length + ' пользователей');
-
-        // Обновляем текущего пользователя
-        if (currentUser) {
-          const updatedUser = users.find(u => u.id === currentUser.id);
-          if (updatedUser) {
-            currentUser = updatedUser;
-            updateNavForUser();
-          }
-        }
-      }
-    }
-
-    // === НАСТРОЙКИ ===
-    if (d.settings && Array.isArray(d.settings)) {
-      for (const s of d.settings) {
-        if (s.key === 'inviteCode') {
-          inviteCodeSetting = s.value;
-          saveState('inviteCode', s.value);
-          const hintEl = document.getElementById('hint-invite-code');
-          if (hintEl) hintEl.textContent = s.value;
-          const currentEl = document.getElementById('current-invite-code');
-          if (currentEl) currentEl.textContent = s.value;
-        }
-        if (s.key === 'founderContent') {
-          try {
-            const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
-            founderContent = { ...founderContent, ...parsed };
-            saveState('founderContent', founderContent);
-            applyFounderContent();
-          } catch(e) { console.warn('Parse founderContent error:', e); }
-        }
-        if (s.key === 'contactsContent') {
-          try {
-            const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
-            contactsContent = { ...contactsContent, ...parsed };
-            saveState('contactsContent', contactsContent);
-            applyContactsContent();
-          } catch(e) { console.warn('Parse contactsContent error:', e); }
-        }
-        if (s.key === 'enabledTransports') {
-          try {
-            const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
-            if (Array.isArray(parsed)) {
-              enabledTransports = parsed;
-              saveState('enabledTransports', enabledTransports);
-            }
-          } catch(e) { console.warn('Parse enabledTransports error:', e); }
-        }
-        if (s.key === 'transportDescs') {
-          try {
-            const descs = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
-            for (const t of ALL_TRANSPORTS) {
-              if (descs[t.val] !== undefined) t.desc = descs[t.val];
-            }
-            saveState('transportDescs', descs);
-          } catch(e) { console.warn('Parse transportDescs error:', e); }
-        }
-        if (s.key === 'heroStats') {
-          try {
-            const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
-            heroStats = { ...heroStats, ...parsed };
-            saveState('heroStats', heroStats);
-            loadHeroStats();
-          } catch(e) { console.warn('Parse heroStats error:', e); }
-        }
-      }
-    }
-
-    // === ОБНОВЛЯЕМ ИНТЕРФЕЙС ===
-    renderPrefTagsFilter();
-    renderPrograms(programs);
-    renderGallery();
-    renderHowCards();
-    renderFeaturedCarousel();
-    applyFounderContent();
-    applyContactsContent();
-    updateTransportSelects();
-
-    // Обновляем админку если открыта
-    if (currentPage === 'admin' && currentUser) {
-      loadAdmin();
-    }
+    // ✅ Применяем данные через общую функцию
+    applyFullDataFromSheets(d);
 
     // ✅ Успешное завершение — снимаем sticky-тост
     showToast('✅ Данные актуальны');
@@ -10579,11 +10440,203 @@ async function loadAllFromSheets() {
 
   } catch(e) {
     console.warn('Sync error:', e);
-    // ✅ Даже при исключении — снимаем sticky-тост
     showToast('📌 Офлайн-режим (данные из кэша)', 5000);
+    // ✅ Планируем фоновое обновление
+    scheduleBackgroundSync();
   }
 }
 
+// ============================================================
+// === ПРИМЕНЕНИЕ ПОЛНЫХ ДАННЫХ ИЗ SHEETS =====================
+// ============================================================
+
+function applyFullDataFromSheets(d) {
+  // === ПРОГРАММЫ ===
+  if (d.programs && Array.isArray(d.programs) && d.programs.length > 0) {
+    programs = d.programs.map(normalizeProgram);
+    saveState('programs', programs);
+    invalidateCache('programs');
+    console.log('✅ Загружено ' + programs.length + ' программ');
+  }
+
+  // === ГАЛЕРЕЯ ===
+  if (d.gallery && Array.isArray(d.gallery) && d.gallery.length > 0) {
+    gallery = d.gallery;
+    saveState('gallery', gallery);
+    invalidateCache('gallery');
+    console.log('✅ Загружено ' + gallery.length + ' фото');
+  }
+
+  // === ЗАЯВКИ ===
+  if (d.leads && Array.isArray(d.leads) && d.leads.length > 0) {
+    leads = d.leads;
+    saveState('leads', leads);
+    invalidateCache('leads');
+    console.log('✅ Загружено ' + leads.length + ' заявок');
+  }
+
+  // === ГРУППЫ ===
+  if (d.groups && Array.isArray(d.groups) && d.groups.length > 0) {
+    groups = d.groups.map(normalizeGroup);
+    saveState('groups', groups);
+    invalidateCache('groups');
+    console.log('✅ Загружено ' + groups.length + ' групп');
+  }
+
+  // === ПОКУПКИ (ПОЕЗДКИ) ===
+  if (d.purchases && Array.isArray(d.purchases) && d.purchases.length > 0) {
+    purchases = d.purchases.map(normalizePurchase);
+    saveState('purchases', purchases);
+    invalidateCache('purchases');
+    console.log('✅ Загружено ' + purchases.length + ' поездок');
+  }
+
+  // === ПОЛЬЗОВАТЕЛИ ===
+  if (d.users && Array.isArray(d.users) && d.users.length > 0) {
+    const remoteUsers = d.users.map(normalizeUser);
+    const localOwner = users.find(u => u.role === 'owner');
+    let mergedUsers = [];
+
+    if (localOwner) {
+      mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
+    } else {
+      mergedUsers = remoteUsers;
+    }
+
+    const uniqueUsers = [];
+    const seenIds = new Set();
+    mergedUsers.forEach(u => {
+      if (!seenIds.has(u.id)) {
+        seenIds.add(u.id);
+        uniqueUsers.push(u);
+      }
+    });
+
+    if (uniqueUsers.length > 0) {
+      users = uniqueUsers;
+      saveState('users', users);
+      invalidateCache('users');
+      console.log('✅ Загружено ' + users.length + ' пользователей');
+
+      if (currentUser) {
+        const updatedUser = users.find(u => u.id === currentUser.id);
+        if (updatedUser) {
+          currentUser = updatedUser;
+          updateNavForUser();
+        }
+      }
+    }
+  }
+
+  // === НАСТРОЙКИ ===
+  if (d.settings && Array.isArray(d.settings)) {
+    for (const s of d.settings) {
+      if (s.key === 'inviteCode') {
+        inviteCodeSetting = s.value;
+        saveState('inviteCode', s.value);
+        const hintEl = document.getElementById('hint-invite-code');
+        if (hintEl) hintEl.textContent = s.value;
+        const currentEl = document.getElementById('current-invite-code');
+        if (currentEl) currentEl.textContent = s.value;
+      }
+      if (s.key === 'founderContent') {
+        try {
+          const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+          founderContent = { ...founderContent, ...parsed };
+          saveState('founderContent', founderContent);
+          applyFounderContent();
+        } catch(e) { console.warn('Parse founderContent error:', e); }
+      }
+      if (s.key === 'contactsContent') {
+        try {
+          const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+          contactsContent = { ...contactsContent, ...parsed };
+          saveState('contactsContent', contactsContent);
+          applyContactsContent();
+        } catch(e) { console.warn('Parse contactsContent error:', e); }
+      }
+      if (s.key === 'enabledTransports') {
+        try {
+          const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+          if (Array.isArray(parsed)) {
+            enabledTransports = parsed;
+            saveState('enabledTransports', enabledTransports);
+          }
+        } catch(e) { console.warn('Parse enabledTransports error:', e); }
+      }
+      if (s.key === 'transportDescs') {
+        try {
+          const descs = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+          for (const t of ALL_TRANSPORTS) {
+            if (descs[t.val] !== undefined) t.desc = descs[t.val];
+          }
+          saveState('transportDescs', descs);
+        } catch(e) { console.warn('Parse transportDescs error:', e); }
+      }
+      if (s.key === 'heroStats') {
+        try {
+          const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+          heroStats = { ...heroStats, ...parsed };
+          saveState('heroStats', heroStats);
+          loadHeroStats();
+        } catch(e) { console.warn('Parse heroStats error:', e); }
+      }
+    }
+  }
+
+  // === ОБНОВЛЯЕМ ИНТЕРФЕЙС ===
+  renderPrefTagsFilter();
+  renderPrograms(programs);
+  renderGallery();
+  renderHowCards();
+  renderFeaturedCarousel();
+  applyFounderContent();
+  applyContactsContent();
+  updateTransportSelects();
+
+  if (currentPage === 'admin' && currentUser) {
+    loadAdmin();
+  }
+}
+
+// ============================================================
+// === ФОНОВОЕ ОБНОВЛЕНИЕ ПРИ НЕУДАЧНОМ READALL ===============
+// ============================================================
+
+let _bgSyncTimer = null;
+
+function scheduleBackgroundSync(delayMs) {
+  // Отменяем старый таймер, если был
+  if (_bgSyncTimer) clearTimeout(_bgSyncTimer);
+  
+  delayMs = (typeof delayMs === 'number') ? delayMs : 60000;   // 60 сек по умолчанию
+  
+  console.log('⏰ Фоновое обновление через ' + Math.round(delayMs / 1000) + ' сек');
+  
+  _bgSyncTimer = setTimeout(async () => {
+    _bgSyncTimer = null;
+    
+    if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
+    
+    console.log('🔄 Фоновое обновление...');
+    try {
+      const result = await gasGet({ action: 'readAll' });
+      
+      if (result && result.ok && result.data) {
+        console.log('✅ Фоновое обновление удалось');
+        applyFullDataFromSheets(result.data);
+        showToast('✅ Данные обновлены');
+      } else {
+        console.warn('⚠️ Фоновое обновление не удалось, retry через 5 мин');
+        scheduleBackgroundSync(5 * 60 * 1000);
+      }
+    } catch(e) {
+      console.warn('⚠️ Ошибка фонового обновления:', e.message);
+      scheduleBackgroundSync(5 * 60 * 1000);
+    }
+  }, delayMs);
+}
+  
 function normalizePurchase(p) {
   return {
     id: parseInt(p.id) || p.id,
