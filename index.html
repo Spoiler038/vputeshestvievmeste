@@ -6365,6 +6365,45 @@ async function doRegister() {
   }
 }
 
+// ============================================================
+// === ХЕШИРОВАНИЕ ПАРОЛЯ (SHA-256) ===========================
+// ============================================================
+
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// === ЛОКАЛЬНОЕ ХЕШИРОВАНИЕ ПАРОЛЯ (устаревшее, но используется) ===
+function hashPasswordLocally(password) {
+  if (!password) return '';
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return 'hash_' + Math.abs(hash).toString(16);
+}
+
+// === ПРОВЕРКА ПАРОЛЯ ===
+async function checkPassword(plainPassword, hashedPassword) {
+  // Если пароль совпадает с открытым (для обратной совместимости)
+  if (plainPassword === hashedPassword) return true;
+  
+  // Проверка SHA-256
+  try {
+    const shaHash = await sha256(plainPassword);
+    if (shaHash === hashedPassword) return true;
+  } catch(e) {
+    console.warn('SHA-256 check error:', e);
+  }
+  
+  return false;
+}
+  
 // === ВХОД ===
 async function doLogin() {
     const loginOrEmail = document.getElementById('login-username').value.trim();
