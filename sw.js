@@ -60,6 +60,7 @@ self.addEventListener('fetch', event => {
   if (url.includes('supabase.co') || 
       url.includes('cloudinary.com') ||
       url.includes('googleapis.com') ||
+      url.includes('script.google.com') ||
       url.includes('api.anthropic') ||
       url.includes('raw.githubusercontent.com')) {
     return;
