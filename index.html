@@ -10762,6 +10762,13 @@ function applyFullDataFromSheets(d) {
       if (s.key === 'push_enabled') {
   const enabled = s.value === true || s.value === 'true';
   localStorage.setItem('vputi_push_enabled', enabled ? '1' : '0');
+  // Обновляем UI переключатели, если они на экране
+  const toggle = document.getElementById('push-toggle');
+  const label = document.getElementById('push-toggle-label');
+  if (toggle) toggle.checked = enabled;
+  if (label) label.textContent = enabled ? 'Включены' : 'Отключены';
+  const mobToggle = document.getElementById('mob-push-toggle');
+  if (mobToggle) mobToggle.checked = enabled;
 }
     }
   }
