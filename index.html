@@ -8951,10 +8951,8 @@ function bumpDataVersion() {
 // ============================================================
 
 function toggleGroupMembers(groupId) {
-    // Пытаемся найти элемент разными способами
     let el = document.getElementById('group-members-' + groupId);
     
-    // Если не найден по ID, ищем в родительской карточке
     if (!el) {
         const cards = document.querySelectorAll('[data-group-header]');
         for (const card of cards) {
@@ -8964,11 +8962,10 @@ function toggleGroupMembers(groupId) {
                     el = membersDiv;
                     break;
                 }
-                // Создаём контейнер для участников, если его нет
                 const newDiv = document.createElement('div');
                 newDiv.id = 'group-members-' + groupId;
-                newDiv.style.cssText = 'display:none;border-top:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0;';
-                newDiv.innerHTML = `<div style="padding:12px 16px;color:var(--text-muted);text-align:center;font-size:12px;">👥 Загрузка...</div>`;
+                newDiv.style.cssText = 'display:none;border-top:1px solid var(--border);padding:0;width:100%;max-width:100%;';
+                newDiv.innerHTML = `<div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;width:100%;padding:12px 16px;color:var(--text-muted);text-align:center;font-size:12px;">👥 Загрузка...</div>`;
                 card.appendChild(newDiv);
                 el = newDiv;
                 break;
@@ -8981,18 +8978,12 @@ function toggleGroupMembers(groupId) {
         return;
     }
     
-    // ✅ Используем класс для состояния, а не только inline style
     const isHidden = el.style.display === 'none' || el.style.display === '';
-    const isMobile = window.innerWidth <= 768;
-    
-    // ✅ Сохраняем состояние в объекте группы
     const g = groups.find(x => x.id === groupId);
-    if (g) {
-        g._isOpen = isHidden;
-    }
+    if (g) g._isOpen = isHidden;
     
     if (isHidden) {
-        // Показываем
+        // === ПОКАЗЫВАЕМ ===
         el.style.display = 'block';
         el.classList.add('show-members');
         
@@ -9002,7 +8993,6 @@ function toggleGroupMembers(groupId) {
         el.style.webkitOverflowScrolling = 'touch';
         el.style.maxWidth = '100%';
         
-        // ✅ ПРИНУДИТЕЛЬНО ПРИМЕНЯЕМ СТИЛИ К ТАБЛИЦЕ
         const table = el.querySelector('table');
         if (table) {
             table.style.minWidth = '650px';
@@ -9011,38 +9001,39 @@ function toggleGroupMembers(groupId) {
             table.style.borderCollapse = 'collapse';
         }
         
-        // Для мобильных добавляем анимацию
-        if (isMobile) {
-            el.style.transition = 'max-height 0.3s ease-out';
-            el.style.maxHeight = '0';
-            el.style.overflow = 'hidden';
-            requestAnimationFrame(() => {
-                el.style.maxHeight = el.scrollHeight + 'px';
-                setTimeout(() => {
-                    el.style.maxHeight = 'none';
-                    el.style.overflowX = 'auto';
-                    el.style.overflowY = 'hidden';
-                }, 400);
-            });
-        }
-    } else {
-        // Скрываем
-        if (isMobile) {
+        // ✅ АНИМАЦИЯ ДЛЯ ВСЕХ УСТРОЙСТВ
+        el.style.transition = 'max-height 0.3s ease-out, opacity 0.2s ease-out';
+        el.style.maxHeight = '0';
+        el.style.overflow = 'hidden';
+        el.style.opacity = '0';
+        
+        requestAnimationFrame(() => {
             el.style.maxHeight = el.scrollHeight + 'px';
-            el.style.overflow = 'hidden';
-            requestAnimationFrame(() => {
-                el.style.maxHeight = '0';
-                setTimeout(() => {
-                    el.style.display = 'none';
-                    el.style.maxHeight = 'none';
-                    el.style.overflow = '';
-                    el.classList.remove('show-members');
-                }, 400);
-            });
-        } else {
-            el.style.display = 'none';
-            el.classList.remove('show-members');
-        }
+            el.style.opacity = '1';
+            setTimeout(() => {
+                el.style.maxHeight = 'none';
+                el.style.opacity = '1';
+                el.style.overflowX = 'auto';
+                el.style.overflowY = 'hidden';
+            }, 350);
+        });
+    } else {
+        // === СКРЫВАЕМ ===
+        el.style.maxHeight = el.scrollHeight + 'px';
+        el.style.overflow = 'hidden';
+        el.style.opacity = '1';
+        
+        requestAnimationFrame(() => {
+            el.style.maxHeight = '0';
+            el.style.opacity = '0';
+            setTimeout(() => {
+                el.style.display = 'none';
+                el.style.maxHeight = 'none';
+                el.style.overflow = '';
+                el.style.opacity = '';
+                el.classList.remove('show-members');
+            }, 350);
+        });
     }
 }
   
@@ -11323,7 +11314,7 @@ if (isLoading || !dataCache.purchases.data) {
                 }
                 
                 return `
-                    <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:visible;">
+                    <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">
                         <!-- Заголовок группы - теперь без клика на весь блок -->
                         <div data-group-header data-group-id="${g.id}" style="padding:12px 14px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--bg);cursor:pointer;-webkit-tap-highlight-color:transparent;border-radius:var(--radius-sm) var(--radius-sm) 0 0;">
     <div style="flex:1;min-width:120px;">
@@ -11340,17 +11331,17 @@ if (isLoading || !dataCache.purchases.data) {
     </div>
 </div>
                         <!-- Кнопки управления группой - отдельная строка -->
-                        <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--surface);border-bottom:1px solid var(--border);border-bottom:1px solid var(--border);">
+                        <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--surface);border-bottom:1px solid var(--border);border-radius:0 0 var(--radius-sm) var(--radius-sm);">
                             <button class="btn btn-edit" style="font-size:10px;padding:4px 10px;height:28px;flex:1;min-width:60px;" onclick="event.stopPropagation();openEditGroup(${g.id})">✏️ Изменить</button>
                             <button class="btn btn-danger" style="font-size:10px;padding:4px 10px;height:28px;flex:1;min-width:60px;" onclick="event.stopPropagation();deleteGroup(${g.id})">🗑 Удалить</button>
                             <button class="btn btn-outline btn-sm" style="font-size:10px;padding:4px 10px;height:28px;flex:1;min-width:70px;" onclick="event.stopPropagation();openAddMember(${g.id})" ${filled >= max ? 'disabled' : ''}>+ Участник</button>
                         </div>
                         <!-- Список участников (раскрывается) -->
                         <div id="group-members-${g.id}" style="display:${isOpen ? 'block' : 'none'};border-top:1px solid var(--border);padding:0;width:100%;max-width:100%;">
-    <div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;width:100%;">
-        ${membersHTML}
-    </div>
-</div>
+                        <div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;width:100%;">
+                            ${membersHTML}
+                        </div>
+                      </div>
                     </div>
                 `;
             }).join('')}
