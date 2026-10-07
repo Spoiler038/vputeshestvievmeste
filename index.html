@@ -4440,9 +4440,10 @@ function logout() {
   clearLoginFields();
   currentUser = null;
   
-  // ✅ УДАЛЯЕМ КЭШ ТОЛЬКО ПРИ ВЫХОДЕ
+  // ✅ УДАЛЯЕМ ВСЕ ДАННЫЕ СЕССИИ
   localStorage.removeItem('vputi_password_hash');
   localStorage.removeItem('vputi_user_data');
+  localStorage.removeItem('vputi_session_expires');   // ← ДОБАВИТЬ
   
   updateNavForUser();
   showPage('home');
@@ -4463,6 +4464,16 @@ function tryAutoLogin() {
         return false;
     }
     
+    // ✅ ПРОВЕРКА СРОКА ДЕЙСТВИЯ СЕССИИ
+    const expires = parseInt(localStorage.getItem('vputi_session_expires') || '0');
+    if (expires && Date.now() > expires) {
+        console.log('🔓 Автологин: сессия истекла');
+        localStorage.removeItem('vputi_password_hash');
+        localStorage.removeItem('vputi_user_data');
+        localStorage.removeItem('vputi_session_expires');
+        return false;
+    }
+    
     let savedUserData;
     try {
         savedUserData = JSON.parse(savedUserDataRaw);
@@ -4470,6 +4481,7 @@ function tryAutoLogin() {
         console.warn('⚠️ Автологин: повреждённые данные, очищаем');
         localStorage.removeItem('vputi_password_hash');
         localStorage.removeItem('vputi_user_data');
+        localStorage.removeItem('vputi_session_expires');
         return false;
     }
     
@@ -4490,7 +4502,6 @@ function tryAutoLogin() {
     }
     
     // 4. Если пользователя вообще нет в списке — синтезируем из сохранённых данных
-    //    (например, если данные пришли из Google Sheets и ещё не успели загрузиться)
     if (!user) {
         console.log('🔓 Автологин: пользователь не найден в списке, синтезируем из localStorage');
         user = {
@@ -4500,7 +4511,7 @@ function tryAutoLogin() {
             name: savedUserData.name || 'Пользователь',
             role: savedUserData.role || 'user',
             avatar: savedUserData.avatar || '',
-            password: savedHash,   // хеш, чтобы не потерять
+            password: savedHash,
             bio: '',
             phone: '',
             discount: 0,
@@ -4509,18 +4520,16 @@ function tryAutoLogin() {
             active: true,
             consentDate: ''
         };
-        // Добавляем в общий список, чтобы он был доступен в админке
         users.push(user);
         saveState('users', users);
     }
     
-    // 5. Проверяем, что хеш пароля совпадает (защита от подмены user_data)
-    //    Если у пользователя есть свой пароль — сравниваем
+    // 5. Проверяем, что хеш пароля совпадает
     if (user.password && user.password !== savedHash) {
-        // Пароль мог быть изменён на другом устройстве — тогда автологин не сработает
         console.warn('⚠️ Автологин: хеш не совпадает, требуется повторный вход');
         localStorage.removeItem('vputi_password_hash');
         localStorage.removeItem('vputi_user_data');
+        localStorage.removeItem('vputi_session_expires');
         return false;
     }
     
