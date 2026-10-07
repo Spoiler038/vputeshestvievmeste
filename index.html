@@ -87,6 +87,13 @@ img { max-width: 100%; display: block; }
 .btn-success { background: var(--accent); color: white; padding: 7px 14px; font-size: 12px; }
 .btn-full { width: 100%; justify-content: center; }
 .btn-disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; }
+#group-modal .modal-footer .btn-danger {
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    border-radius: 50px;
+}
 
 /* ===== НАВИГАЦИЯ ===== */
 .navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(246,241,233,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
@@ -1648,7 +1655,7 @@ input[type=number] {
       <div id="guest-menu"><button class="btn btn-outline btn-sm" onclick="openAuth()">ВОЙТИ</button></div>
       <div id="user-menu" class="hidden">
         <div class="user-avatar" id="user-avatar-small" onclick="document.getElementById('avatar-upload-small').click()"><span id="avatar-letter-small">М</span><input type="file" id="avatar-upload-small" accept="image/*" style="display:none"></div>
-        <div class="user-info"><span id="username-display" class="username">Марина</span><button class="btn btn-outline btn-sm" onclick="showPage('dashboard')">ПРОФИЛЬ</button></div>
+        <div class="user-info"><span id="username-display" class="username">Марина</span><button class="btn btn-outline btn-sm" onclick="openProfileFromNav()">ПРОФИЛЬ</button></div>
         <button class="mobile-admin-toggle" id="mobile-admin-toggle" onclick="toggleMobileAdminPanel()" style="display:none;">⚙ ПАНЕЛЬ</button>
       </div>
     </div>
@@ -2794,15 +2801,7 @@ input[type=number] {
       <div id="group-modal-content"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-danger" id="delete-group-btn" style="display:none;" onclick="deleteGroup(editingGroupId)">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18"/>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <line x1="10" y1="11" x2="10" y2="17"/>
-          <line x1="14" y1="11" x2="14" y2="17"/>
-        </svg>
-        Удалить
-      </button>
+      <button class="btn btn-danger" id="delete-group-btn" style="display:none;" onclick="deleteGroup(editingGroupId)">Удалить</button>
       <button class="btn btn-outline" onclick="closeModal('group-modal')">Отмена</button>
       <button class="btn btn-primary" onclick="saveGroup()">Сохранить</button>
     </div>
@@ -3332,6 +3331,17 @@ setTimeout(function() {
         html2canvas: window._LIB_LOAD_STATE.html2canvas ? '✅ Загружен' : '⏳ Загрузка...'
     });
 }, 2000);
+
+  function openProfileFromNav() {
+    // Если мобильная админ-панель открыта — закрываем её
+    if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
+        closeMobAdmin();
+    }
+    // Небольшая задержка, чтобы анимация закрытия не мешала
+    setTimeout(() => {
+        showPage('dashboard');
+    }, 50);
+}
 </script>
 
 <!-- Запасной вариант: если скрипты не загрузились через динамическую загрузку, пробуем через обычные теги -->
@@ -5270,7 +5280,7 @@ function loadDashboard() {
         <div class="profile-info-label">О себе</div>${u.bio || '—'}
     </div>
     <div class="profile-info-item">
-        <div class="profile-info-label">Участник с</div>${u.joinedDate ? `<div style="font-size:10px;color:var(--text-muted);">с ${formatDateForDisplay(u.joinedDate)}</div>` : ''}
+        <div class="profile-info-label">Участник с</div>${u.joinedDate ? `<div style="font-size:10px;color:var(--text-muted);">с ${formatDate(u.joinedDate)}</div>` : ''}
     </div>
 `;
 
@@ -11282,20 +11292,20 @@ if (isLoading || !dataCache.purchases.data) {
                 return `
                     <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">
                         <!-- Заголовок группы - теперь без клика на весь блок -->
-                        <div style="padding:12px 14px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--bg);">
-                            <div style="flex:1;min-width:120px;">
-                                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">
-                                    <strong style="font-size:14px;font-family:var(--font-family);">${g.name}</strong>
-                                    <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${g.id})" style="cursor:pointer;font-size:8px;padding:1px 6px;">${g.status} ✎</span>
-                                </div>
-                                <div style="font-size:11px;color:var(--text-muted);">${prog ? prog.name : (g.programName || '—')}</div>
-                                ${g.startDate ? `<div style="font-size:10px;color:var(--text-muted);">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
-                            </div>
-                            <div style="text-align:center;min-width:50px;padding:2px 6px;">
-                                <div style="font-size:18px;font-weight:600;color:var(--accent2);line-height:1.2;cursor:pointer;" onclick="toggleGroupMembers(${g.id});">${filled}/${max}</div>
-                                <div style="font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;" onclick="toggleGroupMembers(${g.id});">участников</div>
-                            </div>
-                        </div>
+                        <div data-group-header data-group-id="${g.id}" style="padding:12px 14px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--bg);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+    <div style="flex:1;min-width:120px;">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">
+            <strong style="font-size:14px;font-family:var(--font-family);">${g.name}</strong>
+            <span class="tag ${statusColor}" onclick="event.stopPropagation();cycleGroupStatus(${g.id})" style="cursor:pointer;font-size:8px;padding:1px 6px;">${g.status} ✎</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);">${prog ? prog.name : (g.programName || '—')}</div>
+        ${g.startDate ? `<div style="font-size:10px;color:var(--text-muted);">📅 ${formatDate(g.startDate)}${g.endDate ? ' — ' + formatDate(g.endDate) : ''}</div>` : ''}
+    </div>
+    <div style="text-align:center;min-width:50px;padding:2px 6px;">
+        <div style="font-size:18px;font-weight:600;color:var(--accent2);line-height:1.2;">${filled}/${max}</div>
+        <div style="font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">участников</div>
+    </div>
+</div>
                         <!-- Кнопки управления группой - отдельная строка -->
                         <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--surface);border-bottom:1px solid var(--border);">
                             <button class="btn btn-edit" style="font-size:10px;padding:4px 10px;height:28px;flex:1;min-width:60px;" onclick="event.stopPropagation();openEditGroup(${g.id})">✏️ Изменить</button>
@@ -11331,7 +11341,7 @@ if (isLoading || !dataCache.purchases.data) {
                         <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><strong>${photo.author || '—'}</strong> ${photo.caption ? '· ' + photo.caption : ''}</div>
                         <div style="display:flex;gap:4px;">
                             <button class="btn btn-outline btn-sm" style="font-size:8px;padding:2px 6px;background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);" onclick="editPhotoCaptionAdmin(${photo.id})">✏️</button>
-                            <button class="btn btn-danger" style="font-size:8px;padding:2px 6px;" onclick="deletePhotoAdmin(${photo.id})">🗑</button>
+                            <button class="btn btn-danger" style="font-size:8px;padding:2px 6px;display:inline-flex;align-items:center;justify-content:center;" onclick="deletePhotoAdmin(${photo.id})">     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">         <path d="M3 6h18"/>         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>         <line x1="10" y1="11" x2="10" y2="17"/>         <line x1="14" y1="11" x2="14" y2="17"/>     </svg> </button>
                         </div>
                     </div>
                 </div>
@@ -11819,7 +11829,7 @@ function loadAdminPhotos() {
                         <div><strong>${photo.author || '—'}</strong> ${photo.caption ? '· ' + photo.caption : ''}</div>
                         <div style="display:flex;gap:6px;">
                             <button class="btn btn-outline btn-sm" style="font-size:10px;padding:2px 8px;background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);" onclick="editPhotoCaptionAdmin(${photo.id})">✏️</button>
-                            <button class="btn btn-danger" style="font-size:10px;padding:2px 8px;" onclick="deletePhotoAdmin(${photo.id})">🗑</button>
+                            <button class="btn btn-danger" style="font-size:10px;padding:2px 8px;display:inline-flex;align-items:center;justify-content:center;" onclick="deletePhotoAdmin(${photo.id})">     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">         <path d="M3 6h18"/>         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>         <line x1="10" y1="11" x2="10" y2="17"/>         <line x1="14" y1="11" x2="14" y2="17"/>     </svg> </button>
                         </div>
                     </div>
                 </div>
@@ -12041,37 +12051,30 @@ document.addEventListener('touchstart', function(e) {
     }
 }, { passive: false });
 
- // Добавьте этот код после инициализации
+// ============================================================
+// === ГЛОБАЛЬНЫЙ ОБРАБОТЧИК КЛИКОВ ПО ГРУППАМ ================
+// ============================================================
+
 document.addEventListener('click', function(e) {
-    // Обработка для мобильных устройств
-    const target = e.target.closest('[onclick*="toggleGroupMembers"]');
-    if (target) {
-        const onclickAttr = target.getAttribute('onclick');
-        if (onclickAttr) {
-            const match = onclickAttr.match(/toggleGroupMembers\((\d+)\)/);
-            if (match) {
-                e.preventDefault();
-                // Небольшая задержка для PWA
-                setTimeout(() => {
-                    toggleGroupMembers(parseInt(match[1]));
-                }, 50);
-                return;
-            }
-        }
-    }
-    
-    // Альтернативный обработчик для мобильных групп (data-group-header)
+    // Ищем ближайший элемент с data-group-header (мобильная и ПК версии)
     const groupHeader = e.target.closest('[data-group-header]');
-    if (groupHeader) {
-        const groupId = groupHeader.dataset.groupId;
-        if (groupId) {
-            e.preventDefault();
-            e.stopPropagation();
-            setTimeout(() => {
-                toggleGroupMembers(parseInt(groupId));
-            }, 50);
-        }
+    if (!groupHeader) return;
+
+    // Проверяем, что клик был не по кнопке/интерактивному элементу внутри
+    // (на случай, если где-то забыли stopPropagation)
+    const interactiveEl = e.target.closest('button, a, input, select, textarea, [onclick*="cycleGroupStatus"], [onclick*="openEditGroup"], [onclick*="deleteGroup"], [onclick*="openAddMember"], [onclick*="removeMember"]');
+    
+    if (interactiveEl) {
+        // Клик по кнопке — не трогаем, пусть работает её собственный onclick
+        return;
     }
+
+    const groupId = groupHeader.dataset.groupId;
+    if (!groupId) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    toggleGroupMembers(parseInt(groupId));
 }, { passive: false });
 </script>
   <script>
