@@ -1636,6 +1636,39 @@ input[type=number] {
         flex-shrink: 0;
     }
 }
+  /* ===== TOGGLE SWITCH ===== */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #ccc;
+  transition: 0.3s;
+  border-radius: 28px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 22px; width: 22px;
+  left: 3px; bottom: 3px;
+  background: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+input:checked + .slider {
+  background: var(--accent);
+}
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
 </style>
 </head>
 <body>
@@ -2431,6 +2464,19 @@ input[type=number] {
             <p class="auth-hint" style="margin-top:10px;">Текущий код: <span id="current-invite-code">VPUTI2026</span></p>
           </div>
         </div>
+
+        <!-- Уведомления о заявках -->
+<div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:20px;">
+  <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:6px;">🔔 Уведомления о заявках</h3>
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Push-уведомления приходят всем владельцам и администраторам.</p>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+    <span id="push-toggle-label" style="font-size:14px;font-weight:500;">Отключены</span>
+    <label class="switch">
+      <input type="checkbox" id="push-toggle" onchange="togglePushNotifications(this.checked)">
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
 
         <!-- Статистика на главной -->
         <div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:20px;">
@@ -4345,6 +4391,10 @@ function loginSuccess(user) {
   
   closeAuth();
   updateNavForUser();
+  // Подписка на push, если админ/владелец
+if (user.role === 'owner' || user.role === 'admin') {
+  setTimeout(() => subscribeToPushNotifications(), 1500);
+}
   showToast(`Добро пожаловать, ${user.name.split(' ')[0]}! 👋`);
 }
 
@@ -4436,7 +4486,8 @@ function updateNavForUser() {
   }
 }
 // Функция для выхода (УДАЛЯЕТ кэш ТОЛЬКО ЗДЕСЬ)
-function logout() {
+async function logout() {
+  await unsubscribeFromPushNotifications();
   clearLoginFields();
   currentUser = null;
   
@@ -8444,6 +8495,7 @@ function loadSettingsAdmin() {
   document.getElementById('current-invite-code').textContent = inviteCodeSetting;
   document.getElementById('hint-invite-code').textContent = inviteCodeSetting;
   renderPrefTagsAdmin();
+  loadPushToggleState();
 }
 
 function saveInviteCode() {
@@ -8458,6 +8510,33 @@ function saveInviteCode() {
   document.getElementById('current-invite-code').textContent = inviteCodeSetting;
   document.getElementById('hint-invite-code').textContent = inviteCodeSetting;
   showToast('Код приглашения обновлён');
+}
+
+  function loadPushToggleState() {
+  const enabled = localStorage.getItem('vputi_push_enabled') !== '0';
+  const toggle = document.getElementById('push-toggle');
+  const label = document.getElementById('push-toggle-label');
+  if (toggle) toggle.checked = enabled;
+  if (label) label.textContent = enabled ? 'Включены' : 'Отключены';
+}
+
+async function togglePushNotifications(enabled) {
+  localStorage.setItem('vputi_push_enabled', enabled ? '1' : '0');
+
+  // Обновляем метку
+  const label = document.getElementById('push-toggle-label');
+  if (label) label.textContent = enabled ? 'Включены' : 'Отключены';
+
+  // Синхронизируем с GAS
+  await saveSettingToSheets('push_enabled', enabled);
+
+  if (enabled) {
+    showToast('🔔 Уведомления включены');
+    await subscribeToPushNotifications();
+  } else {
+    showToast('🔕 Уведомления отключены');
+    await unsubscribeFromPushNotifications();
+  }
 }
 
 function loadHeroStats() {
@@ -10210,6 +10289,105 @@ function hasUserTraveled(userId, programId) {
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxH8ltBBHWEkMDKyOde21Th-hAxZj5WYbZNJfAAD1a9QMe3Xt3x66AutDo4xfuzkyxa/exec';
 let sheetsInitialized = false;
 
+// ===== PUSH NOTIFICATIONS =====
+const VAPID_PUBLIC_KEY = 'BO5mDuU0D0DbYXwwHi_Q6XeuwobMS3G9eRX4NwlOKoDNGC4EXFx8k1Hn4L47rDuImr8dKSjlhQEo53vvEj5Feog';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+
+let _isSubscribing = false;
+
+async function subscribeToPushNotifications() {
+  if (_isSubscribing) return;
+  if (!currentUser) return;
+  if (currentUser.role !== 'owner' && currentUser.role !== 'admin') return;
+
+  const enabled = localStorage.getItem('vputi_push_enabled') !== '0';
+  if (!enabled) {
+    console.log('🔕 Push отключены');
+    return;
+  }
+
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.navigator.standalone === true;
+    if (isIOS && !isStandalone) {
+      showToast('📱 Для уведомлений на iOS добавьте приложение на экран «Домой»');
+    }
+    return;
+  }
+
+  _isSubscribing = true;
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.warn('Разрешение не получено');
+      return;
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+
+    // Отписываемся от старой подписки, если есть
+    const existingSub = await registration.pushManager.getSubscription();
+    if (existingSub) await existingSub.unsubscribe();
+
+    // Создаём новую
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+
+    const subJson = subscription.toJSON();
+    const endpoint = subJson.endpoint;
+    const p256dh = subJson.keys ? subJson.keys.p256dh : '';
+    const auth = subJson.keys ? subJson.keys.auth : '';
+
+    await gasPost({
+      action: 'save_push_sub',
+      user_id: currentUser.id,
+      data: {
+        device_id: getDeviceId(),
+        endpoint: endpoint,
+        p256dh: p256dh,
+        auth: auth,
+      },
+    });
+
+    console.log('✅ Push-подписка сохранена');
+  } catch (e) {
+    console.error('Ошибка подписки:', e);
+  } finally {
+    _isSubscribing = false;
+  }
+}
+
+async function unsubscribeFromPushNotifications() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    if (subscription) {
+      const endpoint = subscription.endpoint;
+      await subscription.unsubscribe();
+      if (currentUser) {
+        await gasPost({
+          action: 'delete_push_sub',
+          user_id: currentUser.id,
+          data: { device_id: getDeviceId(), endpoint: endpoint },
+        });
+      }
+      console.log('✅ Отписка выполнена');
+    }
+  } catch (e) {
+    console.error('Ошибка отписки:', e);
+  }
+}  
+
 function gasPost(body) {
     return new Promise((resolve, reject) => {
         const callbackName = '_gasPostCb_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
@@ -10581,6 +10759,10 @@ function applyFullDataFromSheets(d) {
           loadHeroStats();
         } catch(e) { console.warn('Parse heroStats error:', e); }
       }
+      if (s.key === 'push_enabled') {
+  const enabled = s.value === true || s.value === 'true';
+  localStorage.setItem('vputi_push_enabled', enabled ? '1' : '0');
+}
     }
   }
 
@@ -11541,22 +11723,41 @@ if (isLoading || !dataCache.purchases.data) {
     }
 
     box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">⚙️ Настройки</h2>
-      <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
-        <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:7px;">🔑 Код приглашения</label>
-        <input type="text" class="form-input" id="mob-invite" value="${inviteCodeSetting}" style="margin-bottom:8px;">
-        <button class="btn btn-primary btn-sm" onclick="saveMobInvite()">Сохранить код</button>
+  <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">⚙️ Настройки</h2>
+  <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
+    <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:7px;">🔑 Код приглашения</label>
+    <input type="text" class="form-input" id="mob-invite" value="${inviteCodeSetting}" style="margin-bottom:8px;">
+    <button class="btn btn-primary btn-sm" onclick="saveMobInvite()">Сохранить код</button>
+  </div>
+  <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:2px;">🔔 Уведомления</div>
+        <div style="font-size:11px;color:var(--text-muted);">О новых заявках</div>
       </div>
-      <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);">
-        <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:7px;">📊 Статистика на главной</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-          <div><label style="font-size:10px;color:var(--text-muted);">Путешествий</label><input class="form-input" id="mob-stat-trips" value="${heroStats.trips}" style="padding:8px;font-size:14px;"></div>
-          <div><label style="font-size:10px;color:var(--text-muted);">Участников</label><input class="form-input" id="mob-stat-people" value="${heroStats.people}" style="padding:8px;font-size:14px;"></div>
-          <div><label style="font-size:10px;color:var(--text-muted);">Направлений</label><input class="form-input" id="mob-stat-dirs" value="${heroStats.dirs}" style="padding:8px;font-size:14px;"></div>
-        </div>
-        <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%;" onclick="saveHeroStats('mobile')">Сохранить статистику</button>
-      </div>
-    `;
+      <label class="switch">
+        <input type="checkbox" id="mob-push-toggle" onchange="togglePushNotifications(this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+  <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);">
+    <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:7px;">📊 Статистика на главной</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+      <div><label style="font-size:10px;color:var(--text-muted);">Путешествий</label><input class="form-input" id="mob-stat-trips" value="${heroStats.trips}" style="padding:8px;font-size:14px;"></div>
+      <div><label style="font-size:10px;color:var(--text-muted);">Участников</label><input class="form-input" id="mob-stat-people" value="${heroStats.people}" style="padding:8px;font-size:14px;"></div>
+      <div><label style="font-size:10px;color:var(--text-muted);">Направлений</label><input class="form-input" id="mob-stat-dirs" value="${heroStats.dirs}" style="padding:8px;font-size:14px;"></div>
+    </div>
+    <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%;" onclick="saveHeroStats('mobile')">Сохранить статистику</button>
+  </div>
+`;
+
+// Синхронизируем состояние toggle
+setTimeout(() => {
+  const enabled = localStorage.getItem('vputi_push_enabled') !== '0';
+  const mobToggle = document.getElementById('mob-push-toggle');
+  if (mobToggle) mobToggle.checked = enabled;
+}, 0);
 
   // ✅ СЕКЦИЯ ОСНОВАТЕЛЬ
   } else if (section === 'founder') {
