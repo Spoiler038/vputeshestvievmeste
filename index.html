@@ -4448,6 +4448,88 @@ function logout() {
   showPage('home');
   showToast('Вы вышли из аккаунта');
 }
+
+  // ============================================================
+// === АВТОЛОГИН ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ========================
+// ============================================================
+
+function tryAutoLogin() {
+    // 1. Проверяем, есть ли сохранённые данные
+    const savedHash = localStorage.getItem('vputi_password_hash');
+    const savedUserDataRaw = localStorage.getItem('vputi_user_data');
+    
+    if (!savedHash || !savedUserDataRaw) {
+        console.log('🔓 Автологин: нет сохранённых данных');
+        return false;
+    }
+    
+    let savedUserData;
+    try {
+        savedUserData = JSON.parse(savedUserDataRaw);
+    } catch(e) {
+        console.warn('⚠️ Автологин: повреждённые данные, очищаем');
+        localStorage.removeItem('vputi_password_hash');
+        localStorage.removeItem('vputi_user_data');
+        return false;
+    }
+    
+    if (!savedUserData || !savedUserData.id) {
+        console.log('🔓 Автологин: нет id пользователя');
+        return false;
+    }
+    
+    // 2. Ищем пользователя в локальном списке users
+    let user = users.find(u => u.id === savedUserData.id);
+    
+    // 3. Если нет в списке — пробуем по логину/email
+    if (!user && savedUserData.username) {
+        user = users.find(u => u.username === savedUserData.username);
+    }
+    if (!user && savedUserData.email) {
+        user = users.find(u => u.email === savedUserData.email);
+    }
+    
+    // 4. Если пользователя вообще нет в списке — синтезируем из сохранённых данных
+    //    (например, если данные пришли из Google Sheets и ещё не успели загрузиться)
+    if (!user) {
+        console.log('🔓 Автологин: пользователь не найден в списке, синтезируем из localStorage');
+        user = {
+            id: savedUserData.id,
+            username: savedUserData.username || '',
+            email: savedUserData.email || '',
+            name: savedUserData.name || 'Пользователь',
+            role: savedUserData.role || 'user',
+            avatar: savedUserData.avatar || '',
+            password: savedHash,   // хеш, чтобы не потерять
+            bio: '',
+            phone: '',
+            discount: 0,
+            joinedDate: '',
+            device_id: '',
+            active: true,
+            consentDate: ''
+        };
+        // Добавляем в общий список, чтобы он был доступен в админке
+        users.push(user);
+        saveState('users', users);
+    }
+    
+    // 5. Проверяем, что хеш пароля совпадает (защита от подмены user_data)
+    //    Если у пользователя есть свой пароль — сравниваем
+    if (user.password && user.password !== savedHash) {
+        // Пароль мог быть изменён на другом устройстве — тогда автологин не сработает
+        console.warn('⚠️ Автологин: хеш не совпадает, требуется повторный вход');
+        localStorage.removeItem('vputi_password_hash');
+        localStorage.removeItem('vputi_user_data');
+        return false;
+    }
+    
+    // 6. Восстанавливаем сессию
+    currentUser = user;
+    console.log('✅ Автологин: вошли как', user.name, '(' + user.role + ')');
+    return true;
+}
+  
   // ============================================================
 // === КАРТОЧКИ ПРОГРАММ =======================================
 // ============================================================
@@ -6292,6 +6374,26 @@ async function doLogin() {
     btn.disabled = true;
     btn.textContent = '⏳ Вход...';
 
+    // === ХЕЛПЕР: сохранить данные для автологина ===
+    function saveSessionForAutoLogin(user, passwordHash) {
+        try {
+            localStorage.setItem('vputi_password_hash', passwordHash);
+            localStorage.setItem('vputi_user_data', JSON.stringify({
+                id: user.id,
+                username: user.username || '',
+                email: user.email || '',
+                name: user.name || '',
+                role: user.role || 'user',
+                avatar: user.avatar || ''
+            }));
+            // ✅ Срок жизни сессии — 30 дней
+            localStorage.setItem('vputi_session_expires', String(Date.now() + 30 * 24 * 60 * 60 * 1000));
+            console.log('💾 Сессия сохранена для автологина');
+        } catch(e) {
+            console.warn('⚠️ Не удалось сохранить сессию:', e);
+        }
+    }
+
     try {
         const deviceId = getDeviceId();
 
@@ -6303,7 +6405,6 @@ async function doLogin() {
 
         if (localUser) {
             console.log('👤 Найден локальный пользователь:', localUser.username);
-            console.log('📝 Пароль в БД:', localUser.password);
             
             let isPasswordValid = false;
             
@@ -6316,32 +6417,29 @@ async function doLogin() {
             // Проверка SHA-256
             if (!isPasswordValid) {
                 const passwordHash = await sha256(password);
-                console.log('🔑 SHA-256 хеш пароля:', passwordHash);
-                console.log('📝 Сравниваем с:', localUser.password);
                 if (passwordHash === localUser.password) {
                     isPasswordValid = true;
                     console.log('✅ Пароль совпадает (SHA-256)');
                 }
             }
             
-            console.log('🔍 Результат проверки пароля:', isPasswordValid);
-            
             if (isPasswordValid) {
-                // Если пароль был открытым — мигрируем на хеш
+                // Мигрируем на SHA-256, если пароль был открытым
                 const passwordHash = await sha256(password);
                 if (localUser.password !== passwordHash) {
                     localUser.password = passwordHash;
                     console.log('🔄 Пароль мигрирован на SHA-256 для:', localUser.username);
                     saveState('users', users);
                     
-                    // ✅ СИНХРОНИЗИРУЕМ ТОЛЬКО ЕСЛИ ЕСТЬ ИНТЕРНЕТ
-                    // Но не блокируем вход, если синхронизация не удалась
                     try {
                         await syncUserToSheets(localUser);
                     } catch(e) {
                         console.warn('⚠️ Синхронизация не удалась, но вход выполнен');
                     }
                 }
+                
+                // ✅ СОХРАНЯЕМ СЕССИЮ ДЛЯ АВТОЛОГИНА
+                saveSessionForAutoLogin(localUser, passwordHash);
                 
                 localUser.device_id = deviceId;
                 saveState('users', users);
@@ -6382,15 +6480,9 @@ async function doLogin() {
             const user = result.user;
             
             const passwordHash = await sha256(password);
-            localStorage.setItem('vputi_password_hash', passwordHash);
-            localStorage.setItem('vputi_user_data', JSON.stringify({
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                avatar: user.avatar || ''
-            }));
+            
+            // ✅ СОХРАНЯЕМ СЕССИЮ ДЛЯ АВТОЛОГИНА
+            saveSessionForAutoLogin(user, passwordHash);
             
             let existingUser = users.find(u => u.id === user.id);
             if (existingUser) {
@@ -6433,27 +6525,31 @@ async function doLogin() {
         );
         
         if (localUser) {
+            let isPasswordValid = false;
+            
             // Проверка открытого пароля
             if (localUser.password === password) {
+                isPasswordValid = true;
+            }
+            
+            // Проверка SHA-256
+            if (!isPasswordValid) {
+                const passwordHash = await sha256(password);
+                if (passwordHash === localUser.password) {
+                    isPasswordValid = true;
+                }
+            }
+            
+            if (isPasswordValid) {
                 const passwordHash = await sha256(password);
                 if (localUser.password !== passwordHash) {
                     localUser.password = passwordHash;
                     saveState('users', users);
                 }
-                currentUser = localUser;
-                closeAuth();
-                updateNavForUser();
-                showToast(`Добро пожаловать, ${localUser.name.split(' ')[0]}! 👋 (офлайн-режим)`);
-                document.getElementById('login-username').value = '';
-                document.getElementById('login-password').value = '';
-                btn.disabled = false;
-                btn.textContent = 'Войти';
-                return;
-            }
-            
-            // Проверка SHA-256
-            const passwordHash = await sha256(password);
-            if (passwordHash === localUser.password) {
+                
+                // ✅ СОХРАНЯЕМ СЕССИЮ ДЛЯ АВТОЛОГИНА
+                saveSessionForAutoLogin(localUser, passwordHash);
+                
                 currentUser = localUser;
                 closeAuth();
                 updateNavForUser();
@@ -6473,44 +6569,6 @@ async function doLogin() {
         btn.disabled = false;
         btn.textContent = 'Войти';
     }
-}
-  
-// === ЛОКАЛЬНОЕ ХЕШИРОВАНИЕ ПАРОЛЯ ===
-function hashPasswordLocally(password) {
-  if (!password) return '';
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return 'hash_' + Math.abs(hash).toString(16);
-}
-
-// === ХЕШИРОВАНИЕ SHA-256 (для проверки паролей из Google Sheets) ===
-async function sha256(message) {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// Обновленная функция проверки пароля
-async function checkPassword(plainPassword, hashedPassword) {
-  // Если пароль совпадает с открытым (для обратной совместимости)
-  if (plainPassword === hashedPassword) return true;
-  
-  // Проверка SHA-256
-  try {
-    const shaHash = await sha256(plainPassword);
-    console.log('🔑 SHA-256 хеш пароля:', shaHash);
-    console.log('📝 Сравниваем с:', hashedPassword);
-    if (shaHash === hashedPassword) return true;
-  } catch(e) {
-    console.warn('SHA-256 check error:', e);
-  }
-  
-  return false;
 }
   
 // ============================================================
@@ -11997,6 +12055,9 @@ function filterAdminPhotos() {
 // ============================================================
 
 function init() {
+  // ✅ ПЕРВЫМ ДЕЛОМ пробуем автологин
+  tryAutoLogin();
+
   // Обновляем selects транспорта
   updateTransportSelects();
 
@@ -12008,7 +12069,7 @@ function init() {
   renderFeaturedCarousel();
   applyFounderContent();
   applyContactsContent();
-  updateNavForUser();
+  updateNavForUser();       // ← теперь currentUser может быть уже восстановлен
   initEnterHandlers();
   initBackToTop();
 
