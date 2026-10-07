@@ -10306,64 +10306,79 @@ async function loadAllFromSheets() {
   showToast('Синхронизация...', { sticky: true });
 
   try {
-    const result = await gasGet({ action: 'readAll' });
+    // === Попытка 1 ===
+    let result = await gasGet({ action: 'readAll' });
 
-    // Проверяем результат, даже если ошибка — продолжаем с локальными данными
+    // === Попытка 2 (retry) при ошибке или таймауте ===
+    if (!result || !result.ok) {
+      console.warn('⚠️ Первая попытка не удалась:', result?.error || 'unknown');
+      await new Promise(r => setTimeout(r, 2000));
+      result = await gasGet({ action: 'readAll' });
+    }
+
+    // === Если и вторая не удалась — офлайн-режим ===
     if (!result || !result.ok) {
       console.warn('Sheets read error, using local data:', result?.error || 'Unknown error');
-      showToast('Офлайн-режим (данные из кэша)');
+      showToast('📌 Офлайн-режим (данные из кэша)', 8000);
       return;
     }
 
     const d = result.data || {};
 
-    // Загружаем программы
+    // === ПРОГРАММЫ ===
     if (d.programs && Array.isArray(d.programs) && d.programs.length > 0) {
       programs = d.programs.map(normalizeProgram);
       saveState('programs', programs);
-      console.log('Загружено ' + programs.length + ' программ');
+      invalidateCache('programs');
+      console.log('✅ Загружено ' + programs.length + ' программ');
     }
 
-    // Загружаем галерею
+    // === ГАЛЕРЕЯ ===
     if (d.gallery && Array.isArray(d.gallery) && d.gallery.length > 0) {
       gallery = d.gallery;
       saveState('gallery', gallery);
-      console.log('Загружено ' + gallery.length + ' фото');
+      invalidateCache('gallery');
+      console.log('✅ Загружено ' + gallery.length + ' фото');
     }
 
-    // Загружаем заявки
+    // === ЗАЯВКИ ===
     if (d.leads && Array.isArray(d.leads) && d.leads.length > 0) {
       leads = d.leads;
       saveState('leads', leads);
-      console.log('Загружено ' + leads.length + ' заявок');
+      invalidateCache('leads');
+      console.log('✅ Загружено ' + leads.length + ' заявок');
     }
 
-    // Загружаем группы
+    // === ГРУППЫ ===
     if (d.groups && Array.isArray(d.groups) && d.groups.length > 0) {
       groups = d.groups.map(normalizeGroup);
       saveState('groups', groups);
-      console.log('Загружено ' + groups.length + ' групп');
+      invalidateCache('groups');
+      console.log('✅ Загружено ' + groups.length + ' групп');
     }
 
-    // Загружаем покупки (поездки)
+    // === ПОКУПКИ (ПОЕЗДКИ) ===
     if (d.purchases && Array.isArray(d.purchases) && d.purchases.length > 0) {
       purchases = d.purchases.map(normalizePurchase);
       saveState('purchases', purchases);
-      console.log('Загружено ' + purchases.length + ' поездок');
+      invalidateCache('purchases');
+      console.log('✅ Загружено ' + purchases.length + ' поездок');
     }
 
-    // Загружаем пользователей
+    // === ПОЛЬЗОВАТЕЛИ (с сохранением локального владельца) ===
     if (d.users && Array.isArray(d.users) && d.users.length > 0) {
       const remoteUsers = d.users.map(normalizeUser);
       const localOwner = users.find(u => u.role === 'owner');
       let mergedUsers = [];
-      
+
       if (localOwner) {
+        // Локальный владелец всегда приоритетнее
         mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
       } else {
         mergedUsers = remoteUsers;
       }
-      
+
+      // Удаляем дубликаты по id
       const uniqueUsers = [];
       const seenIds = new Set();
       mergedUsers.forEach(u => {
@@ -10372,12 +10387,13 @@ async function loadAllFromSheets() {
           uniqueUsers.push(u);
         }
       });
-      
+
       if (uniqueUsers.length > 0) {
         users = uniqueUsers;
         saveState('users', users);
-        console.log('Загружено ' + users.length + ' пользователей');
-        
+        invalidateCache('users');
+        console.log('✅ Загружено ' + users.length + ' пользователей');
+
         // Обновляем текущего пользователя
         if (currentUser) {
           const updatedUser = users.find(u => u.id === currentUser.id);
@@ -10389,7 +10405,7 @@ async function loadAllFromSheets() {
       }
     }
 
-    // Загружаем настройки
+    // === НАСТРОЙКИ ===
     if (d.settings && Array.isArray(d.settings)) {
       for (const s of d.settings) {
         if (s.key === 'inviteCode') {
@@ -10445,7 +10461,7 @@ async function loadAllFromSheets() {
       }
     }
 
-    // Обновляем интерфейс
+    // === ОБНОВЛЯЕМ ИНТЕРФЕЙС ===
     renderPrefTagsFilter();
     renderPrograms(programs);
     renderGallery();
@@ -10460,12 +10476,14 @@ async function loadAllFromSheets() {
       loadAdmin();
     }
 
-    showToast('Данные актуальны ✓');
-    console.log('Google Sheets sync completed successfully');
+    // ✅ Успешное завершение — снимаем sticky-тост
+    showToast('✅ Данные актуальны');
+    console.log('✅ Google Sheets sync completed successfully');
 
   } catch(e) {
     console.warn('Sync error:', e);
-    showToast('Офлайн-режим (данные из кэша)');
+    // ✅ Даже при исключении — снимаем sticky-тост
+    showToast('📌 Офлайн-режим (данные из кэша)', 5000);
   }
 }
 
