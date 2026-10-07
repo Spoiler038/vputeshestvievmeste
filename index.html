@@ -11305,9 +11305,9 @@ if (isLoading || !dataCache.purchases.data) {
                 }
                 
                 return `
-                    <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">
+                    <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:visible;">
                         <!-- Заголовок группы - теперь без клика на весь блок -->
-                        <div data-group-header data-group-id="${g.id}" style="padding:12px 14px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--bg);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+                        <div data-group-header data-group-id="${g.id}" style="padding:12px 14px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--bg);cursor:pointer;-webkit-tap-highlight-color:transparent;border-radius:var(--radius-sm) var(--radius-sm) 0 0;">
     <div style="flex:1;min-width:120px;">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">
             <strong style="font-size:14px;font-family:var(--font-family);">${g.name}</strong>
@@ -11322,15 +11322,17 @@ if (isLoading || !dataCache.purchases.data) {
     </div>
 </div>
                         <!-- Кнопки управления группой - отдельная строка -->
-                        <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--surface);border-bottom:1px solid var(--border);">
+                        <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--surface);border-bottom:1px solid var(--border);border-bottom:1px solid var(--border);">
                             <button class="btn btn-edit" style="font-size:10px;padding:4px 10px;height:28px;flex:1;min-width:60px;" onclick="event.stopPropagation();openEditGroup(${g.id})">✏️ Изменить</button>
                             <button class="btn btn-danger" style="font-size:10px;padding:4px 10px;height:28px;flex:1;min-width:60px;" onclick="event.stopPropagation();deleteGroup(${g.id})">🗑 Удалить</button>
                             <button class="btn btn-outline btn-sm" style="font-size:10px;padding:4px 10px;height:28px;flex:1;min-width:70px;" onclick="event.stopPropagation();openAddMember(${g.id})" ${filled >= max ? 'disabled' : ''}>+ Участник</button>
                         </div>
                         <!-- Список участников (раскрывается) -->
-                        <div id="group-members-${g.id}" style="display:${isOpen ? 'block' : 'none'};border-top:1px solid var(--border);overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding:0;max-width:100%;">
-                            ${membersHTML}
-                        </div>
+                        <div id="group-members-${g.id}" style="display:${isOpen ? 'block' : 'none'};border-top:1px solid var(--border);padding:0;width:100%;max-width:100%;">
+    <div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;width:100%;">
+        ${membersHTML}
+    </div>
+</div>
                     </div>
                 `;
             }).join('')}
