@@ -127,16 +127,21 @@ self.addEventListener('notificationclick', event => {
   const targetUrl = (event.notification.data && event.notification.data.url) || '/vputeshestvievmeste/';
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then(clientList => {
-        for (const client of clientList) {
-          if (client.url === targetUrl && 'focus' in client) {
-            return client.focus();
-          }
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    .then(clientList => {
+      for (const client of clientList) {
+        if (client.url.includes('/vputeshestvievmeste/') && 'focus' in client) {
+          return client.focus();
         }
-        if (clients.openWindow) {
-          return clients.openWindow(targetUrl);
-        }
-      })
-  );
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+);
+});
+
+self.addEventListener('message', event => {
+  if (!event.data) return;
+  if (event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
 });
