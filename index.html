@@ -10303,7 +10303,7 @@ async function loadAllFromSheets() {
     return;
   }
 
-  showToast('Синхронизация...');
+  showToast('Синхронизация...', { sticky: true });
 
   try {
     const result = await gasGet({ action: 'readAll' });
@@ -10648,12 +10648,27 @@ document.getElementById('auth-overlay').addEventListener('click', e => {
 
 let toastTimer = null;
 
-function showToast(msg) {
+function showToast(msg, options) {
   const el = document.getElementById('toast');
+  
+  // Поддержка старого вызова showToast('текст') и нового showToast('текст', {sticky: true})
+  let duration = 3000;
+  if (typeof options === 'number') {
+    duration = options;              // showToast('текст', 5000)
+  } else if (options && options.sticky) {
+    duration = 0;                    // sticky: не скрывать автоматически
+  } else if (options && options.duration) {
+    duration = options.duration;
+  }
+  
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+  
+  if (duration > 0) {
+    toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+  }
+  // если duration === 0 — тост висит, пока не вызовут showToast снова
 }
 
 // ============================================================
