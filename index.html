@@ -4391,7 +4391,7 @@ function loginSuccess(user) {
   
   closeAuth();
   updateNavForUser();
-  // Подписка на push, если админ/владелец
+  // Подписка на push, если админ/владелец и active !== false
 if (user.role === 'owner' || user.role === 'admin') {
   if (user.active !== false) {
     setTimeout(() => subscribeToPushNotifications(), 1500);
@@ -7180,17 +7180,11 @@ function addPrefTag() {
 async function removePrefTag(index) {
   const tag = prefTags[index];
   if (!tag) return;
-  const ok = await confirmDialog('Тег «' + tag.emoji + ' ' + tag.label + '» будет удалён из фильтра.', {
-    icon: '🏷', title: 'Удалить тег?', ok: 'Удалить'
-  });
+  const ok = await confirmDialog('Тег «' + tag.emoji + ' ' + tag.label + '» будет удалён из фильтра.', { icon: '🏷', title: 'Удалить тег?', ok: 'Удалить' });
   if (!ok) return;
 
   prefTags.splice(index, 1);
   savePrefTags();
-
-  // ✅ Обновляем обе панели
-  renderPrefTagsAdmin();
-  renderMobPrefTagsAdmin();
   showToast('Тег удалён');
 }
 
@@ -7198,13 +7192,15 @@ function savePrefTags() {
   saveState('prefTags', prefTags);
   renderPrefTagsFilter();
   renderPrefTagsAdmin();
-  // Синхронизация с GAS
-  if (typeof saveSettingToSheets === 'function') {
-    saveSettingToSheets('prefTags', prefTags);
-  }
+
   // Обновить мобильную панель, если она открыта
   if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
     renderMobPrefTagsAdmin();
+  }
+
+  // Синхронизация с GAS
+  if (typeof saveSettingToSheets === 'function') {
+    saveSettingToSheets('prefTags', prefTags);
   }
 }
   // ============================================================
@@ -8534,10 +8530,13 @@ function saveInviteCode() {
   const label = document.getElementById('push-toggle-label');
   if (toggle) toggle.checked = enabled;
   if (label) label.textContent = enabled ? 'Включены' : 'Отключены';
+
+  const mobToggle = document.getElementById('mob-push-toggle');
+  if (mobToggle) mobToggle.checked = enabled;
 }
 
 async function togglePushNotifications(enabled) {
-  // ✅ Проверка: только owner/admin
+  // ✅ Только для owner/admin
   if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) {
     showToast('Только для владельца или администратора');
     return;
@@ -8549,9 +8548,13 @@ async function togglePushNotifications(enabled) {
   if (u) u.active = enabled;
   saveState('users', users);
 
-  // ✅ Обновляем UI-метки
+  // ✅ Обновляем UI-метки (и ПК, и мобильную)
   const label = document.getElementById('push-toggle-label');
   if (label) label.textContent = enabled ? 'Включены' : 'Отключены';
+  const toggle = document.getElementById('push-toggle');
+  if (toggle) toggle.checked = enabled;
+  const mobToggle = document.getElementById('mob-push-toggle');
+  if (mobToggle) mobToggle.checked = enabled;
 
   // ✅ Синхронизируем с GAS — пишем в users.active
   await gasPost({
@@ -8571,7 +8574,7 @@ async function togglePushNotifications(enabled) {
       consentDate: currentUser.consentDate || '',
       device_id: currentUser.device_id || '',
       phone: currentUser.phone || '',
-      active: enabled,   // ← личный флаг
+      active: enabled,
     },
   });
 
@@ -8580,8 +8583,8 @@ async function togglePushNotifications(enabled) {
     await subscribeToPushNotifications();
   } else {
     showToast('🔕 Уведомления отключены');
-    // НЕ отписываемся — push просто не будет приходить
-    // (GAS фильтрует по active)
+    // НЕ вызываем unsubscribeFromPushNotifications —
+    // подписка остаётся, но push не идёт (GAS фильтрует по active)
   }
 }
 
@@ -10352,7 +10355,6 @@ async function subscribeToPushNotifications() {
   if (!currentUser) return;
   if (currentUser.role !== 'owner' && currentUser.role !== 'admin') return;
 
-  const enabled = localStorage.getItem('vputi_push_enabled') !== '0';
   if (currentUser && currentUser.active === false) {
   console.log('🔕 Push отключены (active = false)');
   return;
@@ -10815,17 +10817,6 @@ function applyFullDataFromSheets(d) {
       renderPrefTagsAdmin();
     }
   } catch(e) { console.warn('Parse prefTags error:', e); }
-}
-      if (s.key === 'push_enabled') {
-  const enabled = s.value === true || s.value === 'true';
-  localStorage.setItem('vputi_push_enabled', enabled ? '1' : '0');
-  // Обновляем UI переключатели, если они на экране
-  const toggle = document.getElementById('push-toggle');
-  const label = document.getElementById('push-toggle-label');
-  if (toggle) toggle.checked = enabled;
-  if (label) label.textContent = enabled ? 'Включены' : 'Отключены';
-  const mobToggle = document.getElementById('mob-push-toggle');
-  if (mobToggle) mobToggle.checked = enabled;
 }
     }
   }
@@ -11896,6 +11887,9 @@ setTimeout(() => {
       <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%;" onclick="closeMobAdmin();showPage('admin');setTimeout(function(){switchAdmin('howto');},300)">⚙ Открыть полные настройки</button>
     `;
   }
+  setTimeout(() => {
+  renderMobPrefTagsAdmin();
+}, 0);
 }
 
   function renderMobPrefTagsAdmin() {
@@ -11930,7 +11924,6 @@ function addMobPrefTag() {
   document.getElementById('mob-new-pref-label').value = '';
   document.getElementById('mob-new-pref-val').value = '';
 
-  renderMobPrefTagsAdmin();
   showToast('Тег «' + label + '» добавлен ✓');
 }
   
