@@ -4393,7 +4393,9 @@ function loginSuccess(user) {
   updateNavForUser();
   // Подписка на push, если админ/владелец
 if (user.role === 'owner' || user.role === 'admin') {
-  setTimeout(() => subscribeToPushNotifications(), 1500);
+  if (user.active !== false) {
+    setTimeout(() => subscribeToPushNotifications(), 1500);
+  }
 }
   showToast(`Добро пожаловать, ${user.name.split(' ')[0]}! 👋`);
 }
@@ -7178,11 +7180,17 @@ function addPrefTag() {
 async function removePrefTag(index) {
   const tag = prefTags[index];
   if (!tag) return;
-  const ok = await confirmDialog('Тег «' + tag.emoji + ' ' + tag.label + '» будет удалён из фильтра.', { icon: '🏷', title: 'Удалить тег?', ok: 'Удалить' });
+  const ok = await confirmDialog('Тег «' + tag.emoji + ' ' + tag.label + '» будет удалён из фильтра.', {
+    icon: '🏷', title: 'Удалить тег?', ok: 'Удалить'
+  });
   if (!ok) return;
 
   prefTags.splice(index, 1);
   savePrefTags();
+
+  // ✅ Обновляем обе панели
+  renderPrefTagsAdmin();
+  renderMobPrefTagsAdmin();
   showToast('Тег удалён');
 }
 
@@ -7190,6 +7198,14 @@ function savePrefTags() {
   saveState('prefTags', prefTags);
   renderPrefTagsFilter();
   renderPrefTagsAdmin();
+  // Синхронизация с GAS
+  if (typeof saveSettingToSheets === 'function') {
+    saveSettingToSheets('prefTags', prefTags);
+  }
+  // Обновить мобильную панель, если она открыта
+  if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
+    renderMobPrefTagsAdmin();
+  }
 }
   // ============================================================
 // === АДМИНИСТРАТИВНАЯ ПАНЕЛЬ =================================
@@ -8513,7 +8529,7 @@ function saveInviteCode() {
 }
 
   function loadPushToggleState() {
-  const enabled = localStorage.getItem('vputi_push_enabled') !== '0';
+  const enabled = currentUser ? currentUser.active !== false : true;
   const toggle = document.getElementById('push-toggle');
   const label = document.getElementById('push-toggle-label');
   if (toggle) toggle.checked = enabled;
@@ -8521,21 +8537,51 @@ function saveInviteCode() {
 }
 
 async function togglePushNotifications(enabled) {
-  localStorage.setItem('vputi_push_enabled', enabled ? '1' : '0');
+  // ✅ Проверка: только owner/admin
+  if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) {
+    showToast('Только для владельца или администратора');
+    return;
+  }
 
-  // Обновляем метку
+  // ✅ Обновляем локально
+  currentUser.active = enabled;
+  const u = users.find(x => x.id === currentUser.id);
+  if (u) u.active = enabled;
+  saveState('users', users);
+
+  // ✅ Обновляем UI-метки
   const label = document.getElementById('push-toggle-label');
   if (label) label.textContent = enabled ? 'Включены' : 'Отключены';
 
-  // Синхронизируем с GAS
-  await saveSettingToSheets('push_enabled', enabled);
+  // ✅ Синхронизируем с GAS — пишем в users.active
+  await gasPost({
+    action: 'upsert',
+    sheet: 'users',
+    data: {
+      id: currentUser.id,
+      username: currentUser.username || '',
+      password: currentUser.password || '',
+      role: currentUser.role,
+      name: currentUser.name || '',
+      email: currentUser.email || '',
+      bio: currentUser.bio || '',
+      joinedDate: currentUser.joinedDate || '',
+      avatar: currentUser.avatar || '',
+      discount: currentUser.discount || 0,
+      consentDate: currentUser.consentDate || '',
+      device_id: currentUser.device_id || '',
+      phone: currentUser.phone || '',
+      active: enabled,   // ← личный флаг
+    },
+  });
 
   if (enabled) {
     showToast('🔔 Уведомления включены');
     await subscribeToPushNotifications();
   } else {
     showToast('🔕 Уведомления отключены');
-    await unsubscribeFromPushNotifications();
+    // НЕ отписываемся — push просто не будет приходить
+    // (GAS фильтрует по active)
   }
 }
 
@@ -10307,10 +10353,10 @@ async function subscribeToPushNotifications() {
   if (currentUser.role !== 'owner' && currentUser.role !== 'admin') return;
 
   const enabled = localStorage.getItem('vputi_push_enabled') !== '0';
-  if (!enabled) {
-    console.log('🔕 Push отключены');
-    return;
-  }
+  if (currentUser && currentUser.active === false) {
+  console.log('🔕 Push отключены (active = false)');
+  return;
+}
 
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -10759,6 +10805,17 @@ function applyFullDataFromSheets(d) {
           loadHeroStats();
         } catch(e) { console.warn('Parse heroStats error:', e); }
       }
+      if (s.key === 'prefTags') {
+  try {
+    const parsed = typeof s.value === 'object' ? s.value : JSON.parse(s.value);
+    if (Array.isArray(parsed)) {
+      prefTags = parsed;
+      saveState('prefTags', prefTags);
+      renderPrefTagsFilter();
+      renderPrefTagsAdmin();
+    }
+  } catch(e) { console.warn('Parse prefTags error:', e); }
+}
       if (s.key === 'push_enabled') {
   const enabled = s.value === true || s.value === 'true';
   localStorage.setItem('vputi_push_enabled', enabled ? '1' : '0');
@@ -11748,6 +11805,19 @@ if (isLoading || !dataCache.purchases.data) {
       </label>
     </div>
   </div>
+
+  <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
+  <div style="font-size:14px;font-weight:500;margin-bottom:4px;">🏷 Предпочтения (теги)</div>
+  <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Теги отображаются в фильтре программ</div>
+  <div id="mob-pref-tags-admin" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+    <input type="text" class="form-input" id="mob-new-pref-emoji" placeholder="⛰" style="width:48px;text-align:center;font-size:16px;padding:8px;">
+    <input type="text" class="form-input" id="mob-new-pref-label" placeholder="Горы" style="flex:1;min-width:90px;padding:8px;">
+    <input type="text" class="form-input" id="mob-new-pref-val" placeholder="горы" style="flex:1;min-width:90px;padding:8px;">
+  </div>
+  <button class="btn btn-primary btn-sm" style="width:100%;" onclick="addMobPrefTag()">+ Добавить тег</button>
+</div>
+
   <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);">
     <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:7px;">📊 Статистика на главной</label>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
@@ -11826,6 +11896,42 @@ setTimeout(() => {
       <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%;" onclick="closeMobAdmin();showPage('admin');setTimeout(function(){switchAdmin('howto');},300)">⚙ Открыть полные настройки</button>
     `;
   }
+}
+
+  function renderMobPrefTagsAdmin() {
+  const container = document.getElementById('mob-pref-tags-admin');
+  if (!container) return;
+  container.innerHTML = prefTags.map((t, i) =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--accent-light);border:1.5px solid var(--accent);color:var(--accent);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:500;">
+      ${t.emoji} ${t.label}
+      <button onclick="removePrefTag(${i})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:14px;padding:0 0 0 4px;line-height:1;">✕</button>
+    </span>`
+  ).join('');
+}
+
+function addMobPrefTag() {
+  const emoji = (document.getElementById('mob-new-pref-emoji').value || '').trim() || '🏷';
+  const label = (document.getElementById('mob-new-pref-label').value || '').trim();
+  const val = (document.getElementById('mob-new-pref-val').value || '').trim().toLowerCase();
+
+  if (!label || !val) {
+    showToast('Укажите название и значение тега');
+    return;
+  }
+  if (prefTags.find(t => t.val === val)) {
+    showToast('Такой тег уже есть');
+    return;
+  }
+
+  prefTags.push({ emoji, label, val });
+  savePrefTags();
+
+  document.getElementById('mob-new-pref-emoji').value = '';
+  document.getElementById('mob-new-pref-label').value = '';
+  document.getElementById('mob-new-pref-val').value = '';
+
+  renderMobPrefTagsAdmin();
+  showToast('Тег «' + label + '» добавлен ✓');
 }
   
 // Сохранение настроек из мобильной панели
