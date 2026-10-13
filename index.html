@@ -7895,6 +7895,112 @@ function loadAdminLeads() {
   }).join('');
 }
 
+  // ============================================================
+// === ЛЁГКОЕ ОБНОВЛЕНИЕ ТОЛЬКО ЛИДА (для удаления на мобильном)
+// ============================================================
+let _isRefreshingLeads = false;
+
+async function refreshLeadsOnly() {
+  if (_isRefreshingLeads) {
+    console.log('⏳ refreshLeadsOnly уже выполняется, пропуск');
+    return;
+  }
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) {
+    console.log('GAS URL не настроен — обновляем только локально');
+    _rerenderLeadsEverywhere();
+    return;
+  }
+
+  _isRefreshingLeads = true;
+
+  try {
+    // Один лёгкий запрос — только лист leads
+    const result = await gasGet({ action: 'read', sheet: 'leads' });
+
+    if (result && result.ok && Array.isArray(result.data)) {
+      leads = result.data;
+      saveState('leads', leads);
+      invalidateCache('leads');
+      console.log(`✅ Заявки обновлены с сервера: ${leads.length}`);
+    } else {
+      console.warn('⚠️ Не удалось обновить заявки, используем локальные:', result?.error);
+    }
+  } catch(e) {
+    console.warn('⚠️ Ошибка refreshLeadsOnly:', e);
+  } finally {
+    _isRefreshingLeads = false;
+    _rerenderLeadsEverywhere();
+  }
+}
+
+// Перерисовать заявки во всех видимых местах
+function _rerenderLeadsEverywhere() {
+  // ПК-таблица
+  const tbody = document.getElementById('leads-tbody');
+  if (tbody) {
+    renderLeadsTable(leads);
+  }
+
+  // Мобильная панель — если открыта и на секции leads
+  // if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
+  //   const activeMobSection = document.querySelector('.mob-item.active')?.dataset?.section;
+  //   if (activeMobSection === 'leads') {
+  //     // Рендерим БЕЗ запроса к серверу — просто из массива leads
+  //     _renderMobLeadsFromArray();
+  //   }
+  // }
+
+  // Дашборд владельца — счётчик заявок
+  if (currentUser && currentUser.role === 'owner') {
+    const dashEl = document.getElementById('stats-grid');
+    if (dashEl && dashEl.children.length > 0) {
+      // Обновляем только карточку "Заявок", не весь дашборд
+      const cards = dashEl.querySelectorAll('.stat-card');
+      if (cards[2]) {
+        const val = cards[2].querySelector('.stat-value');
+        if (val) val.textContent = leads.length;
+      }
+    }
+  }
+}
+
+// Мобильный рендер заявок из массива (без запроса к GAS)
+function _renderMobLeadsFromArray() {
+  const box = document.getElementById('mob-admin-content');
+  if (!box) return;
+
+  box.innerHTML = `
+    <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">📩 Заявки (${leads.length})</h2>
+    ${leads.length === 0
+      ? '<p style="color:var(--text-muted);">Пока нет заявок.</p>'
+      : leads.slice().reverse().map(function(l) {
+          return `
+            <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:9px;overflow:hidden;">
+              <div style="padding:13px;cursor:pointer;" onclick="openLeadModal(${l.id})">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                  <strong>${l.name}</strong>
+                  <span style="font-size:11px;color:var(--text-muted);">${l.date}</span>
+                </div>
+                <div style="font-size:12px;color:var(--accent);margin-bottom:3px;">${l.contact}</div>
+                <div style="font-size:13px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.message || '—'}</div>
+              </div>
+              <div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">
+                <button class="btn btn-primary btn-sm" style="flex:1;font-size:12px;" onclick="openLeadModal(${l.id})">Открыть →</button>
+                <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteLead(${l.id})">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+  `;
+}
+
   function renderLeadsTable(leadsData) {
     if (!leadsData) return;
     document.getElementById('leads-tbody').innerHTML = leadsData.map(l => {
@@ -7983,55 +8089,36 @@ function openLeadModal(leadId) {
   
 async function deleteLead(leadId) {
   if (!leadId) return;
-  
-  const ok = await confirmDialog('Заявка будет удалена безвозвратно.', { 
+
+  const ok = await confirmDialog('Заявка будет удалена безвозвратно.', {
     icon: `<svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#C0392B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`,
-    title: 'Удалить заявку?', 
-    ok: 'Удалить' 
+    title: 'Удалить заявку?',
+    ok: 'Удалить'
   });
   if (!ok) return;
 
-  // Удаляем из локального массива
+  // ✅ 1. Удаляем локально + сбрасываем кэш
   leads = leads.filter(l => l.id !== leadId);
   saveState('leads', leads);
-  invalidateCache('leads');   // ← сбрасываем кэш, чтобы не вернулись старые
-  
-  // Синхронизация с Google Sheets
+  invalidateCache('leads');
+
+  // ✅ 2. Мгновенно перерисовываем UI (без ожидания сети)
+  closeModal('lead-modal');
+  _rerenderLeadsEverywhere();
+
+  showToast('Заявка удалена');
+
+  // ✅ 3. Синхронизация с GAS в фоне
   try {
-    await gasPost({ action: 'delete', sheet: 'leads', id: leadId });
+    const res = await gasPost({ action: 'delete', sheet: 'leads', id: leadId });
+    if (!res || !res.ok) {
+      console.warn('⚠️ GAS не подтвердил удаление:', res?.error);
+    }
   } catch(e) {
     console.warn('Lead delete sync error:', e);
   }
-  
-  // Закрываем модалку
-  closeModal('lead-modal');
-  
-  // ✅ ПК: перерисовываем таблицу
-  const tbody = document.getElementById('leads-tbody');
-  if (tbody) {
-    renderLeadsTable(leads);
-  }
-  
-  // ✅ МОБИЛЬНАЯ ПАНЕЛЬ: обновляем, если открыта
-  if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
-    const activeMobSection = document.querySelector('.mob-item.active')?.dataset?.section;
-    if (activeMobSection === 'leads') {
-      renderMobAdminSection('leads');
-    }
-  }
-  
-  // ✅ Обновляем счётчик заявок на дашборде (если открыт)
-  if (currentPage === 'admin') {
-    const activeAdminSection = document.querySelector('.admin-section.active');
-    if (activeAdminSection && activeAdminSection.id === 'admin-dashboard') {
-      if (currentUser && currentUser.role === 'owner') {
-        loadAdminStats();
-      }
-    }
-  }
-  
-  showToast('Заявка удалена');
 }
+  
 // === СОЗДАНИЕ УЧАСТНИКА ИЗ ЗАЯВКИ ===
 function addUserFromLead(leadId) {
   const lead = leads.find(l => l.id === leadId);
@@ -11339,9 +11426,8 @@ function switchMobSection(section) {
             loadAdminUsers(currentUser?.role === 'owner');
         }
     } else if (section === 'leads') {
-        if (!dataCache.leads.data) {
-            loadAdminLeads();
-        }
+    // ✅ Лёгкое обновление только лида (один запрос, без checkVersion и getFullData)
+    refreshLeadsOnly();
     } else if (section === 'groups') {
         loadAdminGroups();
     
