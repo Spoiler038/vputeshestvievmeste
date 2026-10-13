@@ -102,6 +102,10 @@ self.addEventListener('push', event => {
     if (event.data) {
       const parsed = event.data.json();
       data = { ...data, ...parsed };
+      // Worker присылает поле `message` — используем его как body
+      if (parsed.message && !parsed.body) {
+        data.body = parsed.message;
+      }
     }
   } catch(e) {
     if (event.data) data.body = event.data.text();
