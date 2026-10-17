@@ -7317,6 +7317,7 @@ function switchAdmin(section) {
                 loadAdminUsers(currentUser?.role === 'owner');
             } else {
                 renderUsersTable(currentUser?.role === 'owner');
+                loadDeletionRequests();
             }
             break;
             
@@ -7357,6 +7358,8 @@ function switchAdmin(section) {
 function loadAdmin() {
   // Принудительно загружаем purchases
   purchases = loadState('purchases', purchases);
+    // Загружаем запросы на удаление профиля
+  loadDeletionRequests();
   
   const isOwner = currentUser && currentUser.role === 'owner';
 
@@ -7695,6 +7698,91 @@ async function syncOwnerToSheets(owner) {
     console.warn('Sync owner error:', e);
   }
 }
+
+  // ============================================================
+// === БЕЙДЖ «ЗАПРОС НА УДАЛЕНИЕ ПРОФИЛЯ» =====================
+// ============================================================
+
+async function loadDeletionRequests() {
+  if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) return;
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
+  try {
+    const res = await gasPost({ action: 'getDeletionRequests' });
+    if (res && res.ok && Array.isArray(res.requests)) {
+      window._deletionRequests = res.requests;
+      updateDeletionBadges();
+      // Обновляем рендер, если открыт раздел «Участники»
+      if (currentPage === 'admin' && document.getElementById('admin-users')?.classList.contains('active')) {
+        renderUsersTable(currentUser.role === 'owner');
+      }
+      if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
+        const active = document.querySelector('.mob-item.active')?.dataset?.section;
+        if (active === 'users') renderMobAdminSection('users');
+      }
+    }
+  } catch(e) {
+    console.warn('loadDeletionRequests error:', e);
+  }
+}
+
+function getDeletionRequestCount() {
+  return (window._deletionRequests || []).length;
+}
+
+function updateDeletionBadges() {
+  const count = getDeletionRequestCount();
+
+  // ПК: пункт бокового меню «Участники»
+  const pcItem = document.querySelector('.admin-nav-item[onclick*="users"]');
+  if (pcItem) {
+    let badge = pcItem.querySelector('.deletion-badge-pc');
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'deletion-badge-pc';
+        badge.style.cssText = 'margin-left:auto;background:#C0392B;color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;display:inline-flex;align-items:center;gap:3px;';
+        pcItem.appendChild(badge);
+      }
+      badge.innerHTML = `⚠ ${count}`;
+    } else if (badge) {
+      badge.remove();
+    }
+  }
+
+  // Мобильный: пункт верхнего бара «Участники»
+  const mobItem = document.querySelector('.mob-item[data-section="users"]');
+  if (mobItem) {
+    let badge = mobItem.querySelector('.deletion-badge-mob');
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'deletion-badge-mob';
+        badge.style.cssText = 'margin-left:4px;background:#C0392B;color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;';
+        mobItem.appendChild(badge);
+      }
+      badge.textContent = '⚠' + count;
+    } else if (badge) {
+      badge.remove();
+    }
+  }
+
+  // Заголовок раздела «Участники» на ПК
+  const usersTitle = document.querySelector('#admin-users .admin-page-title');
+  if (usersTitle) {
+    let titleBadge = usersTitle.querySelector('.deletion-title-badge');
+    if (count > 0) {
+      if (!titleBadge) {
+        titleBadge = document.createElement('span');
+        titleBadge.className = 'deletion-title-badge';
+        titleBadge.style.cssText = 'margin-left:10px;background:#C0392B;color:white;font-size:13px;padding:2px 10px;border-radius:10px;vertical-align:middle;';
+        usersTitle.appendChild(titleBadge);
+      }
+      titleBadge.textContent = '⚠ ' + count + ' запрос(ов)';
+    } else if (titleBadge) {
+      titleBadge.remove();
+    }
+  }
+}
   
 // ============================================================
 // === ОТОБРАЖЕНИЕ ТАБЛИЦЫ УЧАСТНИКОВ ===
@@ -7736,10 +7824,14 @@ function renderUsersTable(isOwner) {
     // Форматируем телефон для отображения
     const displayPhone = u.phone ? formatPhoneForDisplay(u.phone) : '—';
     const phoneLink = u.phone ? formatPhoneForLink(u.phone) : '';
+    const delReq = (window._deletionRequests || []).find(r => String(r.user_id) === String(u.id));
+    const delBadge = delReq
+      ? `<span class="deletion-row-badge" title="Запрошено удаление профиля: ${delReq.requested_at || ''}" style="font-size:12px;color:#C0392B;margin-left:6px;cursor:help;">⚠</span>`
+      : '';
+    return `<tr style="cursor:default;" data-user-id="${u.id}" ${rowTitle}>
     
-    return `<tr style="cursor:default;" ${rowTitle}>
       <td style="vertical-align:middle;white-space:nowrap;">
-        <strong>${u.name || 'Без имени'}</strong>
+        <strong>${u.name || 'Без имени'}</strong>${delBadge}
         ${isOwnerUser ? '<span style="font-size:10px;color:var(--accent2);margin-left:6px;">⭐</span>' : ''}
         ${isAdminUser && !isOwnerUser ? '<span style="font-size:10px;color:var(--accent);margin-left:6px;">🛡️</span>' : ''}
       </td>
@@ -7796,6 +7888,7 @@ function renderUsersTable(isOwner) {
       </td>
     </tr>`;
   }).join('');
+updateDeletionBadges();
 }
   
 // Функция нормализации пользователя
@@ -7922,6 +8015,16 @@ async function deleteUser(userId) {
 
   users = users.filter(x => x.id !== userId);
   saveState('users', users);
+    // Если у этого участника был активный запрос на удаление — закрываем его
+  if ((window._deletionRequests || []).some(r => String(r.user_id) === String(userId))) {
+    gasPost({
+      action: 'log_account_deleted',
+      user_id: userId,
+      admin_id: currentUser.id
+    }).catch(()=>{});
+    window._deletionRequests = (window._deletionRequests || []).filter(r => String(r.user_id) !== String(userId));
+    updateDeletionBadges();
+  }
 
   const isOwner = currentUser && currentUser.role === 'owner';
   loadAdminUsers(isOwner);
@@ -11429,6 +11532,7 @@ function toggleMobileAdminPanel() {
 
     const def = currentUser.role === 'owner' ? 'dashboard' : 'programs';
     renderMobAdminSection(def);
+    loadDeletionRequests();
     document.querySelectorAll('.mob-item').forEach(el => el.classList.toggle('active', el.dataset.section === def));
     
     overlay.style.overflowY = 'auto';
@@ -11480,6 +11584,7 @@ function switchMobSection(section) {
     } else if (section === 'users') {
         if (!dataCache.users.data) {
             loadAdminUsers(currentUser?.role === 'owner');
+            loadDeletionRequests();
         }
     } else if (section === 'leads') {
     // ✅ Лёгкое обновление только лида (один запрос, без checkVersion и getFullData)
@@ -11853,7 +11958,7 @@ function _renderMobUsers(box) {
         return '<div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">'
           + '<div style="padding:13px;cursor:pointer;" onclick="openUserEditModal('+u.id+')">'
           + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
-          + '<strong style="font-size:14px;">'+u.name+'</strong>'
+          + '<strong style="font-size:14px;">'+u.name+'</strong>'+ ((window._deletionRequests || []).find(r => String(r.user_id) === String(u.id)) ? '<span style="font-size:11px;color:#C0392B;margin-left:4px;" title="Запрошено удаление">⚠</span>' : '')
           + '<span class="tag '+(u.role==='owner'?'tag-orange':u.role==='admin'?'tag-orange':'tag-green')+'">'+(u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Участник')+'</span>'
           + '</div>'
           + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@'+u.username+' · '+u.email+'</div>'
@@ -11872,6 +11977,7 @@ function _renderMobUsers(box) {
       }).join('')}
     </div>
   `;
+    updateDeletionBadges();
 }
   
   // ============================================================
@@ -12695,6 +12801,12 @@ function init() {
   // Мобильная панель
   initMobileAdminItems();
   updateNavbarHeight();
+    // Раз в 5 минут обновляем запросы на удаление (только для админов)
+  setInterval(() => {
+    if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
+      loadDeletionRequests();
+    }
+  }, 5 * 60 * 1000);
 
   console.log('✅ ВПУТЕШЕСТВИЕВМЕСТЕ инициализирован');
 }
