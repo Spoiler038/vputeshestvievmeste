@@ -1635,6 +1635,24 @@ input[type=number] {
         margin-left: 0; /* убираем auto, чтобы шла после кнопок масштаба */
         flex-shrink: 0;
     }
+
+  #program-modal .modal-footer {
+    padding: 12px 12px 16px;
+    gap: 6px;
+  }
+  #program-modal .modal-footer .btn {
+    padding: 10px 12px;
+    font-size: 13px;
+    border-radius: 40px;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #program-modal .modal-footer .btn-danger { flex: 0 0 auto; padding: 10px 14px; }
+  #program-modal .modal-footer .btn-outline { flex: 1; }
+  #program-modal .modal-footer .btn-primary { flex: 1.2; }
 }
   /* ===== TOGGLE SWITCH ===== */
 .switch {
@@ -2204,6 +2222,7 @@ input:checked + .slider:before {
               <div class="profile-info-grid" id="profile-info-list"></div>
               <button class="btn btn-outline btn-sm" style="margin-top:10px; width:100%;" onclick="showPage('home')">← На сайт</button>
               <button class="btn btn-outline btn-sm" style="margin-top:10px; width:100%;" onclick="logout()">🚪 Выйти</button>
+              <button class="btn btn-danger btn-sm" style="margin-top:10px; width:100%; background:#7f1d1d;" onclick="requestProfileDeletion()">🗑 Запросить удаление профиля</button>
             </div>
 
             <!-- Правая колонка: редактирование профиля -->
@@ -2764,18 +2783,10 @@ input:checked + .slider:before {
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-danger" id="delete-program-btn" style="display:none;" onclick="deleteProgram(editingProgramId)">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18"/>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <line x1="10" y1="11" x2="10" y2="17"/>
-          <line x1="14" y1="11" x2="14" y2="17"/>
-        </svg>
-        Удалить
-      </button>
-      <button class="btn btn-outline" onclick="closeModal('program-modal')">Отмена</button>
-      <button class="btn btn-primary" id="save-program-btn" onclick="saveProgram()">Сохранить</button>
-    </div>
+  <button class="btn btn-danger" id="delete-program-btn" style="display: none;" onclick="deleteProgram(editingProgramId)">Удалить</button>
+  <button class="btn btn-outline" onclick="closeModal('program-modal')">Отмена</button>
+  <button class="btn btn-primary" id="save-program-btn" onclick="saveProgram()">Сохранить</button>
+</div>
   </div>
 </div>
 
@@ -3862,31 +3873,13 @@ let isQueueProcessing = false;
 async function loadDataWithCache(sheetName, forceRefresh = false) {
     const cache = dataCache[sheetName];
     const now = Date.now();
-    
-    // Если данные есть в кэше и они не устарели
+
+    // ✅ Если данные в кэше и не устарели — отдаём кэш
     if (!forceRefresh && cache.data && (now - cache.timestamp) < CACHE_TTL) {
-        // ✅ ПРОВЕРЯЕМ ВЕРСИЮ НА СЕРВЕРЕ (быстрый запрос)
-        try {
-            const localVersion = localStorage.getItem('vputi_data_version') || '0';
-            const versionResult = await gasGet({ action: 'checkVersion', version: localVersion });
-            
-            if (versionResult && versionResult.ok && !versionResult.needsUpdate) {
-                // Версия актуальна — отдаём кэш
-                console.log(`📦 Данные ${sheetName} из кэша (версия актуальна)`);
-                return cache.data;
-            }
-            
-            // Версия устарела — грузим заново
-            console.log(`🔄 Версия устарела для ${sheetName}, грузим с сервера`);
-            invalidateCache(sheetName);
-        } catch(e) {
-            // Ошибка сети — отдаём кэш
-            console.log(`📦 Данные ${sheetName} из кэша (ошибка проверки версии)`);
-            return cache.data;
-        }
+        return cache.data;
     }
-    
-    // Добавляем в очередь
+
+    // ✅ Иначе — в очередь на загрузку с сервера
     return new Promise((resolve, reject) => {
         loadQueue.push({ sheetName, forceRefresh, resolve, reject, timestamp: Date.now() });
         processQueue();
@@ -3897,7 +3890,6 @@ async function processQueue() {
     if (isQueueProcessing || loadQueue.length === 0) return;
     
     isQueueProcessing = true;
-    updateMobProgress(10);
     
     try {
         // Берем первый элемент из очереди
@@ -5009,23 +5001,17 @@ function openPhotoViewerWithNavigation(photos, index) {
         showToast('Нет фото для просмотра');
         return;
     }
-    
+
+    // ✅ Запоминаем, откуда открыли — чтобы вернуться туда же
+    window._photoViewerReturnPage = currentPage || 'home';
+
     viewerPhotos = photos;
     viewerCurrentIndex = index || 0;
-    
-    // Убеждаемся, что индекс в пределах массива
-    if (viewerCurrentIndex >= viewerPhotos.length) {
-        viewerCurrentIndex = viewerPhotos.length - 1;
-    }
-    if (viewerCurrentIndex < 0) {
-        viewerCurrentIndex = 0;
-    }
-    
+
+    if (viewerCurrentIndex >= viewerPhotos.length) viewerCurrentIndex = viewerPhotos.length - 1;
+    if (viewerCurrentIndex < 0) viewerCurrentIndex = 0;
+
     const viewer = document.getElementById('photo-viewer');
-    const img = document.getElementById('photo-viewer-img');
-    const caption = document.getElementById('photo-viewer-caption');
-    const counter = document.getElementById('photo-viewer-counter');
-    
     if (!viewer) {
         showToast('Ошибка: фото-вьювер не найден');
         return;
@@ -5033,9 +5019,21 @@ function openPhotoViewerWithNavigation(photos, index) {
 
     viewer.style.display = '';
     viewer.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    
+
+    // ✅ Надёжная блокировка скролла (как в модалках)
+    disableScroll();
+
     updateViewerPhoto();
+}
+
+  function closePhotoViewer() {
+    document.getElementById('photo-viewer').classList.remove('active');
+    enableScroll();
+
+    // ✅ Возврат на ту страницу, откуда открыли
+    const returnPage = window._photoViewerReturnPage || 'gallery';
+    window._photoViewerReturnPage = null;
+    showPage(returnPage);
 }
   
 function updateViewerPhoto() {
@@ -5077,13 +5075,6 @@ function photoViewerPrev() {
         viewerCurrentIndex--;
         updateViewerPhoto();
     }
-}
-
-function closePhotoViewer() {
-    document.getElementById('photo-viewer').classList.remove('active');
-    document.body.style.overflow = '';
-    // Возвращаемся в галерею
-    showPage('gallery');
 }
 
 
@@ -5739,6 +5730,60 @@ function switchTab(tab) {
   if (tab === 'docs') {
     renderUserDocs();
   }
+}
+
+  // ============================================================
+// ЗАПРОС НА УДАЛЕНИЕ ПРОФИЛЯ (по 152-ФЗ)
+// ============================================================
+function requestProfileDeletion() {
+  if (!currentUser) {
+    showToast('Войдите в аккаунт');
+    return;
+  }
+
+  showConfirmModal(
+    '🗑 Запрос на удаление профиля',
+    'Вы действительно хотите запросить удаление профиля?\n\n' +
+    '• Ваш аккаунт и все данные (поездки, фото, заявки) будут удалены.\n' +
+    '• Запрос будет обработан в течение 30 дней согласно 152-ФЗ «О персональных данных».\n' +
+    '• До удаления вы можете отменить запрос, написав в поддержку.\n\n' +
+    'Это действие необратимо.',
+    async () => {
+      // ✅ Двойное подтверждение
+      showConfirmModal(
+        '⚠️ Последнее предупреждение',
+        'Вы уверены? После удаления восстановить аккаунт будет невозможно.\n\n' +
+        'Рекомендуем сначала экспортировать данные (Настройки → Экспорт → Локально).',
+        async () => {
+          try {
+            showSaveOverlay(true);
+            const token = localStorage.getItem('teacher_jwt');
+            if (token) {
+              // ✅ Отправляем запрос в GAS (помечаем пользователя как "на удаление")
+              await gasPost({
+                action: 'request_account_deletion',
+                token,
+                user_id: currentUser.id,
+                requested_at: new Date().toISOString()
+              });
+            }
+
+            // ✅ Локально: разлогиниваем, но не удаляем данные (они удалятся на сервере)
+            showToast('✅ Запрос на удаление отправлен. Аккаунт будет удалён в течение 30 дней.', true, 6000);
+
+            // Через 3 сек — разлогин
+            setTimeout(() => {
+              showSaveOverlay(false);
+              logout();
+            }, 1500);
+          } catch(e) {
+            showSaveOverlay(false);
+            showToast('❌ Ошибка отправки запроса: ' + e.message, false);
+          }
+        }
+      );
+    }
+  );
 }
 
 // ============================================================
@@ -7942,14 +7987,14 @@ function _rerenderLeadsEverywhere() {
     renderLeadsTable(leads);
   }
 
-  // Мобильная панель — если открыта и на секции leads
-  // if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
-  //   const activeMobSection = document.querySelector('.mob-item.active')?.dataset?.section;
-  //   if (activeMobSection === 'leads') {
-  //     // Рендерим БЕЗ запроса к серверу — просто из массива leads
-  //     _renderMobLeadsFromArray();
-  //   }
-  // }
+  Мобильная панель — если открыта и на секции leads
+  if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
+    const activeMobSection = document.querySelector('.mob-item.active')?.dataset?.section;
+    if (activeMobSection === 'leads') {
+      // Рендерим БЕЗ запроса к серверу — просто из массива leads
+      _renderMobLeadsFromArray();
+    }
+  }
 
   // Дашборд владельца — счётчик заявок
   if (currentUser && currentUser.role === 'owner') {
@@ -11472,38 +11517,18 @@ async function renderMobAdminSection(section) {
 
   // ✅ СЕКЦИЯ ДАШБОРД (только для владельца)
   if (section === 'dashboard' && isOwner) {
-    // ✅ Загружаем свежие данные с кэшированием
-    try {
-      // Загружаем purchases через кэш
-      const purchasesData = await loadDataWithCache('purchases', false);
-      if (purchasesData) {
-        purchases = purchasesData.map(normalizePurchase);
-        saveState('purchases', purchases);
-      }
-      
-      // Загружаем users через кэш
-      const usersData = await loadDataWithCache('users', false);
-      if (usersData) {
-        users = usersData.map(normalizeUser);
-        saveState('users', users);
-      }
-      
-      // Загружаем programs через кэш
-      const programsData = await loadDataWithCache('programs', false);
-      if (programsData) {
-        programs = programsData.map(normalizeProgram);
-        saveState('programs', programs);
-      }
-      
-      // Загружаем leads через кэш
-      const leadsData = await loadDataWithCache('leads', false);
-      if (leadsData) {
-        leads = leadsData;
-        saveState('leads', leads);
-      }
-    } catch(e) {
-      console.warn('⚠️ Ошибка загрузки данных для дашборда:', e);
-    }
+    // ✅ 1. Мгновенно рендерим из того, что уже есть в памяти
+    _renderMobDashboard(box);
+
+    // ✅ 2. В фоне обновляем данные (параллельно, без await)
+    _bgRefreshDashboard(() => {
+      // Перерисовать только если пользователь всё ещё на дашборде
+      const active = document.querySelector('.mob-item.active')?.dataset?.section;
+      if (active === 'dashboard') _renderMobDashboard(box);
+    });
+
+    return;
+}
 
     // ✅ Формируем график выручки для мобильной версии
     const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
@@ -11576,17 +11601,17 @@ if (isLoading || !dataCache.purchases.data) {
     `;
 
   // ✅ СЕКЦИЯ ПРОГРАММЫ
-  } else if (section === 'programs') {
-    // Загружаем программы через кэш
-    try {
-      const programsData = await loadDataWithCache('programs', false);
-      if (programsData) {
-        programs = programsData.map(normalizeProgram);
-        saveState('programs', programs);
-      }
-    } catch(e) {
-      console.warn('⚠️ Ошибка загрузки программ:', e);
-    }
+} else if (section === 'programs') {
+    // ✅ Мгновенный рендер из памяти
+    _renderMobPrograms(box);
+
+    // ✅ Фоновое обновление
+    _bgRefreshSheet('programs', () => {
+      const active = document.querySelector('.mob-item.active')?.dataset?.section;
+      if (active === 'programs') _renderMobPrograms(box);
+    });
+
+    return;
 
     box.innerHTML = `
       <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">🗺 Программы</h2>
@@ -11616,122 +11641,11 @@ if (isLoading || !dataCache.purchases.data) {
     `;
 
   // ✅ СЕКЦИЯ УЧАСТНИКИ
-  } else if (section === 'users') {
-    // Принудительно загружаем пользователей через кэш
-    try {
-      const usersData = await loadDataWithCache('users', false);
-      if (usersData) {
-        const remoteUsers = usersData.map(normalizeUser);
-        const remoteOwner = remoteUsers.find(u => u.role === 'owner');
-        let mergedUsers = [];
-        
-        if (remoteOwner) {
-          mergedUsers = remoteUsers;
-        } else {
-          const localOwner = users.find(u => u.role === 'owner');
-          if (localOwner) {
-            mergedUsers = [localOwner, ...remoteUsers.filter(u => u.id !== localOwner.id)];
-          } else {
-            mergedUsers = remoteUsers;
-          }
-        }
-        
-        const uniqueUsers = [];
-        const seenIds = new Set();
-        mergedUsers.forEach(u => {
-          if (!seenIds.has(u.id)) {
-            seenIds.add(u.id);
-            uniqueUsers.push(u);
-          }
-        });
-        
-        users = uniqueUsers;
-        saveState('users', users);
-        
-        if (currentUser) {
-          const updatedCurrentUser = users.find(u => u.id === currentUser.id);
-          if (updatedCurrentUser) {
-            currentUser = updatedCurrentUser;
-            updateNavForUser();
-          }
-        }
-      }
-    } catch(e) {
-      console.warn('⚠️ Ошибка загрузки участников:', e);
-    }
-
-    box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">👥 Участники</h2>
-      <div id="mob-users-list">
-        ${users.map(function(u) {
-          const count = purchases.filter(function(p){ return p.userId===u.id; }).length;
-          const total = purchases.filter(function(p){ return p.userId===u.id; }).reduce(function(s,p){ return s+p.price; }, 0);
-          return '<div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">'
-            + '<div style="padding:13px;cursor:pointer;" onclick="openUserEditModal('+u.id+')">'
-            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
-            + '<strong style="font-size:14px;">'+u.name+'</strong>'
-            + '<span class="tag '+(u.role==='owner'?'tag-orange':u.role==='admin'?'tag-orange':'tag-green')+'">'+(u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Участник')+'</span>'
-            + '</div>'
-            + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@'+u.username+' · '+u.email+'</div>'
-            + '<div style="display:flex;gap:14px;font-size:12px;color:var(--text-muted);">'
-            + '<span>✈️ Путешествий: <strong id="mob-trip-count-'+u.id+'">'+count+'</strong></span>'
-            + '<span>🏷 Скидка: <strong>'+(u.discount||0)+'%</strong></span>'
-            + (total>0 ? '<span>💰 '+(total/1000).toFixed(0)+'к ₽</span>' : '')
-            + '</div>'
-            + '</div>'
-            + '<div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">'
-            + (isOwner ? '<select class="filter-select" style="font-size:12px;padding:5px;flex:1;" onchange="changeUserRole('+u.id+',this.value)"><option value=\"owner\"'+(u.role==='owner'?' selected':'')+'>Владелец</option><option value=\"admin\"'+(u.role==='admin'?' selected':'')+'>Админ</option><option value=\"user\"'+(u.role==='user'?' selected':'')+'>Участник</option></select>' : '')
-            + '<button class="btn btn-outline btn-sm" style="font-size:11px;padding:5px 10px;" onclick="showUserStats('+u.id+')">📊</button>'
-            + (u.role!=='owner' ? '<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="deleteUser('+u.id+')">🗑</button>' : '')
-            + '</div>'
-            + '</div>';
-        }).join('')}
-      </div>
-    `;
-
-  // ✅ СЕКЦИЯ ЗАЯВКИ
-  } else if (section === 'leads') {
-    try {
-      const leadsData = await loadDataWithCache('leads', false);
-      if (leadsData) {
-        leads = leadsData;
-        saveState('leads', leads);
-      }
-    } catch(e) {
-      console.warn('⚠️ Ошибка загрузки заявок:', e);
-    }
-
-    box.innerHTML = `
-      <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">📩 Заявки (${leads.length})</h2>
-      ${leads.length === 0
-        ? '<p style="color:var(--text-muted);">Пока нет заявок.</p>'
-        : leads.slice().reverse().map(function(l) {
-            return `
-              <div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:9px;overflow:hidden;">
-                <div style="padding:13px;cursor:pointer;" onclick="openLeadModal(${l.id})">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-                    <strong>${l.name}</strong>
-                    <span style="font-size:11px;color:var(--text-muted);">${l.date}</span>
-                  </div>
-                  <div style="font-size:12px;color:var(--accent);margin-bottom:3px;">${l.contact}</div>
-                  <div style="font-size:13px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.message || '—'}</div>
-                </div>
-                <div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">
-                  <button class="btn btn-primary btn-sm" style="flex:1;font-size:12px;" onclick="openLeadModal(${l.id})">Открыть →</button>
-                  <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteLead(${l.id})">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M3 6h18"/>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                      <line x1="10" y1="11" x2="10" y2="17"/>
-                      <line x1="14" y1="11" x2="14" y2="17"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            `;
-          }).join('')}
-    `;
-
+ } else if (section === 'leads') {
+    _renderMobLeadsFromArray();
+    refreshLeadsOnly();   // ✅ уже реализовано (внутри _rerenderLeadsEverywhere)
+    return;
+  
   // ✅ СЕКЦИЯ ГРУППЫ
   } else if (section === 'groups') {
     if (typeof loadAdminGroups === 'function') {
@@ -12014,6 +11928,233 @@ setTimeout(() => {
   setTimeout(() => {
   renderMobPrefTagsAdmin();
 }, 0);
+}
+
+function _renderMobUsers(box) {
+  if (!box) box = document.getElementById('mob-admin-content');
+  if (!box) return;
+  const isOwner = currentUser && currentUser.role === 'owner';
+
+  box.innerHTML = `
+    <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">👥 Участники</h2>
+    <div id="mob-users-list">
+      ${users.map(function(u) {
+        const count = purchases.filter(function(p){ return p.userId===u.id; }).length;
+        const total = purchases.filter(function(p){ return p.userId===u.id; }).reduce(function(s,p){ return s+p.price; }, 0);
+        return '<div style="background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;">'
+          + '<div style="padding:13px;cursor:pointer;" onclick="openUserEditModal('+u.id+')">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
+          + '<strong style="font-size:14px;">'+u.name+'</strong>'
+          + '<span class="tag '+(u.role==='owner'?'tag-orange':u.role==='admin'?'tag-orange':'tag-green')+'">'+(u.role==='owner'?'Владелец':u.role==='admin'?'Админ':'Участник')+'</span>'
+          + '</div>'
+          + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@'+u.username+' · '+u.email+'</div>'
+          + '<div style="display:flex;gap:14px;font-size:12px;color:var(--text-muted);">'
+          + '<span>✈️ Путешествий: <strong id="mob-trip-count-'+u.id+'">'+count+'</strong></span>'
+          + '<span>🏷 Скидка: <strong>'+(u.discount||0)+'%</strong></span>'
+          + (total>0 ? '<span>💰 '+(total/1000).toFixed(0)+'к ₽</span>' : '')
+          + '</div>'
+          + '</div>'
+          + '<div style="display:flex;gap:8px;padding:8px 13px;background:var(--bg);border-top:1px solid var(--border);">'
+          + (isOwner ? '<select class="filter-select" style="font-size:12px;padding:5px;flex:1;" onchange="changeUserRole('+u.id+',this.value)"><option value="owner"'+(u.role==='owner'?' selected':'')+'>Владелец</option><option value="admin"'+(u.role==='admin'?' selected':'')+'>Админ</option><option value="user"'+(u.role==='user'?' selected':'')+'>Участник</option></select>' : '')
+          + '<button class="btn btn-outline btn-sm" style="font-size:11px;padding:5px 10px;" onclick="showUserStats('+u.id+')">📊</button>'
+          + (u.role!=='owner' ? '<button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="deleteUser('+u.id+')">🗑</button>' : '')
+          + '</div>'
+          + '</div>';
+      }).join('')}
+    </div>
+  `;
+}
+  
+  // ============================================================
+// Мобильный дашборд — рендер из текущего состояния
+// ============================================================
+function _renderMobDashboard(box) {
+  if (!box) box = document.getElementById('mob-admin-content');
+  if (!box) return;
+
+  const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+  const byMonth = Array(12).fill(0);
+  purchases.forEach(p => {
+    const m = new Date(p.date).getMonth();
+    if (m >= 0 && m < 12) byMonth[m] += (p.price || 0);
+  });
+  const maxVal = Math.max(...byMonth) || 1;
+
+  const revenueChartHTML = months.map((m, i) => {
+    const h = Math.round((byMonth[i] / maxVal) * 110) + 4;
+    const k = byMonth[i] > 0 ? (byMonth[i] / 1000).toFixed(0) + 'к' : '—';
+    return `<div class="rev-bar-wrap" onclick="showRevenueDetails(${i})" style="cursor:pointer;">
+      <div class="rev-bar" style="height:${h}px;background:${byMonth[i] > 0 ? 'var(--accent)' : 'var(--accent-light)'};border-radius:4px 4px 0 0;margin-bottom:5px;transition:all 0.3s;"></div>
+      <div class="rev-month" style="font-size:11px;color:var(--text-muted);">${m}</div>
+      <div class="rev-amount" style="font-size:11px;font-weight:600;color:var(--accent2);margin-top:2px;">${k}</div>
+    </div>`;
+  }).join('');
+
+  const rev = purchases.reduce((s, p) => s + (p.price || 0), 0);
+
+  box.innerHTML = `
+    <h2 style="font-size:22px;font-weight:500;margin-bottom:16px;">📊 Дашборд</h2>
+    <div class="stats-grid">
+      <div class="stat-card" style="cursor:pointer;" onclick="switchMobSection('programs')">
+        <div class="stat-label">Программ</div>
+        <div class="stat-value">${programs.length}</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer;" onclick="switchMobSection('users')">
+        <div class="stat-label">Участников</div>
+        <div class="stat-value">${users.length}</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer;" onclick="switchMobSection('leads')">
+        <div class="stat-label">Заявок</div>
+        <div class="stat-value">${leads.length}</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer;" onclick="showRevenueDetails(new Date().getMonth())">
+        <div class="stat-label">Выручка</div>
+        <div class="stat-value">${(rev / 1000).toFixed(0)}к ₽</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border-radius:var(--radius);padding:20px;border:1px solid var(--border);margin-top:20px;">
+      <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:16px;">Выручка по месяцам</h3>
+      <div class="revenue-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(60px, 1fr));gap:8px;align-items:flex-end;">
+        ${revenueChartHTML}
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+// Фоновое обновление 4 листов ПАРАЛЛЕЛЬНО (для дашборда)
+// ============================================================
+let _isBgRefreshingDashboard = false;
+
+async function _bgRefreshDashboard(onDone) {
+  if (_isBgRefreshingDashboard) return;
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
+
+  _isBgRefreshingDashboard = true;
+
+  try {
+    // ✅ Все 4 запроса ПАРАЛЛЕЛЬНО — время = самый медленный, не сумма
+    const [pRes, uRes, prRes, lRes] = await Promise.all([
+      gasGet({ action: 'read', sheet: 'purchases' }),
+      gasGet({ action: 'read', sheet: 'users' }),
+      gasGet({ action: 'read', sheet: 'programs' }),
+      gasGet({ action: 'read', sheet: 'leads' })
+    ]);
+
+    let changed = false;
+    if (pRes && pRes.ok && Array.isArray(pRes.data)) {
+      purchases = pRes.data.map(normalizePurchase);
+      saveState('purchases', purchases);
+      invalidateCache('purchases');
+      changed = true;
+    }
+    if (uRes && uRes.ok && Array.isArray(uRes.data)) {
+      const remoteUsers = uRes.data.map(normalizeUser);
+      // сохраняем локального владельца
+      const localOwner = users.find(x => x.role === 'owner');
+      let merged = remoteUsers;
+      if (localOwner && !remoteUsers.find(u => u.id === localOwner.id)) {
+        merged = [localOwner, ...remoteUsers];
+      }
+      users = merged;
+      saveState('users', users);
+      invalidateCache('users');
+      changed = true;
+    }
+    if (prRes && prRes.ok && Array.isArray(prRes.data)) {
+      programs = prRes.data.map(normalizeProgram);
+      saveState('programs', programs);
+      invalidateCache('programs');
+      changed = true;
+    }
+    if (lRes && lRes.ok && Array.isArray(lRes.data)) {
+      leads = lRes.data;
+      saveState('leads', leads);
+      invalidateCache('leads');
+      changed = true;
+    }
+
+    if (changed && typeof onDone === 'function') onDone();
+  } catch(e) {
+    console.warn('⚠️ _bgRefreshDashboard error:', e);
+  } finally {
+    _isBgRefreshingDashboard = false;
+  }
+}
+
+  function _renderMobPrograms(box) {
+  if (!box) box = document.getElementById('mob-admin-content');
+  if (!box) return;
+  box.innerHTML = `
+    <h2 style="font-size:22px;font-weight:500;margin-bottom:14px;">🗺 Программы</h2>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:14px;" onclick="openAddProgram()">+ Добавить программу</button>
+    ${programs.map(p => `
+      <div style="background:var(--surface);border-radius:var(--radius-sm);padding:13px;border:1px solid var(--border);margin-bottom:9px;display:flex;gap:10px;align-items:center;">
+        <div style="width:42px;height:42px;border-radius:8px;overflow:hidden;background:var(--accent-light);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          ${p.photo ? '<img src="' + p.photo + '" style="width:100%;height:100%;object-fit:cover;">' : '<span>🏔</span>'}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</div>
+          <div style="font-size:11px;color:var(--text-muted);">${p.season} · ${p.days} дн · ${p.price.toLocaleString('ru')} ₽</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0;">
+          <button class="btn btn-edit" style="padding:5px 9px;font-size:11px;" onclick="openEditProgram(${p.id})">✏️</button>
+          <button class="btn btn-danger" style="padding:5px 9px;font-size:11px;" onclick="deleteProgram(${p.id})">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <line x1="10" y1="11" x2="10" y2="17"/>
+              <line x1="14" y1="11" x2="14" y2="17"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+// ✅ Универсальное фоновое обновление одного листа
+const _bgRefreshing = {};
+
+async function _bgRefreshSheet(sheetName, onDone) {
+  if (_bgRefreshing[sheetName]) return;
+  if (!GAS_URL || GAS_URL.includes('ВСТАВЬТЕ')) return;
+
+  _bgRefreshing[sheetName] = true;
+  try {
+    const result = await gasGet({ action: 'read', sheet: sheetName });
+    if (!result || !result.ok || !Array.isArray(result.data)) return;
+
+    if (sheetName === 'programs') {
+      programs = result.data.map(normalizeProgram);
+      saveState('programs', programs);
+    } else if (sheetName === 'users') {
+      const remoteUsers = result.data.map(normalizeUser);
+      const localOwner = users.find(x => x.role === 'owner');
+      let merged = remoteUsers;
+      if (localOwner && !remoteUsers.find(u => u.id === localOwner.id)) {
+        merged = [localOwner, ...remoteUsers];
+      }
+      users = merged;
+      saveState('users', users);
+    } else if (sheetName === 'leads') {
+      leads = result.data;
+      saveState('leads', leads);
+    } else if (sheetName === 'groups') {
+      groups = result.data.map(normalizeGroup);
+      saveState('groups', groups);
+    } else if (sheetName === 'purchases') {
+      purchases = result.data.map(normalizePurchase);
+      saveState('purchases', purchases);
+    }
+    invalidateCache(sheetName);
+
+    if (typeof onDone === 'function') onDone();
+  } catch(e) {
+    console.warn(`⚠️ _bgRefreshSheet(${sheetName}):`, e);
+  } finally {
+    _bgRefreshing[sheetName] = false;
+  }
 }
 
   function renderMobPrefTagsAdmin() {
