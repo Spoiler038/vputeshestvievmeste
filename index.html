@@ -4124,8 +4124,14 @@ function _showPageMain(page) {
   currentPage = page;
 
   if (page === 'home') {
-    if (home) home.style.display = '';
-  } else if (page === 'detail') {
+  if (home) home.style.display = '';
+
+  // ✅ Если форма была заменена сообщением — восстанавливаем
+  const formWrap = document.getElementById('contact-form-wrap');
+  if (formWrap && formWrap.dataset.originalHtml && !formWrap.querySelector('#lead-name')) {
+    restoreLeadForm();
+  }
+} else if (page === 'detail') {
     if (detail) {
       detail.classList.add('active');
       detail.style.display = '';
@@ -5354,15 +5360,49 @@ async function submitLead() {
     consent_type: 'lead_form'
   });
 
-  document.getElementById('contact-form-wrap').innerHTML = `
+  const formWrap = document.getElementById('contact-form-wrap');
+
+  // ✅ Сохраняем исходный HTML формы один раз
+  if (!formWrap.dataset.originalHtml) {
+    formWrap.dataset.originalHtml = formWrap.innerHTML;
+  }
+
+  // ✅ Показываем сообщение об успехе
+  formWrap.innerHTML = `
     <div class="form-success">
       <div class="form-success-icon">✅</div>
       <h3 style="font-family:var(--font-family);font-size:26px;margin-bottom:7px;">Заявка отправлена!</h3>
       <p style="color:var(--text-muted);">Марина свяжется с вами в течение 24 часов.</p>
+      <p style="color:var(--text-muted);font-size:12px;margin-top:12px;">Форма обновится через несколько секунд...</p>
     </div>
   `;
 
   showToast('Заявка успешно отправлена!');
+
+  // ✅ Через 8 секунд возвращаем пустую форму
+  clearTimeout(window._leadFormResetTimer);
+  window._leadFormResetTimer = setTimeout(() => {
+    restoreLeadForm();
+  }, 8000);
+}
+
+// ✅ Восстановление исходной формы
+function restoreLeadForm() {
+  clearTimeout(window._leadFormResetTimer);
+
+  const formWrap = document.getElementById('contact-form-wrap');
+  if (!formWrap) return;
+
+  if (formWrap.dataset.originalHtml) {
+    formWrap.innerHTML = formWrap.dataset.originalHtml;
+
+    // Навешиваем обработчик на чекбокс согласия заново
+    const consent = document.getElementById('lead-consent');
+    if (consent) consent.addEventListener('change', toggleLeadSubmit);
+
+    // Инициализируем состояние кнопки
+    toggleLeadSubmit();
+  }
 }
   
   
