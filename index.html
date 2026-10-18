@@ -1735,6 +1735,23 @@ input:checked + .slider:before {
   padding: 8px 10px;
   font-size: 12px;
 }
+
+  /* ✅ Отступ над "Предпочтения" без изменения высоты filter-bar */
+.pref-tags-section {
+  margin-top: 0;
+  padding-top: 7px;
+  /* Компенсируем padding-top, чтобы высота filter-bar не изменилась */
+  margin-bottom: -7px;
+}
+.pref-tags-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 9px;
+}
 </style>
 </head>
 <body>
@@ -2019,7 +2036,7 @@ input:checked + .slider:before {
       </div>
 
       <div>
-        <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:9px;">Предпочтения</label>
+       <label class="pref-tags-label">Предпочтения</label>
         <div class="filter-tags" id="pref-tags">
           <button class="filter-tag" data-tag="горы" onclick="toggleTag(this)">⛰ Горы</button>
           <button class="filter-tag" data-tag="море" onclick="toggleTag(this)">🌊 Море</button>
@@ -4463,15 +4480,76 @@ function loginSuccess(user) {
   
   closeAuth();
   updateNavForUser();
-  // Подписка на push, если админ/владелец и active !== false
-if (user.role === 'owner' || user.role === 'admin') {
-  if (user.active !== false) {
-    setTimeout(() => subscribeToPushNotifications(), 1500);
+
+  // ✅ Подписка на push
+  if (user.role === 'owner' || user.role === 'admin') {
+    if (user.active !== false) {
+      // Если разрешение уже дано — подписываемся сразу
+      if ('Notification' in window && Notification.permission === 'granted') {
+        subscribeToPushNotifications();
+      } else {
+        // Иначе — показываем баннер с кнопкой "Разрешить уведомления"
+        showPushPermissionBanner();
+      }
+    }
   }
-}
+
   showToast(`Добро пожаловать, ${user.name.split(' ')[0]}! 👋`);
 }
 
+// ✅ Баннер с кнопкой "Разрешить уведомления" — это user gesture
+function showPushPermissionBanner() {
+  // Если уже есть баннер — не дублируем
+  if (document.getElementById('push-permission-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'push-permission-banner';
+  banner.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 500;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: calc(100vw - 40px);
+    flex-wrap: wrap;
+    justify-content: center;
+  `;
+  banner.innerHTML = `
+    <span style="font-size:13px;color:var(--text);">
+      🔔 Включите уведомления о новых заявках
+    </span>
+    <button class="btn btn-primary btn-sm" onclick="requestPushPermission()">Разрешить</button>
+    <button class="btn btn-outline btn-sm" onclick="this.closest('#push-permission-banner').remove()">Позже</button>
+  `;
+  document.body.appendChild(banner);
+}
+
+async function requestPushPermission() {
+  // ✅ Это user gesture — запрос разрешения сработает
+  const banner = document.getElementById('push-permission-banner');
+  if (banner) banner.remove();
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      showToast('🔔 Уведомления разрешены');
+      await subscribeToPushNotifications();
+    } else {
+      showToast('🔕 Уведомления отключены');
+    }
+  } catch(e) {
+    console.error('Permission error:', e);
+  }
+}
+  
 function updateNavForUser() {
   const guestMenu = document.getElementById('guest-menu');
   const userMenu = document.getElementById('user-menu');
@@ -5349,6 +5427,7 @@ async function submitLead() {
 
   leads.push(lead);
   saveState('leads', leads);
+  updateLeadsBadge();
 
   // Отправляем в Google Sheets
   saveLeadToSheets(lead);
@@ -7441,10 +7520,11 @@ function switchAdmin(section) {
             
         case 'leads':
             if (!dataCache.leads.data) {
-                loadAdminLeads();
+              loadAdminLeads();
             } else {
-                renderLeadsTable(dataCache.leads.data);
+              renderLeadsTable(dataCache.leads.data);
             }
+            updateLeadsBadge();
             break;
             
         case 'groups':
@@ -7502,6 +7582,7 @@ function loadAdmin() {
   loadAdminUsers(isOwner);
   loadAdminLeads();
   loadAdminGroups();
+  updateLeadsBadge();
 
   const activeSection = document.querySelector('.admin-section.active');
   if (!isOwner && activeSection && activeSection.id === 'admin-dashboard') {
@@ -8170,6 +8251,7 @@ function loadAdminLeads() {
       </td>
     </tr>`;
   }).join('');
+  updateLeadsBadge();
 }
 
   // ============================================================
@@ -8239,6 +8321,7 @@ function _rerenderLeadsEverywhere() {
       }
     }
   }
+  updateLeadsBadge();
 }
 
 // Мобильный рендер заявок из массива (без запроса к GAS)
@@ -8276,7 +8359,64 @@ function _renderMobLeadsFromArray() {
           `;
         }).join('')}
   `;
+  updateLeadsBadge();
 }
+
+  function updateLeadsBadge() {
+  const count = Array.isArray(leads) ? leads.length : 0;
+
+  // ПК: пункт бокового меню «Заявки»
+  const pcItem = document.querySelector('.admin-nav-item[onclick*="leads"]');
+  if (pcItem) {
+    let badge = pcItem.querySelector('.leads-badge-pc');
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'leads-badge-pc';
+        badge.style.cssText = 'margin-left:auto;background:var(--accent);color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;display:inline-flex;align-items:center;gap:3px;';
+        pcItem.appendChild(badge);
+      }
+      badge.textContent = count;
+    } else if (badge) {
+      badge.remove();
+    }
+  }
+
+  // ПК: заголовок раздела «Заявки»
+  const leadsTitle = document.querySelector('#admin-leads .admin-page-title');
+  if (leadsTitle) {
+    let titleBadge = leadsTitle.querySelector('.leads-title-badge');
+    if (count > 0) {
+      if (!titleBadge) {
+        titleBadge = document.createElement('span');
+        titleBadge.className = 'leads-title-badge';
+        titleBadge.style.cssText = 'margin-left:10px;background:var(--accent);color:white;font-size:13px;padding:2px 10px;border-radius:10px;vertical-align:middle;display:inline-block;';
+        leadsTitle.appendChild(titleBadge);
+      }
+      titleBadge.textContent = count + ' заявок';
+    } else if (titleBadge) {
+      titleBadge.remove();
+    }
+  }
+
+  // Мобильный: пункт верхнего бара «Заявки»
+  const mobItem = document.querySelector('.mob-item[data-section="leads"]');
+  if (mobItem) {
+    let badge = mobItem.querySelector('.leads-badge-mob');
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'leads-badge-mob';
+        badge.style.cssText = 'margin-left:4px;background:var(--accent);color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;';
+        mobItem.appendChild(badge);
+      }
+      badge.textContent = count;
+    } else if (badge) {
+      badge.remove();
+    }
+  }
+}
+
 
   function renderLeadsTable(leadsData) {
     if (!leadsData) return;
@@ -8297,9 +8437,10 @@ function _renderMobLeadsFromArray() {
             </td>
         </tr>`;
     }).join('');
+    updateLeadsBadge();
 }
 
-  
+
  // === МОДАЛКА ЗАЯВКИ ===
 function openLeadModal(leadId) {
   const lead = leads.find(l => l.id === leadId);
@@ -8384,6 +8525,7 @@ async function deleteLead(leadId) {
   _rerenderLeadsEverywhere();
 
   showToast('Заявка удалена');
+  updateLeadsBadge();
 
   // ✅ 3. Синхронизация с GAS в фоне
   try {
@@ -10756,10 +10898,10 @@ async function subscribeToPushNotifications() {
   if (!currentUser) return;
   if (currentUser.role !== 'owner' && currentUser.role !== 'admin') return;
 
-  if (currentUser && currentUser.active === false) {
-  console.log('🔕 Push отключены (active = false)');
-  return;
-}
+  if (currentUser.active === false) {
+    console.log('🔕 Push отключены (active = false)');
+    return;
+  }
 
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -10773,48 +10915,105 @@ async function subscribeToPushNotifications() {
   _isSubscribing = true;
 
   try {
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.warn('Разрешение не получено');
+    // ✅ 1. Проверяем разрешение
+    let permission = Notification.permission;
+
+    if (permission === 'denied') {
+      console.warn('❌ Уведомления запрещены в браузере');
+      _isSubscribing = false;
       return;
     }
 
-    const registration = await navigator.serviceWorker.ready;
+    if (permission === 'default') {
+      // ⚠️ Запрос разрешения БЕЗ user gesture может быть проигнорирован
+      // Поэтому показываем кнопку/баннер, либо просим пользователя нажать
+      console.log('⚠️ Разрешение на уведомления не запрошено. Запрашиваем...');
+      permission = await Notification.requestPermission();
+    }
 
-    // Отписываемся от старой подписки, если есть
+    if (permission !== 'granted') {
+      console.warn('❌ Разрешение не получено:', permission);
+      _isSubscribing = false;
+      return;
+    }
+
+    // ✅ 2. Ждём готовности SW (с таймаутом)
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 10000))
+    ]);
+
+    // ✅ 3. Проверяем существующую подписку — если endpoint совпадает, НЕ пересоздаём
     const existingSub = await registration.pushManager.getSubscription();
-    if (existingSub) await existingSub.unsubscribe();
 
-    // Создаём новую
+    if (existingSub) {
+      const existingEndpoint = existingSub.endpoint;
+
+      // Сравниваем с сохранённым на сервере — если совпадает, ничего не делаем
+      const serverSubs = await gasPost({ action: 'get_push_subs', user_id: currentUser.id }).catch(() => null);
+      const serverEndpoints = (serverSubs?.subs || []).map(s => s.endpoint);
+
+      if (serverEndpoints.includes(existingEndpoint)) {
+        console.log('✅ Подписка уже актуальна на сервере, пропускаем');
+        _isSubscribing = false;
+        return;
+      }
+
+      // Endpoint есть локально, но нет на сервере — просто сохраняем
+      console.log('📤 Сохраняем существующую подписку на сервере...');
+      const subJson = existingSub.toJSON();
+      await gasPost({
+        action: 'save_push_sub',
+        user_id: currentUser.id,
+        data: {
+          device_id: getDeviceId(),
+          endpoint: subJson.endpoint,
+          p256dh: subJson.keys?.p256dh || '',
+          auth: subJson.keys?.auth || '',
+        },
+      });
+      console.log('✅ Существующая подписка сохранена на сервере');
+      _isSubscribing = false;
+      return;
+    }
+
+    // ✅ 4. Подписки нет — создаём новую
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
 
     const subJson = subscription.toJSON();
-    const endpoint = subJson.endpoint;
-    const p256dh = subJson.keys ? subJson.keys.p256dh : '';
-    const auth = subJson.keys ? subJson.keys.auth : '';
 
     await gasPost({
       action: 'save_push_sub',
       user_id: currentUser.id,
       data: {
         device_id: getDeviceId(),
-        endpoint: endpoint,
-        p256dh: p256dh,
-        auth: auth,
+        endpoint: subJson.endpoint,
+        p256dh: subJson.keys?.p256dh || '',
+        auth: subJson.keys?.auth || '',
       },
     });
 
-    console.log('✅ Push-подписка сохранена');
+    console.log('✅ Новая push-подписка создана и сохранена');
+
+    // ✅ 5. Тост пользователю, что нужно разрешение
+    if (Notification.permission === 'default') {
+      showToast('🔔 Разрешите уведомления в настройках браузера', 5000);
+    }
   } catch (e) {
     console.error('Ошибка подписки:', e);
+    if (e.message === 'SW timeout') {
+      console.warn('Service Worker не готов, попробуем позже');
+      // Пробуем ещё раз через 5 сек
+      setTimeout(() => subscribeToPushNotifications(), 5000);
+    }
   } finally {
     _isSubscribing = false;
   }
 }
-
+  
 async function unsubscribeFromPushNotifications() {
   if (!('serviceWorker' in navigator)) return;
   try {
@@ -11101,6 +11300,7 @@ function applyFullDataFromSheets(d) {
     invalidateCache('leads');
     console.log('✅ Загружено ' + leads.length + ' заявок');
   }
+  updateLeadsBadge();
 
   // === ГРУППЫ ===
   if (d.groups && Array.isArray(d.groups) && d.groups.length > 0) {
@@ -11707,7 +11907,8 @@ function switchMobSection(section) {
         // _renderMobUsers вызовется через renderMobAdminSection выше
     } else if (section === 'leads') {
     // ✅ Лёгкое обновление только лида (один запрос, без checkVersion и getFullData)
-    refreshLeadsOnly();
+      refreshLeadsOnly();
+      updateLeadsBadge();
     } else if (section === 'groups') {
         loadAdminGroups();
     
@@ -12933,6 +13134,7 @@ function init() {
   // Мобильная панель
   initMobileAdminItems();
   updateNavbarHeight();
+  updateLeadsBadge();
     // Раз в 5 минут обновляем запросы на удаление (только для админов)
   setInterval(() => {
     if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
