@@ -2222,7 +2222,6 @@ input:checked + .slider:before {
               <div class="profile-info-grid" id="profile-info-list"></div>
               <button class="btn btn-outline btn-sm" style="margin-top:10px; width:100%;" onclick="showPage('home')">← На сайт</button>
               <button class="btn btn-outline btn-sm" style="margin-top:10px; width:100%;" onclick="logout()">🚪 Выйти</button>
-              <button class="btn btn-danger btn-sm" style="margin-top:10px; width:100%; background:#7f1d1d;" onclick="requestProfileDeletion()">🗑 Запросить удаление профиля</button>
             </div>
 
             <!-- Правая колонка: редактирование профиля -->
@@ -2263,6 +2262,14 @@ input:checked + .slider:before {
                     <input type="password" class="form-input" id="confirm-password" placeholder="••••••">
                   </div>
                   <button class="btn btn-outline" onclick="changePassword()">Сменить пароль</button>
+                  </div>
+                  <!-- Опасная зона -->
+                  <div style="margin-top:30px; border-top:1px solid var(--border); padding-top:20px;">
+                  <h4 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:8px;color:#7f1d1d;">⚠️ Опасная зона</h4>
+                  <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">
+                  Удаление профиля необратимо. Все данные (поездки, фото, заявки) будут удалены в течение 30 дней согласно 152-ФЗ.
+                  </p>
+                  <button class="btn btn-danger" style="width:100%;background:#7f1d1d;" onclick="requestProfileDeletion()" id="delete-profile-btn">🗑 Удалить профиль</button>
                 </div>
               </div>
             </div>
@@ -5026,16 +5033,6 @@ function openPhotoViewerWithNavigation(photos, index) {
 
     updateViewerPhoto();
 }
-
-  function closePhotoViewer() {
-    document.getElementById('photo-viewer').classList.remove('active');
-    enableScroll();
-
-    // ✅ Возврат на ту страницу, откуда открыли
-    const returnPage = window._photoViewerReturnPage || 'gallery';
-    window._photoViewerReturnPage = null;
-    showPage(returnPage);
-}
   
 function updateViewerPhoto() {
     if (!viewerPhotos || viewerPhotos.length === 0) {
@@ -5469,6 +5466,11 @@ function loadDashboard() {
   // Обновляем селект программ для фото
   updatePhotoProgramSelect(u.id);
   updateDeletionButton();
+   // Скрываем «Удалить профиль» для владельца
+  const delBtn = document.getElementById('delete-profile-btn');
+  if (delBtn) {
+    delBtn.style.display = (u.role === 'owner') ? 'none' : 'inline-flex';
+  }
 }
 
 
@@ -5784,14 +5786,20 @@ async function requestProfileDeletion() {
 
   // Меняет текст/вид кнопки в зависимости от флага
 function updateDeletionButton() {
-  const btn = document.querySelector('[onclick="requestProfileDeletion()"]');
+  const btn = document.getElementById('delete-profile-btn');
   if (!btn) return;
+  // Владельцу кнопка не нужна
+  if (currentUser && currentUser.role === 'owner') {
+    btn.style.display = 'none';
+    return;
+  }
+  btn.style.display = 'inline-flex';
   const requested = currentUser && localStorage.getItem('vputi_deletion_requested') === String(currentUser.id);
   if (requested) {
     btn.textContent = '↩️ Отозвать запрос на удаление';
     btn.style.background = '#7A7060';
   } else {
-    btn.textContent = '🗑 Запросить удаление профиля';
+    btn.textContent = '🗑 Удалить профиль';
     btn.style.background = '#7f1d1d';
   }
 }
@@ -7715,9 +7723,9 @@ async function loadDeletionRequests() {
       if (currentPage === 'admin' && document.getElementById('admin-users')?.classList.contains('active')) {
         renderUsersTable(currentUser.role === 'owner');
       }
-      if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
+            if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
         const active = document.querySelector('.mob-item.active')?.dataset?.section;
-        if (active === 'users') renderMobAdminSection('users');
+        if (active === 'users') _renderMobUsers();
       }
     }
   } catch(e) {
@@ -11581,11 +11589,12 @@ function switchMobSection(section) {
         if (!dataCache.programs.data) {
             loadAdminPrograms();
         }
-    } else if (section === 'users') {
+        } else if (section === 'users') {
         if (!dataCache.users.data) {
             loadAdminUsers(currentUser?.role === 'owner');
-            loadDeletionRequests();
         }
+        loadDeletionRequests();
+        // _renderMobUsers вызовется через renderMobAdminSection выше
     } else if (section === 'leads') {
     // ✅ Лёгкое обновление только лида (один запрос, без checkVersion и getFullData)
     refreshLeadsOnly();
@@ -11654,6 +11663,18 @@ async function renderMobAdminSection(section) {
       if (active === 'programs') _renderMobPrograms(box);
     });
     return;    
+
+    } else if (section === 'users') {
+    // ✅ Мгновенный рендер из памяти
+    _renderMobUsers(box);
+
+    // ✅ Фоновое обновление + бейдж «⚠»
+    _bgRefreshSheet('users', () => {
+      const active = document.querySelector('.mob-item.active')?.dataset?.section;
+      if (active === 'users') _renderMobUsers(box);
+    });
+    loadDeletionRequests();
+    return;
   // ✅ СЕКЦИЯ УЧАСТНИКИ
  } else if (section === 'leads') {
     _renderMobLeadsFromArray();
