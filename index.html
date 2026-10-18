@@ -4200,7 +4200,12 @@ function _showPageMain(page) {
         galleryPage.style.display = '';
     }
     updateGalleryProgramFilter();
-    renderGalleryPage();
+    // ✅ Сбрасываем страницу и применяем сортировку по умолчанию
+    galleryCurrentPage = 0;
+    galleryFilterApplied = false;
+    const sortSel = document.getElementById('gallery-filter-sort');
+    if (sortSel) sortSel.value = 'newest';
+    applyGalleryFilters();   // ← применит сортировку «Сначала новые»
 }
 
   window.scrollTo(0, 0);
@@ -12538,9 +12543,10 @@ function resetGalleryFilters() {
     document.getElementById('gallery-filter-program').value = '';
     document.getElementById('gallery-filter-sort').value = 'newest';
     galleryFilteredPhotos = [];
-    galleryFilterApplied = false;  // ✅ сбрасываем флаг
+    galleryFilterApplied = false;
     galleryCurrentPage = 0;
-    renderGalleryPage();
+    // ✅ Применяем сортировку «Сначала новые» даже после сброса
+    applyGalleryFilters();
 }
 
 function changeGalleryGridSize(delta) {
