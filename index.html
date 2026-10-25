@@ -7838,14 +7838,17 @@ function loadAdminUsers(isOwner, forceRefresh = false) {
                 }
                 
                 // Обновляем мобильную панель
-                if (isMobPanelOpen) {
+                  if (isMobPanelOpen) {
                     const activeMobSection = document.querySelector('.mob-item.active')?.dataset?.section;
                     if (activeMobSection === 'dashboard') {
                         renderMobAdminSection('dashboard');
                     }
                 }
                 
-                showToast('📩 Входящих заявок: ' + leads.length);
+                // ✅ Тост о количестве заявок — только для owner/admin
+                if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
+                    showToast('📩 Входящих заявок: ' + leads.length);
+                }
             }
         })
         .catch(err => {
