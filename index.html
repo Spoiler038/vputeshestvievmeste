@@ -2375,11 +2375,12 @@ input:checked + .slider:before {
           <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Или ссылка на фото</label>
           <input type="text" class="form-input" id="photo-url" placeholder="https://example.com/photo.jpg">
         </div>
-      <div>
+            <div>
       <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Программа путешествия</label>
-        <select class="filter-select" id="photo-program">
+        <select class="filter-select" id="photo-program" onchange="updatePhotoDeadlineHint()">
         <option value="">— Общее фото —</option>
         </select>
+        <div id="photo-deadline-hint" style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.4;"></div>
       </div>
     <div>
       <label style="display:block;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Подпись</label>
@@ -2568,7 +2569,21 @@ input:checked + .slider:before {
     </label>
   </div>
 </div>
-
+                <!-- ✅ Ограничение загрузки фото -->
+        <div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:20px;">
+          <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:6px;">📸 Ограничение загрузки фото</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.6;">
+            Если включено — участник может загружать фото к поездке только в течение <strong>30 дней</strong> после её завершения.
+            Если выключено — загрузка доступна без ограничений по времени.
+          </p>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+            <span id="photo-upload-limit-label" style="font-size:14px;font-weight:500;">Включено</span>
+            <label class="switch">
+              <input type="checkbox" id="photo-upload-limit-toggle" onchange="togglePhotoUploadLimit(this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
         <!-- Статистика на главной -->
         <div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:20px;">
           <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:6px;">📊 Статистика на главной</h3>
@@ -3920,6 +3935,7 @@ let gallery = loadState('gallery', []);
 let groups = loadState('groups', []);
 let inviteCodeSetting = loadState('inviteCode', 'VPUTI2026');
 let heroStats = loadState('heroStats', { trips: '47', people: '380+', dirs: '12' });
+let photoUploadLimitEnabled = loadState('photoUploadLimitEnabled', true);
 
 // Глобальный кэш данных
 const dataCache = {
@@ -5672,6 +5688,42 @@ function updatePhotoProgramSelect(userId) {
   // Если выбранное значение все еще доступно — оставляем
   if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
+
+  function updatePhotoDeadlineHint() {
+  const hint = document.getElementById('photo-deadline-hint');
+  if (!hint) return;
+
+  const sel = document.getElementById('photo-program');
+  const programId = sel ? parseInt(sel.value) : null;
+
+  if (!currentUser) {
+    hint.textContent = '';
+    return;
+  }
+
+  // Ограничение отключено — показываем сообщение, что сроков нет
+  if (!photoUploadLimitEnabled) {
+    hint.textContent = '';
+    return;
+  }
+
+  if (!programId) {
+    hint.textContent = '';
+    return;
+  }
+
+  const check = canUserUploadPhoto(currentUser.id, programId);
+  if (!check.allowed) {
+    hint.innerHTML = `<span style="color:#C0392B;">⚠ ${check.reason}</span>`;
+  } else if (check.daysLeft !== null && check.daysLeft > 0) {
+    const cls = check.daysLeft <= 5 ? 'color:#E67E22;font-weight:600;' : 'color:var(--text-muted);';
+    hint.innerHTML = `<span style="${cls}">📅 Осталось ${check.daysLeft} дн. на загрузку фото</span>`;
+  } else if (check.daysLeft === 0) {
+    hint.innerHTML = `<span style="color:#E67E22;font-weight:600;">⏳ Сегодня последний день загрузки</span>`;
+  } else {
+    hint.textContent = '';
+  }
+}
   
 function renderUserGallery(userId) {
   const container = document.getElementById('user-gallery-by-program');
@@ -6030,22 +6082,44 @@ async function addPhoto() {
   }
 
   // Проверяем, может ли пользователь добавить фото
+    // Проверяем, может ли пользователь добавить фото
   if (currentUser.role === 'user') {
-    // Если выбрана конкретная программа — проверяем участие в ней
     if (programId) {
-      const hasTraveled = purchases.some(p => 
-        p.userId === currentUser.id && p.programId === programId
+      const hasTraveled = purchases.some(p =>
+        String(p.userId) === String(currentUser.id) && String(p.programId) === String(programId)
       );
       if (!hasTraveled) {
         showToast('Вы можете добавлять фото только к поездкам, в которых участвовали');
         return;
       }
+
+      // ✅ Проверка срока 30 дней (если ограничение включено)
+      const check = canUserUploadPhoto(currentUser.id, programId);
+      if (!check.allowed) {
+        showToast('❌ ' + check.reason, 5000);
+        return;
+      }
+      if (check.daysLeft !== null && check.daysLeft <= 5 && check.daysLeft > 0) {
+        // Мягкое напоминание — не блокирует
+        console.log(`⏳ Осталось ${check.daysLeft} дн. на загрузку фото к этой поездке`);
+      }
     } else {
-      // Если не выбрана программа — проверяем, есть ли вообще поездки
       const userPurchases = purchases.filter(p => p.userId === currentUser.id);
       if (userPurchases.length === 0) {
         showToast('Добавлять фото могут только участники путешествий');
         return;
+      }
+      // ✅ Для «общих фото» (без программы) тоже проверяем,
+      // есть ли хотя бы одна поездка, к которой ещё можно грузить
+      if (photoUploadLimitEnabled) {
+        const anyAvailable = userPurchases.some(p => {
+          const c = canUserUploadPhoto(currentUser.id, p.programId);
+          return c.allowed;
+        });
+        if (!anyAvailable) {
+          showToast('❌ Все ваши поездки завершены более 30 дней назад. Загрузка фото недоступна.', 5000);
+          return;
+        }
       }
     }
   }
@@ -8872,6 +8946,14 @@ function syncAllDataFromSheets(silent = false) {
                 loadHeroStats();
               } catch(e) {}
             }
+                        if (s.key === 'photoUploadLimitEnabled') {
+              try {
+                const val = s.value;
+                photoUploadLimitEnabled = (val === 'TRUE' || val === true || val === 'true' || val === '1');
+                saveState('photoUploadLimitEnabled', photoUploadLimitEnabled);
+                loadPhotoUploadLimitState();
+              } catch(e) {}
+            }
           }
         }
         
@@ -9087,6 +9169,43 @@ function loadSettingsAdmin() {
   document.getElementById('hint-invite-code').textContent = inviteCodeSetting;
   renderPrefTagsAdmin();
   loadPushToggleState();
+  loadPhotoUploadLimitState();
+}
+
+  function loadPhotoUploadLimitState() {
+  const enabled = photoUploadLimitEnabled !== false;
+  const toggle = document.getElementById('photo-upload-limit-toggle');
+  const label = document.getElementById('photo-upload-limit-label');
+  if (toggle) toggle.checked = enabled;
+  if (label) label.textContent = enabled ? 'Включено' : 'Отключено';
+}
+
+async function togglePhotoUploadLimit(enabled) {
+  // Только для owner/admin
+  if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) {
+    showToast('Только для владельца или администратора');
+    return;
+  }
+
+  photoUploadLimitEnabled = enabled;
+  saveState('photoUploadLimitEnabled', enabled);
+
+  // UI
+  const label = document.getElementById('photo-upload-limit-label');
+  if (label) label.textContent = enabled ? 'Включено' : 'Отключено';
+  const toggle = document.getElementById('photo-upload-limit-toggle');
+  if (toggle) toggle.checked = enabled;
+  const mobToggle = document.getElementById('mob-photo-upload-limit-toggle');
+  if (mobToggle) mobToggle.checked = enabled;
+
+  // Синхронизация с Google Sheets (лист settings)
+  try {
+    await saveSettingToSheets('photoUploadLimitEnabled', enabled ? 'TRUE' : 'FALSE');
+    showToast(enabled ? '🔒 Ограничение включено' : '🔓 Ограничение отключено');
+  } catch (e) {
+    console.warn('Save photoUploadLimitEnabled error:', e);
+    showToast('⚠ Сохранено локально, синхронизация позже');
+  }
 }
 
 function saveInviteCode() {
@@ -10910,6 +11029,66 @@ function getUserProgramIds(userId) {
 function hasUserTraveled(userId, programId) {
   return purchases.some(p => p.userId === userId && p.programId === programId);
 }
+
+  // ✅ Проверка: можно ли пользователю загружать фото к поездке
+// Возвращает { allowed: true/false, reason: 'текст', daysLeft: число|null }
+function canUserUploadPhoto(userId, programId) {
+  // Если ограничение отключено — разрешаем всегда
+  if (!photoUploadLimitEnabled) {
+    return { allowed: true, reason: '', daysLeft: null };
+  }
+
+  // Ищем поездку пользователя по этой программе
+  const userPurchases = purchases.filter(p =>
+    String(p.userId) === String(userId) &&
+    String(p.programId) === String(programId)
+  );
+
+  if (userPurchases.length === 0) {
+    return { allowed: false, reason: 'Вы не участвовали в этой поездке', daysLeft: null };
+  }
+
+  // Берём последнюю поездку (если было несколько)
+  const lastPurchase = userPurchases.reduce((a, b) => {
+    const dateA = new Date(a.date || 0).getTime();
+    const dateB = new Date(b.date || 0).getTime();
+    return dateA > dateB ? a : b;
+  });
+
+  const endDate = lastPurchase.date;
+  if (!endDate) {
+    // Если даты нет — считаем, что можно (не блокируем)
+    return { allowed: true, reason: '', daysLeft: null };
+  }
+
+  const end = new Date(endDate);
+  if (isNaN(end.getTime())) {
+    return { allowed: true, reason: '', daysLeft: null };
+  }
+
+  const now = new Date();
+  // Обнуляем время — сравниваем по календарным дням
+  end.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+
+  const diffMs = now.getTime() - end.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 30) {
+    return {
+      allowed: true,
+      reason: '',
+      daysLeft: Math.max(0, 30 - diffDays)
+    };
+  }
+
+  return {
+    allowed: false,
+    reason: `Прошло ${diffDays} дней с окончания поездки (лимит — 30 дней)`,
+    daysLeft: 0,
+    diffDays
+  };
+}
   // ============================================================
 // === GOOGLE SHEETS СИНХРОНИЗАЦИЯ =============================
 // ============================================================
@@ -11455,6 +11634,15 @@ function applyFullDataFromSheets(d) {
     }
   } catch(e) { console.warn('Parse prefTags error:', e); }
 }
+            if (s.key === 'photoUploadLimitEnabled') {
+        try {
+          const val = s.value;
+          photoUploadLimitEnabled = (val === 'TRUE' || val === true || val === 'true' || val === '1');
+          saveState('photoUploadLimitEnabled', photoUploadLimitEnabled);
+          loadPhotoUploadLimitState();
+          console.log('✅ Загружено photoUploadLimitEnabled:', photoUploadLimitEnabled);
+        } catch(e) { console.warn('Parse photoUploadLimitEnabled error:', e); }
+      }
     }
   }
 
@@ -12216,6 +12404,18 @@ async function renderMobAdminSection(section) {
     <input type="text" class="form-input" id="mob-invite" value="${inviteCodeSetting}" style="margin-bottom:8px;">
     <button class="btn btn-primary btn-sm" onclick="saveMobInvite()">Сохранить код</button>
   </div>
+    <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:2px;">📸 Загрузка фото</div>
+        <div style="font-size:11px;color:var(--text-muted);">Ограничение 30 дней после поездки</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="mob-photo-upload-limit-toggle" onchange="togglePhotoUploadLimit(this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
   <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
       <div>
@@ -12257,6 +12457,10 @@ setTimeout(() => {
   const enabled = currentUser ? currentUser.active !== false : true;
   const mobToggle = document.getElementById('mob-push-toggle');
   if (mobToggle) mobToggle.checked = enabled;
+
+  // ✅ Синхронизируем toggle ограничения загрузки фото
+  const mobPhotoToggle = document.getElementById('mob-photo-upload-limit-toggle');
+  if (mobPhotoToggle) mobPhotoToggle.checked = photoUploadLimitEnabled !== false;
 }, 0);
 
   // ✅ СЕКЦИЯ ОСНОВАТЕЛЬ
@@ -12892,8 +13096,18 @@ function photoViewerPrev() {
 }
 
 function closePhotoViewer() {
-    document.getElementById('photo-viewer').classList.remove('active');
-    document.body.style.overflow = '';
+    const viewer = document.getElementById('photo-viewer');
+    if (viewer) {
+        viewer.classList.remove('active');
+        viewer.style.display = 'none';
+    }
+
+    // ✅ Правильная разблокировка скролла (как в модалках)
+    // Проверяем, не открыта ли ещё какая-нибудь модалка
+    const anyModalOpen = document.querySelector('.modal-overlay.open') || document.querySelector('.auth-overlay.open');
+    if (!anyModalOpen) {
+        enableScroll();
+    }
 }
 
 // Один раз при DOMContentLoaded
