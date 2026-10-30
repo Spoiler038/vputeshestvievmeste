@@ -2569,9 +2569,15 @@ input:checked + .slider:before {
     </label>
   </div>
 </div>
-                <!-- ✅ Ограничение загрузки фото -->
+                        <!-- ✅ Ограничение загрузки фото -->
         <div style="background:var(--surface);border-radius:var(--radius);padding:28px;border:1px solid var(--border);margin-top:20px;">
-          <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:6px;">📸 Ограничение загрузки фото</h3>
+          <h3 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:6px;display:inline-flex;align-items:center;gap:8px;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            Ограничение загрузки фото
+          </h3>
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.6;">
             Если включено — участник может загружать фото к поездке только в течение <strong>30 дней</strong> после её завершения.
             Если выключено — загрузка доступна без ограничений по времени.
@@ -12404,12 +12410,24 @@ async function renderMobAdminSection(section) {
     <input type="text" class="form-input" id="mob-invite" value="${inviteCodeSetting}" style="margin-bottom:8px;">
     <button class="btn btn-primary btn-sm" onclick="saveMobInvite()">Сохранить код</button>
   </div>
-    <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
+      <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-      <div>
-        <div style="font-size:14px;font-weight:500;margin-bottom:2px;">📸 Загрузка фото</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:500;margin-bottom:2px;display:inline-flex;align-items:center;gap:6px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          Загрузка фото
+        </div>
         <div style="font-size:11px;color:var(--text-muted);">Ограничение 30 дней после поездки</div>
       </div>
+      <label class="switch">
+        <input type="checkbox" id="mob-photo-upload-limit-toggle" onchange="togglePhotoUploadLimit(this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
       <label class="switch">
         <input type="checkbox" id="mob-photo-upload-limit-toggle" onchange="togglePhotoUploadLimit(this.checked)">
         <span class="slider"></span>
