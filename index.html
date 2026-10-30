@@ -5672,38 +5672,63 @@ function updatePhotoProgramSelect(userId) {
   // Если выбранное значение все еще доступно — оставляем
   if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
+  
 function renderUserGallery(userId) {
   const container = document.getElementById('user-gallery-by-program');
   if (!container) return;
 
-  const userPhotos = gallery.filter(g => g.userId === userId || g.author === (users.find(u => u.id === userId)?.name?.split(' ')[0] || ''));
+  const userName = users.find(u => u.id === userId)?.name?.split(' ')[0] || '';
+  const userPhotos = gallery.filter(g => 
+    String(g.userId) === String(userId) || 
+    (userName && g.author === userName)
+  );
 
   if (userPhotos.length === 0) {
     container.innerHTML = '<p style="color:var(--text-muted);">Пока нет фотографий. Добавьте первое!</p>';
     return;
   }
 
+  // ✅ Группируем по programId, но приводим к числу и отбрасываем мусор
   const byProgram = {};
   userPhotos.forEach(item => {
-    const key = item.programId || 'general';
+    let pid = item.programId;
+    // Приводим к числу, если это валидное число > 0
+    if (pid !== null && pid !== undefined && pid !== '') {
+      const n = parseInt(pid);
+      pid = (Number.isFinite(n) && n > 0) ? n : null;
+    } else {
+      pid = null;
+    }
+    const key = pid !== null ? String(pid) : 'general';
     if (!byProgram[key]) byProgram[key] = [];
     byProgram[key].push(item);
   });
 
-  container.innerHTML = Object.entries(byProgram).map(([progId, photos]) => {
-    const prog = progId !== 'general' ? programs.find(p => p.id === parseInt(progId)) : null;
+  // ✅ Программы сначала, «Общие» — в конце
+  const keys = Object.keys(byProgram).sort((a, b) => {
+    if (a === 'general') return 1;
+    if (b === 'general') return -1;
+    return 0;
+  });
+
+  container.innerHTML = keys.map(progId => {
+    const photos = byProgram[progId];
+    const prog = progId !== 'general' 
+      ? programs.find(p => String(p.id) === String(progId)) 
+      : null;
     const title = prog ? prog.name : 'Общие фото';
     const emoji = prog ? '🗺' : '📷';
     return `
       <div style="margin-bottom:32px;">
         <h4 style="font-family:var(--font-family);font-size:18px;font-weight:500;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
           ${emoji} ${title}
+          <span style="font-size:12px;font-weight:400;color:var(--text-muted);">(${photos.length})</span>
         </h4>
         <div class="gallery-grid">
           ${photos.map(item => `
-            <div class="gallery-item">
-              ${item.url ? `<img src="${item.url}" alt="${item.caption}" onerror="imgHide(this)">` : `<span>${item.emoji || '📷'}</span>`}
-              <div class="gallery-meta">${item.caption}</div>
+            <div class="gallery-item" onclick="openPhotoViewerWithNavigation(${JSON.stringify(photos).replace(/"/g, '&quot;')}, ${photos.indexOf(item)})" style="cursor:pointer;">
+              ${item.url ? `<img src="${item.url}" alt="${item.caption || ''}" onerror="imgHide(this)">` : `<span>${item.emoji || '📷'}</span>`}
+              <div class="gallery-meta">${item.caption || ''}</div>
             </div>
           `).join('')}
         </div>
@@ -6025,23 +6050,31 @@ async function addPhoto() {
     }
   }
 
-  async function saveGalleryItem(photoUrl) {
-    let groupId = null;
-  if (programId && currentUser) {
-    const purchase = purchases.find(
-      p => p.userId === currentUser.id && p.programId === programId
-    );
-    if (purchase) {
-      groupId = purchase.groupId;
+    async function saveGalleryItem(photoUrl) {
+    // ✅ Приводим programId к числу, если валидный, иначе null
+    let normalizedProgramId = null;
+    if (programId !== null && programId !== undefined && programId !== '') {
+      const n = parseInt(programId);
+      if (Number.isFinite(n) && n > 0) normalizedProgramId = n;
     }
-  }
+
+    let groupId = null;
+    if (normalizedProgramId && currentUser) {
+      const purchase = purchases.find(
+        p => String(p.userId) === String(currentUser.id) && String(p.programId) === String(normalizedProgramId)
+      );
+      if (purchase) {
+        groupId = purchase.groupId || null;
+      }
+    }
+
     const item = {
       id: gallery.length > 0 ? Math.max(...gallery.map(g => parseInt(g.id) || 0)) + 1 : 1,
       url: photoUrl,
       caption: caption,
       author: currentUser.name.split(' ')[0],
       userId: currentUser.id,
-      programId: programId,
+      programId: normalizedProgramId,   // ✅ число или null
       groupId: groupId,
       createdAt: new Date().toISOString().slice(0, 10)
     };
@@ -12154,13 +12187,14 @@ async function renderMobAdminSection(section) {
                     photo.createdAt || ''
                 ].join(' ').toLowerCase();
                 return `
-                <div data-search="${searchStr.replace(/"/g, '&quot;')}" style="aspect-ratio:1/1;border-radius:var(--radius-sm);overflow:hidden;position:relative;background:var(--bg2);" data-id="${photo.id}">
+                                <div data-search="${searchStr.replace(/"/g, '&quot;')}" style="aspect-ratio:1/1;border-radius:var(--radius-sm);overflow:hidden;position:relative;background:var(--bg2);cursor:pointer;" data-id="${photo.id}" onclick="openAdminPhotoViewer(${photo.id})">
                     ${photo.url ? `<img src="${photo.url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">` : `<span style="display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;">📷</span>`}
                     <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));padding:6px;color:white;font-size:9px;display:flex;flex-direction:column;gap:2px;">
                         <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><strong>${photo.author || '—'}</strong> ${photo.caption ? '· ' + photo.caption : ''}</div>
                         <div style="display:flex;gap:4px;">
-                            <button class="btn btn-outline btn-sm" style="font-size:8px;padding:2px 6px;background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);" onclick="editPhotoCaptionAdmin(${photo.id})">✏️</button>
-                            <button class="btn btn-danger" style="font-size:8px;padding:2px 6px;display:inline-flex;align-items:center;justify-content:center;" onclick="deletePhotoAdmin(${photo.id})">     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">         <path d="M3 6h18"/>         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>         <line x1="10" y1="11" x2="10" y2="17"/>         <line x1="14" y1="11" x2="14" y2="17"/>     </svg> </button>
+                                                        <button class="btn btn-outline btn-sm" style="font-size:8px;padding:2px 6px;background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);" onclick="event.stopPropagation();editPhotoCaptionAdmin(${photo.id})">✏️</button>
+                            <button class="btn btn-danger" style="font-size:8px;padding:2px 6px;display:inline-flex;align-items:center;justify-content:center;" onclick="event.stopPropagation();deletePhotoAdmin(${photo.id})">    
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">         <path d="M3 6h18"/>         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>         <line x1="10" y1="11" x2="10" y2="17"/>         <line x1="14" y1="11" x2="14" y2="17"/>     </svg> </button>
                         </div>
                     </div>
                 </div>
@@ -12958,13 +12992,14 @@ function loadAdminPhotos() {
                     photo.createdAt || ''
                 ].join(' ').toLowerCase();
                 return `
-                <div class="gallery-item" data-search="${searchStr.replace(/"/g, '&quot;')}" style="aspect-ratio:1/1;border-radius:var(--radius-sm);overflow:hidden;position:relative;background:var(--bg2);" data-id="${photo.id}">
+                                <div class="gallery-item" data-search="${searchStr.replace(/"/g, '&quot;')}" style="aspect-ratio:1/1;border-radius:var(--radius-sm);overflow:hidden;position:relative;background:var(--bg2);cursor:pointer;" data-id="${photo.id}" onclick="openAdminPhotoViewer(${photo.id})">
                     ${photo.url ? `<img src="${photo.url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">` : `<span style="display:flex;align-items:center;justify-content:center;height:100%;font-size:32px;">📷</span>`}
                     <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));padding:10px;color:white;font-size:11px;display:flex;flex-direction:column;gap:2px;">
                         <div><strong>${photo.author || '—'}</strong> ${photo.caption ? '· ' + photo.caption : ''}</div>
                         <div style="display:flex;gap:6px;">
-                            <button class="btn btn-outline btn-sm" style="font-size:10px;padding:2px 8px;background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);" onclick="editPhotoCaptionAdmin(${photo.id})">✏️</button>
-                            <button class="btn btn-danger" style="font-size:10px;padding:2px 8px;display:inline-flex;align-items:center;justify-content:center;" onclick="deletePhotoAdmin(${photo.id})">     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">         <path d="M3 6h18"/>         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>         <line x1="10" y1="11" x2="10" y2="17"/>         <line x1="14" y1="11" x2="14" y2="17"/>     </svg> </button>
+                            <button class="btn btn-outline btn-sm" style="font-size:10px;padding:2px 8px;background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);" onclick="event.stopPropagation();editPhotoCaptionAdmin(${photo.id})">✏️</button>
+                            <button class="btn btn-danger" style="font-size:10px;padding:2px 8px;display:inline-flex;align-items:center;justify-content:center;" onclick="event.stopPropagation();deletePhotoAdmin(${photo.id})">     
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">         <path d="M3 6h18"/>         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>         <line x1="10" y1="11" x2="10" y2="17"/>         <line x1="14" y1="11" x2="14" y2="17"/>     </svg> </button>
                         </div>
                     </div>
                 </div>
@@ -13172,6 +13207,20 @@ function clearMobPhotoSearch() {
         input.focus();
     }
     filterMobAdminPhotos();
+}
+
+  // ✅ Открытие фото-вьювера из админки «Управление фото»
+function openAdminPhotoViewer(photoId) {
+    const photos = gallery || [];
+    if (photos.length === 0) return;
+
+    // ✅ Сортируем так же, как они отображаются в сетке (по id desc — как в loadAdminPhotos)
+    // Если порядок в галерее отличается — используем тот же массив, что и при рендере
+    const sortedPhotos = photos;
+    const index = sortedPhotos.findIndex(p => String(p.id) === String(photoId));
+    if (index === -1) return;
+
+    openPhotoViewerWithNavigation(sortedPhotos, index);
 }
   
 // ============================================================
