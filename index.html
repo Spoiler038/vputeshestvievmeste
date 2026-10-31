@@ -1658,7 +1658,16 @@ input[type=number] {
   #program-modal .modal-footer .btn-danger { flex: 0 0 auto; padding: 10px 14px; }
   #program-modal .modal-footer .btn-outline { flex: 1; }
   #program-modal .modal-footer .btn-primary { flex: 1.2; }
+
+    /* ✅ ПК-кнопка «ПАНЕЛЬ» на мобильном скрыта — там своя #mobile-admin-toggle */
+  #pc-admin-btn {
+    display: none !important;
+  }
 }
+
+  
+
+  
   /* ===== TOGGLE SWITCH ===== */
 .switch {
   position: relative;
@@ -1758,6 +1767,10 @@ input:checked + .slider:before {
   margin-bottom: 9px;
   margin-top: 7px;
 }
+
+  #pc-admin-btn.hidden {
+  display: none !important;
+}
 </style>
 </head>
 <body>
@@ -1778,6 +1791,8 @@ input:checked + .slider:before {
       <div id="user-menu" class="hidden">
         <div class="user-avatar" id="user-avatar-small" onclick="document.getElementById('avatar-upload-small').click()"><span id="avatar-letter-small">М</span><input type="file" id="avatar-upload-small" accept="image/*" style="display:none"></div>
         <div class="user-info"><span id="username-display" class="username">Марина</span><button class="btn btn-outline btn-sm" id="profile-btn" onclick="openProfileFromNav()">ПРОФИЛЬ</button></div>
+        <!-- ✅ Кнопка «ПАНЕЛЬ» для ПК (в мобильной версии скрыта, там своя #mobile-admin-toggle) -->
+        <button class="btn btn-outline btn-sm hidden" id="pc-admin-btn" onclick="togglePcAdminPanel()">ПАНЕЛЬ</button>
         <button class="mobile-admin-toggle" id="mobile-admin-toggle" onclick="toggleMobileAdminPanel()" style="display:none;">⚙ ПАНЕЛЬ</button>
       </div>
     </div>
@@ -3511,6 +3526,54 @@ setTimeout(function() {
     }
 }
 
+  // ✅ Toggle кнопки «ПАНЕЛЬ» для ПК (полноценная админка с сайдбаром)
+function togglePcAdminPanel() {
+    if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) {
+        showToast('Доступ запрещён');
+        return;
+    }
+
+    // На мобильном — просто открываем мобильную панель
+    if (window.innerWidth <= 768) {
+        toggleMobileAdminPanel();
+        return;
+    }
+
+    // На ПК — toggle: из админки → на сайт, из любого другого раздела → в админку
+    if (currentPage === 'admin') {
+        showPage('home');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        showPage('admin');
+    }
+}
+
+// ✅ Обновление текста обеих кнопок в зависимости от текущей страницы
+function updateNavButtonsState() {
+    // Профиль
+    const profileBtn = document.getElementById('profile-btn');
+    if (profileBtn) {
+        profileBtn.textContent = currentPage === 'dashboard' ? '✕ ЗАКРЫТЬ' : 'ПРОФИЛЬ';
+    }
+
+    // Панель (ПК)
+    const pcAdminBtn = document.getElementById('pc-admin-btn');
+    if (pcAdminBtn) {
+        pcAdminBtn.textContent = currentPage === 'admin' ? '✕ ЗАКРЫТЬ' : 'ПАНЕЛЬ';
+    }
+
+    // Панель (мобильная) — уже управляется в toggleMobileAdminPanel
+    // но на всякий случай синхронизируем
+    const mobAdminBtn = document.getElementById('mobile-admin-toggle');
+    if (mobAdminBtn) {
+        // если панель открыта — «✕ ЗАКРЫТЬ», если закрыта — «⚙ ПАНЕЛЬ»
+        // isMobPanelOpen управляется в toggleMobileAdminPanel, здесь только fallback
+        if (typeof isMobPanelOpen !== 'undefined') {
+            mobAdminBtn.textContent = isMobPanelOpen ? '✕ ЗАКРЫТЬ' : '⚙ ПАНЕЛЬ';
+        }
+    }
+}
+
   function updateProfileBtnState() {
     const btn = document.getElementById('profile-btn');
     if (!btn) return;
@@ -4278,11 +4341,11 @@ function _showPageMain(page) {
     applyGalleryFilters();   // ← применит сортировку «Сначала новые»
 }
 
-    window.scrollTo(0, 0);
+      window.scrollTo(0, 0);
 
-  // ✅ Обновляем текст кнопки «ПРОФИЛЬ»
-  if (typeof updateProfileBtnState === 'function') {
-    updateProfileBtnState();
+  // ✅ Обновляем тексты кнопок «ПРОФИЛЬ» и «ПАНЕЛЬ» в зависимости от страницы
+  if (typeof updateNavButtonsState === 'function') {
+    updateNavButtonsState();
   }
 }
 
@@ -4635,7 +4698,19 @@ function updateNavForUser() {
     }, 500);
   }
     
-    // Управляем кнопкой на ПК
+       // ✅ Управляем ПК-кнопкой «ПАНЕЛЬ»
+    const pcAdminBtn = document.getElementById('pc-admin-btn');
+    if (pcAdminBtn) {
+      if (isAdmin) {
+        pcAdminBtn.classList.remove('hidden');
+        pcAdminBtn.style.display = '';
+      } else {
+        pcAdminBtn.classList.add('hidden');
+        pcAdminBtn.style.display = 'none';
+      }
+    }
+
+    // Старое (если где-то ещё используется) — оставляем
     if (adminBtn) {
       if (isAdmin) {
         adminBtn.classList.remove('hidden');
@@ -4675,10 +4750,15 @@ function updateNavForUser() {
     guestMenu.classList.remove('hidden');
     userMenu.classList.add('hidden');
     
-    // Скрываем обе админ-кнопки
+        // Скрываем все админ-кнопки
     if (adminBtn) {
       adminBtn.classList.add('hidden');
       adminBtn.style.display = 'none';
+    }
+    const pcAdminBtn = document.getElementById('pc-admin-btn');
+    if (pcAdminBtn) {
+      pcAdminBtn.classList.add('hidden');
+      pcAdminBtn.style.display = 'none';
     }
     if (mobileToggle) {
       mobileToggle.classList.add('hidden');
