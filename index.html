@@ -1433,6 +1433,11 @@ input[type=number] {
   .steps {
     gap: 16px;
   }
+    /* ✅ Кнопка «ПРОФИЛЬ» / «ЗАКРЫТЬ» на мобильном */
+  #profile-btn {
+    min-width: auto;
+    white-space: nowrap;
+  }
 }
 
 /* Стили для сетки галереи на странице */
@@ -1772,7 +1777,7 @@ input:checked + .slider:before {
       <div id="guest-menu"><button class="btn btn-outline btn-sm" onclick="openAuth()">ВОЙТИ</button></div>
       <div id="user-menu" class="hidden">
         <div class="user-avatar" id="user-avatar-small" onclick="document.getElementById('avatar-upload-small').click()"><span id="avatar-letter-small">М</span><input type="file" id="avatar-upload-small" accept="image/*" style="display:none"></div>
-        <div class="user-info"><span id="username-display" class="username">Марина</span><button class="btn btn-outline btn-sm" onclick="openProfileFromNav()">ПРОФИЛЬ</button></div>
+        <div class="user-info"><span id="username-display" class="username">Марина</span><button class="btn btn-outline btn-sm" id="profile-btn" onclick="openProfileFromNav()">ПРОФИЛЬ</button></div>
         <button class="mobile-admin-toggle" id="mobile-admin-toggle" onclick="toggleMobileAdminPanel()" style="display:none;">⚙ ПАНЕЛЬ</button>
       </div>
     </div>
@@ -3505,6 +3510,16 @@ setTimeout(function() {
         }, 50);
     }
 }
+
+  function updateProfileBtnState() {
+    const btn = document.getElementById('profile-btn');
+    if (!btn) return;
+    if (currentPage === 'dashboard') {
+        btn.textContent = '✕ ЗАКРЫТЬ';
+    } else {
+        btn.textContent = 'ПРОФИЛЬ';
+    }
+}
 </script>
 
 <!-- Запасной вариант: если скрипты не загрузились через динамическую загрузку, пробуем через обычные теги -->
@@ -4263,7 +4278,12 @@ function _showPageMain(page) {
     applyGalleryFilters();   // ← применит сортировку «Сначала новые»
 }
 
-  window.scrollTo(0, 0);
+    window.scrollTo(0, 0);
+
+  // ✅ Обновляем текст кнопки «ПРОФИЛЬ»
+  if (typeof updateProfileBtnState === 'function') {
+    updateProfileBtnState();
+  }
 }
 
   window._showPageMain = _showPageMain;
