@@ -3487,14 +3487,23 @@ setTimeout(function() {
 }, 2000);
 
   function openProfileFromNav() {
-    // Если мобильная админ-панель открыта — закрываем её
+    // ✅ Если мобильная админ-панель открыта — закрываем её
     if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
         closeMobAdmin();
     }
-    // Небольшая задержка, чтобы анимация закрытия не мешала
-    setTimeout(() => {
-        showPage('dashboard');
-    }, 50);
+
+    // ✅ Toggle: если уже на странице профиля — закрываем (на главную),
+    // иначе открываем профиль
+    if (currentPage === 'dashboard') {
+        showPage('home');
+        // Прокручиваем наверх, как будто только что зашли на сайт
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        // Небольшая задержка, чтобы анимация закрытия моб. панели не мешала
+        setTimeout(() => {
+            showPage('dashboard');
+        }, 50);
+    }
 }
 </script>
 
