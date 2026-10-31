@@ -820,9 +820,12 @@ html.modal-open {overflow: hidden !important;}
   gap: 6px;
   white-space: nowrap;
 }
-/* ✅ КОГДА КНОПКА ВИДНА (ДЛЯ АДМИНОВ) */
-.mobile-admin-toggle.visible {
-  display: inline-flex !important;
+
+/* ✅ Кнопка «ПАНЕЛЬ» показывается ТОЛЬКО на мобильном */
+@media (max-width: 768px) {
+  .mobile-admin-toggle.visible {
+    display: inline-flex !important;
+  }
 }
 /* ===== TOAST УВЕДОМЛЕНИЯ ===== */
 #toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 300; background: var(--text); color: white; padding: 14px 28px; border-radius: 50px; font-size: 14px; font-weight: 500; box-shadow: 0 8px 32px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; white-space: nowrap; max-width: 90vw; text-align: center; }
@@ -1078,12 +1081,6 @@ html.modal-open {overflow: hidden !important;}
   [id^="group-members-"] table th {
     padding: 6px 10px;
     font-size: 11px;
-  }
-   .mobile-admin-toggle {
-    display: none !important;
-  }
-  .mobile-admin-toggle.visible {
-    display: inline-flex !important;
   }
 [id^="group-members-"] {
     overflow-x: auto;
@@ -1793,7 +1790,7 @@ input:checked + .slider:before {
         <div class="user-info"><span id="username-display" class="username">Марина</span><button class="btn btn-outline btn-sm" id="profile-btn" onclick="openProfileFromNav()">ПРОФИЛЬ</button></div>
         <!-- ✅ Кнопка «ПАНЕЛЬ» для ПК (в мобильной версии скрыта, там своя #mobile-admin-toggle) -->
         <button class="btn btn-outline btn-sm hidden" id="pc-admin-btn" onclick="togglePcAdminPanel()">ПАНЕЛЬ</button>
-        <button class="mobile-admin-toggle" id="mobile-admin-toggle" onclick="toggleMobileAdminPanel()" style="display:none;">⚙ ПАНЕЛЬ</button>
+        <button class="mobile-admin-toggle" id="mobile-admin-toggle" onclick="toggleMobileAdminPanel()">⚙ ПАНЕЛЬ</button>
       </div>
     </div>
   </div>
@@ -4721,15 +4718,17 @@ function updateNavForUser() {
       }
     }
     
-    // ✅ Управляем мобильной кнопкой
+        // ✅ Управляем мобильной кнопкой
     if (mobileToggle) {
       if (isAdmin) {
         mobileToggle.classList.remove('hidden');
-        mobileToggle.style.display = 'inline-flex';
+        // ✅ НЕ задаём inline display — CSS сам решит, показывать ли
+        // (на ПК .mobile-admin-toggle всегда display:none, на мобильном — с .visible показывается)
+        mobileToggle.style.display = '';
         mobileToggle.classList.add('visible');
       } else {
         mobileToggle.classList.add('hidden');
-        mobileToggle.style.display = 'none';
+        mobileToggle.style.display = '';
         mobileToggle.classList.remove('visible');
       }
       
@@ -4760,9 +4759,9 @@ function updateNavForUser() {
       pcAdminBtn.classList.add('hidden');
       pcAdminBtn.style.display = 'none';
     }
-    if (mobileToggle) {
+        if (mobileToggle) {
       mobileToggle.classList.add('hidden');
-      mobileToggle.style.display = 'none';
+      mobileToggle.style.display = '';
       mobileToggle.classList.remove('visible');
     }
     
