@@ -81,7 +81,7 @@ img { max-width: 100%; display: block; }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 .btn-danger { background: #C0392B; color: white; padding: 12px 20px; font-size: 14px; }
 .btn-danger:hover { background: #a93226; }
-.btn-edit { background: var(--accent2); color: white; }
+.btn-edit { background: transparent; border: 1.5px solid var(--border); color: white; }
 .btn-edit:hover { background: #b07848; }
 .btn-sm { padding: 7px 18px; font-size: 14px; }
 .btn-success { background: var(--accent); color: white; padding: 7px 14px; font-size: 12px; }
@@ -6169,6 +6169,42 @@ function updateDeletionButton() {
     btn.style.background = '#7f1d1d';
   }
 }
+
+  async function rejectDeletionRequest(userId) {
+  const ok = await confirmDialog(
+    'Отклонить запрос на удаление профиля?\nПользователь продолжит пользоваться аккаунтом.',
+    { icon: '↩️', title: 'Отклонить запрос?', ok: 'Отклонить', danger: false }
+  );
+  if (!ok) return;
+
+  try {
+    const res = await gasPost({
+      action: 'cancel_account_deletion',
+      user_id: userId,
+      admin_id: currentUser.id
+    });
+
+    if (res && res.ok) {
+      // Обновляем локально
+      const u = users.find(x => x.id === userId);
+      if (u) {
+        u.deletion_requested_at = '';
+        u.deletion_deadline = '';
+        saveState('users', users);
+      }
+      window._deletionRequests = (window._deletionRequests || [])
+        .filter(r => String(r.user_id) !== String(userId));
+      updateDeletionBadges();
+      closeModal('user-edit-modal');
+      loadAdminUsers(currentUser.role === 'owner');
+      showToast('Запрос отклонён ✓');
+    } else {
+      showToast('Ошибка: ' + (res?.error || 'неизвестная'));
+    }
+  } catch (e) {
+    showToast('Ошибка соединения: ' + e.message);
+  }
+}
   
 // ============================================================
 // === ДОБАВЛЕНИЕ ФОТО =========================================
@@ -8327,7 +8363,9 @@ function normalizeUser(u) {
     phone: u.phone || '',
     device_id: u.device_id || '',
     active: u.active !== false,
-    consentDate: u.consentDate || ''
+    consentDate: u.consentDate || '',
+    deletion_requested_at: u.deletion_requested_at || '',
+    deletion_deadline: u.deletion_deadline || ''
   };
 }
 
@@ -8437,11 +8475,11 @@ async function deleteUser(userId) {
   saveState('users', users);
     // Если у этого участника был активный запрос на удаление — закрываем его
   if ((window._deletionRequests || []).some(r => String(r.user_id) === String(userId))) {
-    gasPost({
-      action: 'log_account_deleted',
-      user_id: userId,
-      admin_id: currentUser.id
-    }).catch(()=>{});
+  gasPost({ 
+    action: 'delete', 
+    sheet: 'users', 
+      id: userId 
+    }).catch(e => console.warn('User delete sync:', e));  
     window._deletionRequests = (window._deletionRequests || []).filter(r => String(r.user_id) !== String(userId));
     updateDeletionBadges();
   }
@@ -9162,6 +9200,22 @@ function openUserEditModal(userId) {
           <textarea class="form-textarea" id="ue-bio" style="min-height:70px;">${u.bio || ''}</textarea>
         </div>
       </div>
+      ${deletionBlock}
+const delReq = (window._deletionRequests || []).find(r => String(r.user_id) === String(userId));
+const deletionBlock = delReq ? `
+  <div style="background:#FDEAE8;border-radius:var(--radius-sm);padding:14px;margin-bottom:18px;border-left:4px solid #C0392B;">
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#C0392B;margin-bottom:6px;">⚠️ Запрошено удаление профиля</div>
+    <div style="font-size:13px;color:var(--text);line-height:1.6;">
+      Запрос: <strong>${formatDate(delReq.requested_at)}</strong><br>
+      Удалить до: <strong>${delReq.deadline ? formatDate(delReq.deadline) : '—'}</strong>
+    </div>
+    <button class="btn btn-outline" style="margin-top:10px;width:100%;border-color:#C0392B;color:#C0392B;" 
+            onclick="rejectDeletionRequest(${userId})">
+      ↩️ Отклонить запрос (профиль останется)
+    </button>
+  </div>
+` : '';
+  
       ${userPurchases.length > 0 ? `
       <div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;margin-bottom:18px;">
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">История путешествий · итого ${(total / 1000).toFixed(0)}к ₽</div>
