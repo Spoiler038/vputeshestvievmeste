@@ -6119,6 +6119,7 @@ async function requestProfileDeletion() {
     // Можно отправить в GAS action 'cancel_account_deletion' — опционально
     await gasPost({ action: 'cancel_account_deletion', user_id: currentUser.id }).catch(()=>{});
     showToast('Запрос отозван');
+    updateDeletionButton();
     return;
   }
 
