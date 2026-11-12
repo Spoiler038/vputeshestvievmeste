@@ -1,7 +1,7 @@
 // ============================================================
 // ВПУТЕШЕСТВИЕВМЕСТЕ — Service Worker
 // ============================================================
-const CACHE_NAME = 'vputi-v9';
+const CACHE_NAME = 'vputi-v10';
 const CACHE_ASSETS = [
   '/vputeshestvievmeste/',
   '/vputeshestvievmeste/index.html',
