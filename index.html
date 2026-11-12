@@ -9101,6 +9101,20 @@ function syncAllDataFromSheets(silent = false) {
           });
           users = uniqueUsers;
           saveState('users', users);
+                    // ✅ Синхронизируем флаг удаления текущего пользователя
+          if (currentUser) {
+              const updatedUser = users.find(u => u.id === currentUser.id);
+              if (updatedUser) {
+                  currentUser = updatedUser;
+                  if (!currentUser.deletion_requested_at) {
+                      localStorage.removeItem('vputi_deletion_requested');
+                      // Если сейчас открыт дашборд — обновим кнопку
+                      if (currentPage === 'dashboard') {
+                          updateDeletionButton();
+                      }
+                  }
+              }
+          }
         }
         
         // Обновляем галерею
@@ -10562,8 +10576,7 @@ function openAddMember(groupId) {
     addMemberGroupId = groupId;
 
     const registeredOptions = users
-        .filter(u => u.role === 'user')
-        .map(u => `<option value="reg_${u.id}">${u.name} (${u.username})</option>`)
+        .map(u => `<option value="reg_${u.id}">${u.name} (${u.username})${u.role === 'owner' ? ' ⭐' : u.role === 'admin' ? ' 🛡️' : ''}</option>`)
         .join('');
 
     const payMethodOptions = PAYMENT_METHODS.map(m =>
