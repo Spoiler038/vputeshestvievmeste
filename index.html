@@ -836,7 +836,7 @@ html.modal-open {overflow: hidden !important;}
   z-index: 300;
   background: var(--text);
   color: white;
-  padding: 14px 24px;
+  padding: 12px 20px;
   border-radius: 18px;              /* чуть меньше скругление для многострочного */
   font-size: 14px;
   font-weight: 500;
@@ -844,9 +844,10 @@ html.modal-open {overflow: hidden !important;}
   opacity: 0;
   transition: opacity 0.3s, transform 0.3s;
   pointer-events: none;
-  max-width: min(90vw, 480px);      /* ограничение по ширине */
+  max-width: min(90vw, 600px); /* ограничение по ширине */
+  width: max-content;
   text-align: center;
-  line-height: 1.45;                /* читаемее в 2-3 строки */
+  line-height: 1.4;                /* читаемее в 2-3 строки */
   white-space: normal;              /* ✅ разрешаем перенос */
   overflow-wrap: break-word;        /* ✅ рвём длинные слова/URL */
   word-break: break-word;
