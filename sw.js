@@ -1,7 +1,7 @@
 // ============================================================
 // ВПУТЕШЕСТВИЕВМЕСТЕ — Service Worker
 // ============================================================
-const CACHE_NAME = 'vputi-v8';
+const CACHE_NAME = 'vputi-v9';
 const CACHE_ASSETS = [
   '/vputeshestvievmeste/',
   '/vputeshestvievmeste/index.html',
@@ -121,8 +121,21 @@ self.addEventListener('push', event => {
     vibrate: [200, 100, 200],
   };
 
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(data.title, options),
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        .then(clients => {
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'PUSH_RECEIVED',
+              title: data.title || '',
+              body: data.body || '',
+              url: (data.url || '/vputeshestvievmeste/')
+            });
+          });
+        })
+    ])
   );
 });
 
