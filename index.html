@@ -6145,12 +6145,28 @@ async function requestProfileDeletion() {
       { icon: '↩️', title: 'Отозвать запрос?', ok: 'Отозвать', danger: false }
     );
     if (!ok) return;
-    localStorage.removeItem('vputi_deletion_requested');
-    // Можно отправить в GAS action 'cancel_account_deletion' — опционально
-    await gasPost({ action: 'cancel_account_deletion', user_id: currentUser.id }).catch(()=>{});
-    showToast('Запрос отозван');
-    updateDeletionButton();
-    return;
+localStorage.removeItem('vputi_deletion_requested');
+
+// Отправляем на сервер
+await gasPost({ action: 'cancel_account_deletion', user_id: currentUser.id }).catch(()=>{});
+
+// ✅ Очищаем локальные данные
+const u = users.find(x => x.id === currentUser.id);
+if (u) {
+  u.deletion_requested_at = '';
+  u.deletion_deadline = '';
+  saveState('users', users);
+}
+
+// ✅ Если текущий пользователь — админ, сразу обновляем его бейджи
+if (currentUser.role === 'owner' || currentUser.role === 'admin') {
+  window._deletionRequests = (window._deletionRequests || []).filter(r => String(r.user_id) !== String(currentUser.id));
+  updateDeletionBadges();
+}
+
+showToast('Запрос отозван');
+updateDeletionButton();
+return;
   }
 
   const ok = await confirmDialog(
@@ -13703,12 +13719,21 @@ function init() {
   initMobileAdminItems();
   updateNavbarHeight();
   updateLeadsBadge();
-    // Раз в 5 минут обновляем запросы на удаление (только для админов)
-  setInterval(() => {
-    if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
-      loadDeletionRequests();
+    // ✅ Фоновое обновление бейджей запросов на удаление (раз в 1 минуту)
+setInterval(() => {
+  // Проверяем только если пользователь админ и вкладка активна
+  if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
+    if (document.visibilityState === 'visible') {
+      loadDeletionRequests().then(() => {
+        // Если открыта мобильная панель на вкладке "Участники", обновляем её
+        if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
+          const active = document.querySelector('.mob-item.active')?.dataset?.section;
+          if (active === 'users') _renderMobUsers();
+        }
+      });
     }
-  }, 5 * 60 * 1000);
+  }
+}, 5*60 * 1000);
 
   console.log('✅ ВПУТЕШЕСТВИЕВМЕСТЕ инициализирован');
 }
