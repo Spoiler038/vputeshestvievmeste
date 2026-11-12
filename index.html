@@ -13826,10 +13826,6 @@ if ('serviceWorker' in navigator) {
     const isLeadPush     = /заявк/i.test(title);
     const isDeletionPush = /удален|профил/i.test(title);
 
-    // === ПК-админка ===
-    const adminEl = document.getElementById('page-admin');
-    const adminVisible = currentPage === 'admin' && adminEl && !adminEl.classList.contains('hidden');
-
         // === ПК-админка ===
     const adminEl = document.getElementById('page-admin');
     const adminVisible = currentPage === 'admin' && adminEl && !adminEl.classList.contains('hidden');
