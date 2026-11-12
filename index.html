@@ -2396,7 +2396,7 @@ input:checked + .slider:before {
         <!-- ===== ВКЛАДКА: ФОТОАЛЬБОМ ===== -->
 <div class="tab-content" id="tab-photos">
   <!-- ПОДСКАЗКА ДЛЯ ПОЛЬЗОВАТЕЛЯ -->
-  <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:16px 20px;margin-bottom:20px;border-left:4px solid var(--accent);">
+  <div id="photo-upload-hint-box" style="background:var(--accent-light);border-radius:var(--radius-sm);padding:16px 20px;margin-bottom:20px;border-left:4px solid var(--accent);">
     <div style="display:flex;align-items:flex-start;gap:12px;">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>     <circle cx="12" cy="13" r="4"/> </svg>
       <div>
@@ -5832,6 +5832,12 @@ function loadDashboard() {
   const delBtn = document.getElementById('delete-profile-btn');
   if (delBtn) {
     delBtn.style.display = (u.role === 'owner') ? 'none' : 'inline-flex';
+  }
+
+    // ✅ Управляем отображением подсказки об ограничении загрузки фото
+  const photoHintBox = document.getElementById('photo-upload-hint-box');
+  if (photoHintBox) {
+    photoHintBox.style.display = photoUploadLimitEnabled ? '' : 'none';
   }
 }
 
