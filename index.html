@@ -13708,6 +13708,77 @@ function init() {
 // Запуск
 init();
 
+// ============================================================
+// === АВТООБНОВЛЕНИЕ ПРИ PUSH (админка) =====================
+// ============================================================
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', function(event) {
+    const data = event.data || {};
+    if (data.type !== 'PUSH_RECEIVED') return;
+
+    // Только админы/владельцы
+    if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) return;
+
+    // Не трогаем, если открыта модалка/авторизация — админ может вводить данные
+    const anyModalOpen = document.querySelector('.modal-overlay.open') || document.querySelector('.auth-overlay.open');
+    if (anyModalOpen) {
+      console.log('📩 Push получен, но модалка открыта — пропускаем автообновление');
+      return;
+    }
+
+    const title = String(data.title || '');
+    const isLeadPush     = /заявк/i.test(title);
+    const isDeletionPush = /удален|профил/i.test(title);
+
+    // === ПК-админка ===
+    const adminEl = document.getElementById('page-admin');
+    const adminVisible = currentPage === 'admin' && adminEl && !adminEl.classList.contains('hidden');
+
+    if (adminVisible) {
+      const activeSection = document.querySelector('.admin-section.active')?.id || '';
+
+      if (isLeadPush && activeSection === 'admin-leads') {
+        console.log('🔄 Автообновление: Заявки (ПК)');
+        loadAdminLeads();
+        if (currentUser.role === 'owner') loadAdminStats();
+        showToast('📩 Новая заявка — раздел обновлён');
+        return;
+      }
+
+      if (isDeletionPush && activeSection === 'admin-users') {
+        console.log('🔄 Автообновление: Участники (ПК)');
+        loadDeletionRequests().then(() => {
+          loadAdminUsers(currentUser.role === 'owner', true);
+        });
+        showToast('⚠ Запрос на удаление — раздел обновлён');
+        return;
+      }
+    }
+
+    // === Мобильная панель ===
+    if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
+      const mobSection = document.querySelector('.mob-item.active')?.dataset?.section || '';
+
+      if (isLeadPush && mobSection === 'leads') {
+        console.log('🔄 Автообновление: Заявки (моб.)');
+        refreshLeadsOnly();
+        showToast('📩 Новая заявка — раздел обновлён');
+        return;
+      }
+
+      if (isDeletionPush && mobSection === 'users') {
+        console.log('🔄 Автообновление: Участники (моб.)');
+        loadDeletionRequests().then(() => _renderMobUsers());
+        showToast('⚠ Запрос на удаление — раздел обновлён');
+        return;
+      }
+    }
+
+    console.log('📩 Push получен, но активный раздел не совпадает — автообновление не нужно');
+  });
+}
+
   // Добавьте в инициализацию
 document.addEventListener('touchstart', function(e) {
     const target = e.target.closest('[onclick*="toggleGroupMembers"]');
