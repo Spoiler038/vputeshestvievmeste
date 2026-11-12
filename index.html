@@ -6199,8 +6199,19 @@ return;
       action: 'request_account_deletion',
       user_id: currentUser.id
     });
-    if (res && res.ok) {
+        if (res && res.ok) {
       localStorage.setItem('vputi_deletion_requested', String(currentUser.id));
+      
+      // ✅ Сохраняем дату запроса локально, чтобы кнопка не сбрасывалась при перезаходе
+      if (currentUser) {
+        currentUser.deletion_requested_at = new Date().toISOString();
+        const u = users.find(x => x.id === currentUser.id);
+        if (u) {
+          u.deletion_requested_at = currentUser.deletion_requested_at;
+          saveState('users', users); // Сохраняем в память браузера
+        }
+      }
+
       showToast('✅ Запрос отправлен. Аккаунт будет удалён в течение 30 дней.', 5000);
       // Обновляем текст кнопки
       updateDeletionButton();
