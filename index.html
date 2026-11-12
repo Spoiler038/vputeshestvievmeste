@@ -10576,7 +10576,7 @@ function openAddMember(groupId) {
     addMemberGroupId = groupId;
 
     const registeredOptions = users
-        .map(u => `<option value="reg_${u.id}">${u.name} (${u.username})${u.role === 'owner' ? ' ⭐' : u.role === 'admin' ? ' 🛡️' : ''}</option>`)
+        .map(u => `<option value="reg_${u.id}">${u.name} (${u.username})${u.role === 'owner' ? ' ⭐' : u.role === 'admin' ? ' 📛' : ''}</option>`)
         .join('');
 
     const payMethodOptions = PAYMENT_METHODS.map(m =>
