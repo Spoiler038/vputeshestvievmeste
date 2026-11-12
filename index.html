@@ -10614,9 +10614,8 @@ function openAddMember(groupId) {
             <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
                 Группа: <strong style="color:var(--text);">${g.name}</strong> — мест занято: <strong>${filled}/${max}</strong>
             </div>
-
-            <div style="display:flex;gap:8px;margin-bottom:14px;">
-                <button class="btn btn-outline btn-sm" id="tab-registered" onclick="switchMemberTab('registered')" style="background:var(--accent-light);border-color:var(--accent);color:var(--accent);">
+              <div style="display:flex; justify-content:center; gap:8px; margin-bottom:14px;">
+                <button class="btn btn-outline btn-sm" id="tab-registered" onclick="switchMemberTab('registered')" style="background:var(--accent-light); border-color:var(--accent); color:var(--accent);">
                     👤 Зарегистрированный
                 </button>
                 <button class="btn btn-outline btn-sm" id="tab-manual" onclick="switchMemberTab('manual')">
