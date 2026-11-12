@@ -4898,9 +4898,18 @@ function tryAutoLogin() {
     }
     
     // 6. Восстанавливаем сессию
-    currentUser = user;
-    console.log('✅ Автологин: вошли как', user.name, '(' + user.role + ')');
-    return true;
+currentUser = user;
+
+// ✅ Синхронизируем локальный флаг запроса на удаление с реальными данными
+// (если админ отклонил запрос, пока пользователь был офлайн)
+if (user.deletion_requested_at) {
+    localStorage.setItem('vputi_deletion_requested', String(user.id));
+} else {
+    localStorage.removeItem('vputi_deletion_requested');
+}
+
+console.log('✅ Автологин: вошли как', user.name, '(' + user.role + ')');
+return true;
 }
   
   // ============================================================
@@ -5800,6 +5809,12 @@ function loadDashboard() {
 
   // Обновляем селект программ для фото
   updatePhotoProgramSelect(u.id);
+    // ✅ Синхронизируем флаг перед отрисовкой кнопки
+  if (u.deletion_requested_at) {
+      localStorage.setItem('vputi_deletion_requested', String(u.id));
+  } else {
+      localStorage.removeItem('vputi_deletion_requested');
+  }
   updateDeletionButton();
    // Скрываем «Удалить профиль» для владельца
   const delBtn = document.getElementById('delete-profile-btn');
@@ -11773,10 +11788,16 @@ function applyFullDataFromSheets(d) {
       console.log('✅ Загружено ' + users.length + ' пользователей');
 
       if (currentUser) {
-        const updatedUser = users.find(u => u.id === currentUser.id);
-        if (updatedUser) {
-          currentUser = updatedUser;
-          updateNavForUser();
+    const updatedUser = users.find(u => u.id === currentUser.id);
+    if (updatedUser) {
+        currentUser = updatedUser;
+        
+        // ✅ Если админ отменил запрос — убираем флаг
+        if (!currentUser.deletion_requested_at) {
+            localStorage.removeItem('vputi_deletion_requested');
+        }
+        
+        updateNavForUser();
         }
       }
     }
