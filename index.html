@@ -9132,7 +9132,7 @@ function syncAllDataFromSheets(silent = false) {
 function openUserEditModal(userId) {
   const u = users.find(x => x.id === userId);
   if (!u) return;
-  
+
   currentEditUserId = userId;
 
   // Форматируем дату из YYYY-MM-DD в DD.MM.YYYY
@@ -9146,9 +9146,26 @@ function openUserEditModal(userId) {
   const userPurchases = purchases.filter(p => p.userId === userId);
   const total = userPurchases.reduce((s, p) => s + p.price, 0);
 
+  // ✅ Запрос на удаление профиля (если есть) — объявляем ДО innerHTML
+  const delReq = (window._deletionRequests || []).find(r => String(r.user_id) === String(userId));
+  const deletionBlock = delReq ? `
+    <div style="background:#FDEAE8;border-radius:var(--radius-sm);padding:14px;margin-bottom:18px;border-left:4px solid #C0392B;">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#C0392B;margin-bottom:6px;">⚠️ Запрошено удаление профиля</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.6;">
+        Запрос: <strong>${formatDate(delReq.requested_at)}</strong><br>
+        Удалить до: <strong>${delReq.deadline ? formatDate(delReq.deadline) : '—'}</strong>
+      </div>
+      <button class="btn btn-outline" style="margin-top:10px;width:100%;border-color:#C0392B;color:#C0392B;"
+              onclick="rejectDeletionRequest(${userId})">
+        ↩️ Отклонить запрос (профиль останется)
+      </button>
+    </div>
+  ` : '';
+
   document.getElementById('user-edit-modal-title').textContent = u.name;
   document.getElementById('user-edit-content').innerHTML = `
     <div style="padding:4px 0;">
+      ${deletionBlock}
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
         <div class="user-avatar" style="width:52px;height:52px;font-size:22px;flex-shrink:0;">
           ${u.avatar ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;">` : u.name[0]}
@@ -9179,9 +9196,9 @@ function openUserEditModal(userId) {
           <input type="email" class="form-input" id="ue-email" value="${u.email}">
         </div>
         <div class="form-group">
-    <label>Телефон</label>
-    <input type="text" class="form-input" id="ue-phone" value="${u.phone ? formatPhoneForDisplay(u.phone) : ''}">
-</div>
+          <label>Телефон</label>
+          <input type="text" class="form-input" id="ue-phone" value="${u.phone ? formatPhoneForDisplay(u.phone) : ''}">
+        </div>
         <div class="form-group">
           <label>Скидка (%)</label>
           <input type="number" class="form-input" id="ue-discount" value="${u.discount || 0}" min="0" max="100">
@@ -9200,22 +9217,6 @@ function openUserEditModal(userId) {
           <textarea class="form-textarea" id="ue-bio" style="min-height:70px;">${u.bio || ''}</textarea>
         </div>
       </div>
-      ${deletionBlock}
-const delReq = (window._deletionRequests || []).find(r => String(r.user_id) === String(userId));
-const deletionBlock = delReq ? `
-  <div style="background:#FDEAE8;border-radius:var(--radius-sm);padding:14px;margin-bottom:18px;border-left:4px solid #C0392B;">
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#C0392B;margin-bottom:6px;">⚠️ Запрошено удаление профиля</div>
-    <div style="font-size:13px;color:var(--text);line-height:1.6;">
-      Запрос: <strong>${formatDate(delReq.requested_at)}</strong><br>
-      Удалить до: <strong>${delReq.deadline ? formatDate(delReq.deadline) : '—'}</strong>
-    </div>
-    <button class="btn btn-outline" style="margin-top:10px;width:100%;border-color:#C0392B;color:#C0392B;" 
-            onclick="rejectDeletionRequest(${userId})">
-      ↩️ Отклонить запрос (профиль останется)
-    </button>
-  </div>
-` : '';
-  
       ${userPurchases.length > 0 ? `
       <div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;margin-bottom:18px;">
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">История путешествий · итого ${(total / 1000).toFixed(0)}к ₽</div>
