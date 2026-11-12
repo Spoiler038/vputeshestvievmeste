@@ -13764,21 +13764,25 @@ function init() {
   initMobileAdminItems();
   updateNavbarHeight();
   updateLeadsBadge();
-    // ✅ Фоновое обновление бейджей запросов на удаление (раз в 1 минуту)
+  // Раз в 5 минут обновляем данные для бейджей (заявки и запросы на удаление)
 setInterval(() => {
-  // Проверяем только если пользователь админ и вкладка активна
   if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
     if (document.visibilityState === 'visible') {
+      
+      // 1. Обновляем бейдж заявок
+      refreshLeadsOnly(); 
+
+      // 2. Обновляем бейдж запросов на удаление
       loadDeletionRequests().then(() => {
-        // Если открыта мобильная панель на вкладке "Участники", обновляем её
         if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
           const active = document.querySelector('.mob-item.active')?.dataset?.section;
           if (active === 'users') _renderMobUsers();
         }
       });
+
     }
   }
-}, 5*60 * 1000);
+}, 5 * 60 * 1000);
 
   console.log('✅ ВПУТЕШЕСТВИЕВМЕСТЕ инициализирован');
 }
