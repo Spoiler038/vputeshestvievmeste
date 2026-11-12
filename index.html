@@ -4562,6 +4562,19 @@ function formatDate(dateStr) {
   
   return dateStr;
 }
+
+  // Форматирование ISO-даты для подсказок (с временем)
+function formatDateTime(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return isoStr; // если не распарсилось — вернём как есть
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${day}.${month}.${year} в ${hours}:${minutes}`;
+}
   
 // ============================================================
 // === АВТОРИЗАЦИЯ =============================================
@@ -8354,8 +8367,8 @@ function renderUsersTable(isOwner) {
     const phoneLink = u.phone ? formatPhoneForLink(u.phone) : '';
     const delReq = (window._deletionRequests || []).find(r => String(r.user_id) === String(u.id));
     const delBadge = delReq
-      ? `<span class="deletion-row-badge" title="Запрошено удаление профиля: ${delReq.requested_at || ''}" style="font-size:12px;color:#C0392B;margin-left:6px;cursor:help;">⚠</span>`
-      : '';
+  ? `<span class="deletion-row-badge" title="Запрошено удаление профиля: ${formatDateTime(delReq.requested_at)}" style="font-size:12px;color:#C0392B;margin-left:6px;cursor:help;">⚠</span>`
+  : '';
     return `<tr style="cursor:default;" data-user-id="${u.id}" ${rowTitle}>
     
       <td style="vertical-align:middle;white-space:nowrap;">
