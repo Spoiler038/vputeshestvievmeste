@@ -13813,52 +13813,52 @@ if ('serviceWorker' in navigator) {
     const adminEl = document.getElementById('page-admin');
     const adminVisible = currentPage === 'admin' && adminEl && !adminEl.classList.contains('hidden');
 
+        // === ПК-админка ===
+    const adminEl = document.getElementById('page-admin');
+    const adminVisible = currentPage === 'admin' && adminEl && !adminEl.classList.contains('hidden');
+
     if (adminVisible) {
       const activeSection = document.querySelector('.admin-section.active')?.id || '';
 
-      if (isLeadPush && activeSection === 'admin-leads') {
-        console.log('🔄 Автообновление: Заявки (ПК)');
-        loadAdminLeads();
+      if (isLeadPush) {
+        loadAdminLeads(); // Обновит таблицу и вызовет updateLeadsBadge()
         if (currentUser.role === 'owner') loadAdminStats();
         showToast('📩 Новая заявка — раздел обновлён');
-        return;
       }
 
-      if (isDeletionPush && activeSection === 'admin-users') {
-        console.log('🔄 Автообновление: Участники (ПК)');
+      if (isDeletionPush) {
         loadDeletionRequests().then(() => {
-          loadAdminUsers(currentUser.role === 'owner', true);
+          if (activeSection === 'admin-users') {
+            loadAdminUsers(currentUser.role === 'owner', true);
+          }
         });
         showToast('⚠ Запрос на удаление — раздел обновлён');
-        return;
       }
+      return; // Выходим, так как всё сделали
     }
 
     // === Мобильная панель ===
     if (typeof isMobPanelOpen !== 'undefined' && isMobPanelOpen) {
       const mobSection = document.querySelector('.mob-item.active')?.dataset?.section || '';
 
-      if (isLeadPush && mobSection === 'leads') {
-        console.log('🔄 Автообновление: Заявки (моб.)');
-        refreshLeadsOnly();
+      if (isLeadPush) {
+        refreshLeadsOnly(); // Обновит данные и вызовет updateLeadsBadge()
         showToast('📩 Новая заявка — раздел обновлён');
-        return;
       }
 
-      if (isDeletionPush && mobSection === 'users') {
-        console.log('🔄 Автообновление: Участники (моб.)');
+      if (isDeletionPush) {
         loadDeletionRequests().then(() => _renderMobUsers());
         showToast('⚠ Запрос на удаление — раздел обновлён');
-        return;
       }
+      return; // Выходим
     }
 
-    // Если активный раздел не совпал — просто обновляем счетчики (бейджи), чтобы админ видел цифру
-if (isLeadPush) {
-  refreshLeadsOnly(); // Эта функция обновит данные и вызовет updateLeadsBadge()
-} else if (isDeletionPush) {
-  loadDeletionRequests(); // Эта функция вызовет updateDeletionBadges()
-}
+    // Если раздел вообще не совпадает — просто обновляем счетчики (бейджи)
+    if (isLeadPush) {
+      refreshLeadsOnly(); 
+    } else if (isDeletionPush) {
+      loadDeletionRequests(); 
+    }  
   });
 }
 
