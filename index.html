@@ -6749,7 +6749,6 @@ function generatePersonalDocPDFFromModal() {
 
 // === ГЕНЕРАЦИЯ ПЕРСОНАЛЬНОГО PDF ДОКУМЕНТА ===
 function generatePersonalDocPDF(docType) {
-  // Проверяем, авторизован ли пользователь
   const isLoggedIn = !!currentUser;
   
   let template = docsTemplates[docType];
@@ -6758,7 +6757,6 @@ function generatePersonalDocPDF(docType) {
     return;
   }
 
-  // Подставляем данные
   let filledText;
   if (isLoggedIn) {
     filledText = fillTemplate(template, currentUser);
@@ -6786,10 +6784,11 @@ function generatePersonalDocPDF(docType) {
 
   showToast('Создание PDF...');
 
-  // Создаем временный контейнер с содержимым для html2canvas
+  // ✅ Создаём временный контейнер с явной кодировкой
   const container = document.createElement('div');
-  container.style.cssText = 'padding:40px;font-family:Arial, sans-serif;background:white;max-width:800px;margin:0 auto;';
+  container.style.cssText = 'padding:40px;font-family:Arial, "Helvetica Neue", Helvetica, sans-serif;background:white;max-width:800px;margin:0 auto;';
   container.innerHTML = `
+    <meta charset="UTF-8">
     <h1 style="color:#5C8A4E;font-size:24px;margin-bottom:8px;text-align:center;">${titles[docType] || 'Документ'}</h1>
     <div style="text-align:center;font-size:12px;color:#7A7060;margin-bottom:20px;border-bottom:2px solid #EDE7DA;padding-bottom:12px;">
       ${new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -6804,33 +6803,60 @@ function generatePersonalDocPDF(docType) {
 
   document.body.appendChild(container);
 
-  html2canvas(container, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: 'white'
-  }).then(canvas => {
-    document.body.removeChild(container);
+  // ✅ Даём браузеру время отрисовать контейнер
+  setTimeout(() => {
+    // ✅ Явно задаём высоту, чтобы html2canvas захватил всё
+    const fullHeight = container.scrollHeight;
+    const fullWidth = container.scrollWidth;
+    container.style.height = fullHeight + 'px';
+    container.style.overflow = 'visible';
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 210;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: 'white',
+      width: fullWidth,
+      height: fullHeight,
+      windowWidth: fullWidth,
+      windowHeight: fullHeight,
+      scrollX: 0,
+      scrollY: 0
+    }).then(canvas => {
+      document.body.removeChild(container);
 
-    doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    const filename = (titles[docType] || 'document')
-      .replace(/\s+/g, '_')
-      .replace(/[^a-zA-Zа-яА-Я0-9_]/g, '') +
-      (isLoggedIn ? '_' + currentUser.name.replace(/\s+/g, '_') : '') +
-      '.pdf';
+      // ✅ Если документ не влезает на одну страницу — разбиваем на несколько
+      let heightLeft = imgHeight;
+      let position = 0;
 
-    doc.save(filename);
-    showToast('✅ Документ сохранён');
-  }).catch(err => {
-    document.body.removeChild(container);
-    showToast('Ошибка создания PDF: ' + err.message);
-  });
+      doc.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= 297; // высота A4
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        doc.addPage();
+        doc.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= 297;
+      }
+
+      const filename = (titles[docType] || 'document')
+        .replace(/\s+/g, '_')
+        .replace(/[^a-zA-Zа-яА-Я0-9_]/g, '') +
+        (isLoggedIn ? '_' + currentUser.name.replace(/\s+/g, '_') : '') +
+        '.pdf';
+
+      doc.save(filename);
+      showToast('✅ Документ сохранён');
+    }).catch(err => {
+      document.body.removeChild(container);
+      showToast('Ошибка создания PDF: ' + err.message);
+    });
+  }, 100);
 }
 
 // === ФИКСАЦИЯ СОГЛАСИЯ ===
