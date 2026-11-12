@@ -1665,6 +1665,7 @@ input[type=number] {
     padding: 12px 12px 16px;
     gap: 6px;
   }
+  
   #program-modal .modal-footer .btn {
     padding: 10px 12px;
     font-size: 13px;
@@ -1682,6 +1683,12 @@ input[type=number] {
     /* ✅ ПК-кнопка «ПАНЕЛЬ» на мобильном скрыта — там своя #mobile-admin-toggle */
   #pc-admin-btn {
     display: none !important;
+  }
+
+  #toast {
+    font-size: 13px;
+    max-width: 92vw;
+    width: max-content; 
   }
 }
 
@@ -1726,7 +1733,7 @@ input:checked + .slider:before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 #delete-profile-btn svg {
   flex-shrink: 0;
@@ -13776,7 +13783,12 @@ if ('serviceWorker' in navigator) {
       }
     }
 
-    console.log('📩 Push получен, но активный раздел не совпадает — автообновление не нужно');
+    // Если активный раздел не совпал — просто обновляем счетчики (бейджи), чтобы админ видел цифру
+if (isLeadPush) {
+  refreshLeadsOnly(); // Эта функция обновит данные и вызовет updateLeadsBadge()
+} else if (isDeletionPush) {
+  loadDeletionRequests(); // Эта функция вызовет updateDeletionBadges()
+}
   });
 }
 
